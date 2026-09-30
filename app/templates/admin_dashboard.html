@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="admin-layout">
+  <div class="panel header-panel">
+    <div>
+      <h1>JACITEC CTF — ADMIN</h1>
+      <p>Status: <strong>{{ '🟢 CTF ATIVO' if ctf else '🟡 AGUARDANDO' }}</strong></p>
+      <p>Código atual: <strong>{{ ctf.code if ctf else 'Nenhum CTF ativo' }}</strong></p>
+      {% if ctf and ctf.max_duration_minutes %}<p>Duração máxima: <strong>{{ ctf.max_duration_minutes }} minutos</strong></p>{% endif %}
+    </div>
+    <div class="admin-actions">
+      <form method="post" action="{{ url_for('generate_ctf') }}">
+        <label for="max-duration">Duração máxima do CTF (minutos; deixe vazio para não limitar)</label>
+        <input id="max-duration" name="max_duration_minutes" type="number" min="1" max="1440" value="60" placeholder="60" />
+        <button type="submit" class="primary-btn">GERAR NOVO CTF</button>
+      </form>
+      {% if ctf %}
+      <form method="post" action="{{ url_for('finalize_ctf') }}">
+        <button type="submit" class="danger-btn">FINALIZAR CTF</button>
+      </form>
+      {% endif %}
+      <a href="{{ url_for('admin_logout') }}" class="link-btn">Sair</a>
+    </div>
+  </div>
+
+  {% if admin_notice %}<div class="notice warning">{{ admin_notice }}</div>{% endif %}
+
+  <div class="panel stats-panel">
+    <div>Participantes: <strong>{{ participant_count }}</strong></div>
+    <div>Em andamento: <strong>{{ active_count }}</strong></div>
+    <div>Finalizados: <strong>{{ finished_count }}</strong></div>
+  </div>
+
+  <div class="panel leaderboard-panel">
+    <h2>RANKING</h2>
+    <ol>
+      {% for row in ranking[:10] %}
+      <li>{{ row.name }} — {{ row.points }} pts — {{ row.elapsed // 3600 }}:{{ '%02d' % ((row.elapsed % 3600) // 60) }}:{{ '%02d' % (row.elapsed % 60) }} — {{ 'Finalizou antes do encerramento' if row.finished_at else 'Em andamento' if ctf else 'Encerrado pelo administrador/tempo limite' }}</li>
+      {% else %}
+      <li>Nenhum participante registrado ainda.</li>
+      {% endfor %}
+    </ol>
+  </div>
+
+  <div class="panel history-panel">
+    <h2>CTFs anteriores</h2>
+    {% for item in history %}
+      <div class="history-item">
+        <strong>{{ item.ctf.code }}</strong>
+        <span>Criado: <time data-datetime="{{ item.ctf.created_at }}">{{ item.ctf.created_at }}</time></span>
+        {% if item.ctf.finished_at %}<span>Finalizado: <time data-datetime="{{ item.ctf.finished_at }}">{{ item.ctf.finished_at }}</time></span>{% endif %}
+        <span>Participantes: {{ item.participants }}</span>
+        <span>Status: {{ item.ctf.status }}</span>
+        <a class="secondary-btn" href="{{ url_for('ctf_archive_page', ctf_id=item.ctf.id) }}">Ver dashboard salvo</a>
+      </div>
+    {% else %}
+      <p>Nenhum CTF finalizado ainda.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

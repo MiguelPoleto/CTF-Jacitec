@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="leaderboard-card">
+  <div class="board-header">
+    <h1>🏆 JACITEC CTF</h1>
+    <a href="{{ url_for('ctf_home') }}" class="link-btn">Voltar ao início</a>
+  </div>
+
+  <div id="ranking-status" class="status-pill">Carregando ranking...</div>
+
+  {% if ctf %}
+    <div class="ctf-summary">
+      <span>Código: <strong>{{ ctf.code }}</strong></span>
+      <span>Status: <strong>{{ ctf.status }}</strong></span>
+    </div>
+  {% endif %}
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Participante</th>
+        <th>Pontos</th>
+        <th>Tempo</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="ranking-body"></tbody>
+  </table>
+
+  <div class="history-panel">
+    <h2>CTFs anteriores</h2>
+    <div id="history-list" class="history-list"></div>
+  </div>
+</section>
+
+<script>
+  (() => {
+    const rankingBody = document.getElementById('ranking-body');
+    const rankingStatus = document.getElementById('ranking-status');
+    const historyList = document.getElementById('history-list');
+    const previousPositions = new Map();
+    let lastFetch = Date.now();
+
+    function duration(totalSeconds) {
+      const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+      const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+      const seconds = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    }
+
+    async function loadRanking() {
+      try {
+        const response = await fetch('/api/ranking', { cache: 'no-store' });
+        const data = await response.json();
+        rankingStatus.textContent = data.status === 'ATIVO' ? 'CTF em andamento · atualização ao vivo' : data.status === 'FINALIZADO' ? 'CTF finalizado · classificação final' : 'Aguardando novo CTF';
+        const now = Date.now();
+        const fragment = document.createDocumentFragment();
+        if (!data.ranking || data.ranking.length === 0) {
+          rankingBody.replaceChildren();
+          const row = document.createElement('tr');
+          const cell = document.createElement('td');
+          cell.colSpan = 5;
+          cell.textContent = 'Nenhum participante no ranking ainda.';
+          row.appendChild(cell);
+          rankingBody.appendChild(row);
+          return;
+        }
+
+        data.ranking.forEach((entry) => {
+          const row = document.createElement('tr');
+          const oldPosition = previousPositions.get(entry.id);
+          row.dataset.elapsed = String(entry.time);
+          row.dataset.updatedAt = String(now);
+          row.dataset.running = entry.finished_at ? 'false' : String(data.status === 'ATIVO');
+          if (entry.position === 1) row.classList.add('podium-first');
+          else if (entry.position === 2) row.classList.add('podium-second');
+          else if (entry.position === 3) row.classList.add('podium-third');
+          if (oldPosition && entry.position < oldPosition) row.classList.add('rank-overtake');
+
+          const values = [String(entry.position), entry.name, `${entry.points} pts`, duration(entry.time), entry.participation_status];
+          values.forEach((value, index) => {
+            const cell = document.createElement('td');
+            cell.textContent = value;
+            if (index === 3) cell.className = 'ranking-time';
+            row.appendChild(cell);
+          });
+          fragment.appendChild(row);
+          previousPositions.set(entry.id, entry.position);
+        });
+        rankingBody.replaceChildren(fragment);
+        lastFetch = now;
+      } catch (_) {
+        rankingStatus.textContent = 'Sem conexão com o ranking. Tentando novamente…';
+      }
+    }
+
+    async function loadHistory() {
+      try {
+        const response = await fetch('/api/ctf-history', { cache: 'no-store' });
+        const data = await response.json();
+        historyList.replaceChildren();
+        if (!data.ctfs || data.ctfs.length === 0) {
+          const empty = document.createElement('p');
+          empty.textContent = 'Nenhum CTF finalizado ainda.';
+          historyList.appendChild(empty);
+          return;
+        }
+        data.ctfs.forEach((item) => {
+          const card = document.createElement('article');
+          card.className = 'history-card';
+          const archiveLink = document.createElement('a');
+          archiveLink.href = `/ctf/${item.id}/archive`;
+          archiveLink.className = 'archive-link';
+          archiveLink.textContent = item.code;
+          const date = document.createElement('time');
+          date.dataset.datetime = item.finished_at || item.created_at;
+          date.textContent = date.dataset.datetime;
+          const winner = document.createElement('span');
+          winner.textContent = `Vencedor: ${item.winner || '—'} (${item.winner_points} pts)`;
+          const participants = document.createElement('span');
+          participants.textContent = `Participantes: ${item.participants}`;
+          card.append(archiveLink, date, winner, participants);
+          historyList.appendChild(card);
+          const dateValue = new Date(`${date.dataset.datetime.replace(' ', 'T')}Z`);
+          if (!Number.isNaN(dateValue.getTime())) {
+            date.textContent = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }).format(dateValue);
+            date.setAttribute('datetime', dateValue.toISOString());
+          }
+        });
+      } catch (_) {
+        // Preserve the last rendered archive if a refresh fails.
+      }
+    }
+
+    function tickRankingTimes() {
+      const now = Date.now();
+      rankingBody.querySelectorAll('tr[data-elapsed]').forEach((row) => {
+        if (row.dataset.running !== 'true') return;
+        const elapsed = Number(row.dataset.elapsed) + Math.floor((now - Number(row.dataset.updatedAt)) / 1000);
+        const cell = row.querySelector('.ranking-time');
+        if (cell) cell.textContent = duration(elapsed);
+      });
+    }
+
+    loadRanking();
+    loadHistory();
+    setInterval(loadRanking, 4000);
+    setInterval(loadHistory, 20000);
+    setInterval(tickRankingTimes, 1000);
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="auth-box">
+  <div class="brand-block">
+    <h1>JACITEC CTF</h1>
+    <p>Capture The Flag 2026</p>
+  </div>
+
+  {% if error %}
+    <div class="notice error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('join_ctf') }}">
+    <label for="name">Nome</label>
+    <input id="name" name="name" type="text" placeholder="Seu nome" required />
+
+    <label for="code">Código do CTF</label>
+    <input id="code" name="code" type="text" placeholder="JCTF-XXXX" required />
+
+    <button type="submit" class="primary-btn">ENTRAR NO CTF</button>
+  </form>
+
+  <div class="divider"></div>
+
+  <a class="secondary-btn" href="{{ url_for('public_ranking_page') }}">🏆 TABELA</a>
+  <a class="tiny-link" href="{{ url_for('admin_login_page') }}">Admin</a>
+</section>
+
+<section class="tool-box">
+  <h2>Ferramentas recomendadas</h2>
+  <ul>
+    <li><strong>🌐 Navegador:</strong> Chrome, Firefox ou Edge.</li>
+    <li><strong>🛠️ DevTools:</strong> Elements, Console, Network, Application e Sources.</li>
+    <li><strong>🔎 Burp Suite:</strong> Community é suficiente para os desafios web.</li>
+    <li><strong>💻 Terminal:</strong> útil para testes simples e encoding.</li>
+    <li><strong>🔐 Encoding:</strong> Base64, URL e ferramentas rápidas de decode.</li>
+  </ul>
+</section>
+{% endblock %}

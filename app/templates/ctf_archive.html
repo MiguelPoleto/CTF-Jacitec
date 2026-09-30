@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="leaderboard-card archive-board">
+  <div class="board-header">
+    <div>
+      <p class="panel-eyebrow">ARQUIVO DO CTF</p>
+      <h1>🏆 {{ ctf.code }}</h1>
+    </div>
+    <a href="{{ url_for('public_ranking_page') }}" class="link-btn">Voltar ao ranking atual</a>
+  </div>
+
+  <div class="ctf-summary">
+    <span>Status: <strong>{{ ctf.status }}</strong></span>
+    <span>Iniciado: <time data-datetime="{{ ctf.created_at }}">{{ ctf.created_at }}</time></span>
+    {% if ctf.finished_at %}<span>Encerrado: <time data-datetime="{{ ctf.finished_at }}">{{ ctf.finished_at }}</time></span>{% endif %}
+    {% if ctf.max_duration_minutes %}<span>Duração máxima: <strong>{{ ctf.max_duration_minutes }} min</strong></span>{% endif %}
+    <span>Participantes: <strong>{{ ranking|length }}</strong></span>
+  </div>
+
+  <h2>Classificação salva</h2>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Posição</th><th>Participante</th><th>Pontos</th><th>Tempo</th><th>Desafios</th><th>Status</th><th>Detalhes</th></tr></thead>
+      <tbody>
+        {% for row in ranking %}
+          <tr class="{% if loop.index == 1 %}podium-first{% elif loop.index == 2 %}podium-second{% elif loop.index == 3 %}podium-third{% endif %}">
+            <td>{{ loop.index }}</td>
+            <td>{{ row.name }}</td>
+            <td>{{ row.points }}</td>
+            <td>{{ '%02d:%02d:%02d'|format(row.elapsed // 3600, (row.elapsed % 3600) // 60, row.elapsed % 60) }}</td>
+            <td>{{ row.challenge_count }} / {{ challenge_list|length }}</td>
+            <td>{{ row.participation_status }}</td>
+            <td><details class="archive-details"><summary>Ver respostas</summary>
+              <ul>
+                {% for result in row.challenge_results %}
+                  <li><strong>{{ result.name }}</strong> · {{ 'Resolvido' if result.status == 'solved' else 'Pulado' if result.status == 'skipped' else 'Não resolvido' }} · {{ result.score_earned }} pts · {{ result.hints_used }} dicas{% if result.solved_at %} · <time data-datetime="{{ result.solved_at }}">{{ result.solved_at }}</time>{% endif %}</li>
+                {% endfor %}
+              </ul>
+            </details></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7">Este CTF não teve participantes registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

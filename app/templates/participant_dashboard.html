@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+
+{% block shell_class %}workspace-shell{% endblock %}
+
+{% block content %}
+<div class="workspace-topbar">
+  <a class="workspace-brand" href="{{ url_for('participant_dashboard', challenge=1) }}" title="Voltar ao início do CTF">JACITEC <span>INÍCIO DO CTF</span></a>
+  <div class="workspace-identity">
+    <span>{{ participant.name }}</span>
+    <span class="workspace-event">{{ ctf.code }}</span>
+    <span class="live-clock" id="live-clock">--:--:--</span>
+  </div>
+</div>
+
+<nav class="workspace-course-nav" aria-label="Atividades">
+  {% for item in challenges %}
+    <a class="course-step {% if item.challenge.id == active_challenge.id %}selected{% endif %} {% if item.record.status == 'solved' %}completed{% endif %}"
+       href="{{ url_for('participant_dashboard', challenge=item.challenge.id) }}"
+       title="{{ item.challenge.name }}">
+      <span>{{ '%02d'|format(item.challenge.id) }}</span>
+      <small>{{ item.challenge.name }}</small>
+    </a>
+  {% endfor %}
+</nav>
+
+<main class="lab-frame-wrap">
+  <iframe id="challenge-site" title="Site do desafio {{ active_challenge.id }}" src="{{ url_for('lab_page', challenge_id=active_challenge.id) }}"></iframe>
+</main>
+
+<aside class="control-panel" id="control-panel" aria-label="Painel da competição">
+  <header class="control-panel-header" id="panel-drag-handle" title="Arraste para mover o painel">
+    <div>
+      <p class="panel-eyebrow">JACITEC CTF · {{ ctf.code }}</p>
+      <h1 id="panel-challenge-title">{{ active_challenge.name }}</h1>
+    </div>
+    <button class="panel-minimize" id="panel-minimize" type="button" aria-label="Minimizar painel">—</button>
+  </header>
+
+  <div class="panel-metrics">
+    <div><span>Tempo</span><strong id="panel-timer">00:00:00</strong></div>
+    <div><span>Pontos</span><strong id="panel-points">{{ stats.total }}</strong></div>
+    <div><span>Atividade</span><strong id="panel-activity">{{ active_challenge.id }}/{{ challenges|length }}</strong></div>
+    <div><span>Limite CTF</span><strong id="event-countdown">{{ ctf.max_duration_minutes ~ ' min' if ctf.max_duration_minutes else 'Sem limite' }}</strong></div>
+  </div>
+
+  <div class="panel-status" id="panel-status">{{ 'RESOLVIDO' if active_record.status == 'solved' else 'PULADO' if active_record.status == 'skipped' else 'EM ABERTO' }}</div>
+  <div class="panel-progress"><span id="panel-progress-fill" style="width: {{ stats.solved / challenges|length * 100 }}%"></span></div>
+
+  <section class="panel-hints">
+    <div class="panel-section-title"><h2>Dicas</h2><span id="hint-count">{{ active_record.hints_used }}/{{ active_challenge.hints|length }}</span></div>
+    <div id="hint-list" class="hint-list" aria-live="polite"></div>
+    <button id="reveal-hint" class="panel-secondary" type="button">Revelar próxima dica</button>
+  </section>
+
+  <form id="flag-form" class="panel-flag-form">
+    <label for="flag-input">Enviar flag</label>
+    <div class="flag-input-row">
+      <input id="flag-input" name="flag" autocomplete="off" placeholder="JACITEC{...}" required {% if active_record.status == 'solved' %}disabled{% endif %} />
+      <button type="submit" {% if active_record.status == 'solved' %}disabled{% endif %}>Enviar</button>
+    </div>
+    <p id="submission-feedback" role="status" class="{% if active_record.status == 'solved' %}feedback-success{% endif %}">{% if active_record.status == 'solved' %}Resolvido · {{ active_record.score_earned }} pontos{% endif %}</p>
+  </form>
+
+  <div class="panel-footer">
+    <span>Iniciado em <time data-datetime="{{ participant.entered_at }}">{{ participant.entered_at }}</time></span>
+  </div>
+  <a id="next-challenge" class="panel-next" href="{{ url_for('participant_dashboard', challenge=active_challenge.id + 1) }}" {% if active_record.status != 'solved' or active_challenge.id >= challenges|length %}hidden{% endif %}>Atividade seguinte →</a>
+  <button type="button" id="finish-open" class="panel-finish">Finalizar minha participação</button>
+</aside>
+
+<button class="panel-expand" id="panel-expand" type="button" hidden aria-label="Expandir painel">
+  <span id="mini-timer">00:00:00</span><span>＋</span>
+</button>
+
+<dialog class="finish-dialog" id="finish-dialog" aria-labelledby="finish-title">
+  <form method="post" action="{{ url_for('finish_participation') }}">
+    <p class="panel-eyebrow">CONFIRMAÇÃO</p>
+    <h2 id="finish-title">Finalizar sua participação?</h2>
+    <p>Seu tempo e pontuação serão registrados, e você será levado à classificação. O CTF continuará ativo para os demais participantes.</p>
+    <div class="finish-dialog-actions">
+      <button type="button" id="finish-cancel" class="panel-secondary">Continuar jogando</button>
+      <button type="submit" class="finish-confirm">Sim, finalizar</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+  (() => {
+    const challengeId = {{ active_challenge.id }};
+    const challengeHints = {{ active_challenge.hints|tojson }};
+    const participantStartedAt = {{ participant.entered_at|tojson }};
+    const panel = document.getElementById('control-panel');
+    const minimizeButton = document.getElementById('panel-minimize');
+    const expandButton = document.getElementById('panel-expand');
+    const dragHandle = document.getElementById('panel-drag-handle');
+    const finishDialog = document.getElementById('finish-dialog');
+    const hintsList = document.getElementById('hint-list');
+    const hintCount = document.getElementById('hint-count');
+    const feedback = document.getElementById('submission-feedback');
+    const timer = document.getElementById('panel-timer');
+    const miniTimer = document.getElementById('mini-timer');
+    const startedAt = new Date(`${participantStartedAt.replace(' ', 'T')}Z`);
+    let hintsUsed = {{ active_record.hints_used }};
+    let isSolved = {{ 'true' if active_record.status == 'solved' else 'false' }};
+    let eventRemainingSeconds = null;
+    let eventCountdownUpdatedAt = Date.now();
+
+    function formatDuration(total) {
+      const hours = String(Math.floor(total / 3600)).padStart(2, '0');
+      const minutes = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
+      const seconds = String(total % 60).padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    }
+
+    function renderHints() {
+      hintsList.innerHTML = '';
+      challengeHints.slice(0, hintsUsed).forEach((hint, index) => {
+        const item = document.createElement('div');
+        item.className = 'revealed-hint';
+        const heading = document.createElement('span');
+        heading.textContent = `Dica ${index + 1}`;
+        const text = document.createElement('p');
+        text.textContent = hint;
+        item.append(heading, text);
+        hintsList.appendChild(item);
+      });
+      hintCount.textContent = `${hintsUsed}/${challengeHints.length}`;
+      document.getElementById('reveal-hint').disabled = isSolved || hintsUsed >= challengeHints.length;
+      document.getElementById('reveal-hint').textContent = hintsUsed >= challengeHints.length ? 'Todas as dicas reveladas' : 'Revelar próxima dica';
+    }
+
+    function updateTimer() {
+      const elapsed = Math.max(0, Math.floor((Date.now() - startedAt.getTime()) / 1000));
+      const value = formatDuration(elapsed);
+      timer.textContent = value;
+      miniTimer.textContent = value;
+      document.getElementById('live-clock').textContent = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date());
+      if (eventRemainingSeconds !== null) {
+        const remaining = Math.max(0, eventRemainingSeconds - Math.floor((Date.now() - eventCountdownUpdatedAt) / 1000));
+        document.getElementById('event-countdown').textContent = formatDuration(remaining);
+      }
+    }
+
+    minimizeButton.addEventListener('click', () => {
+      panel.classList.add('minimized');
+      expandButton.hidden = false;
+      syncExpandPosition();
+    });
+    let suppressExpandClick = false;
+    expandButton.addEventListener('click', (event) => {
+      if (suppressExpandClick) {
+        event.preventDefault();
+        suppressExpandClick = false;
+        return;
+      }
+      panel.classList.remove('minimized');
+      expandButton.hidden = true;
+    });
+
+    document.getElementById('finish-open').addEventListener('click', () => finishDialog.showModal());
+    document.getElementById('finish-cancel').addEventListener('click', () => finishDialog.close());
+
+    const savedPanelPosition = (() => {
+      try { return JSON.parse(localStorage.getItem('jacitec-panel-position')); }
+      catch (_) { return null; }
+    })();
+
+    function setPanelPosition(left, top, save = false) {
+      const maxLeft = Math.max(8, window.innerWidth - panel.offsetWidth - 8);
+      const maxTop = Math.max(8, window.innerHeight - Math.min(panel.offsetHeight, window.innerHeight - 16) - 8);
+      const position = {
+        left: Math.max(8, Math.min(left, maxLeft)),
+        top: Math.max(8, Math.min(top, maxTop))
+      };
+      panel.style.left = `${position.left}px`;
+      panel.style.top = `${position.top}px`;
+      panel.style.right = 'auto';
+      panel.style.bottom = 'auto';
+      if (save) {
+        try { localStorage.setItem('jacitec-panel-position', JSON.stringify(position)); }
+        catch (_) { /* Storage may be unavailable in private browsing. */ }
+      }
+      syncExpandPosition();
+      return position;
+    }
+
+    function syncExpandPosition() {
+      if (expandButton.hidden) return;
+      const rect = panel.getBoundingClientRect();
+      expandButton.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - expandButton.offsetWidth - 8))}px`;
+      expandButton.style.top = `${Math.max(8, Math.min(rect.top, window.innerHeight - expandButton.offsetHeight - 8))}px`;
+      expandButton.style.right = 'auto';
+      expandButton.style.bottom = 'auto';
+    }
+
+    if (savedPanelPosition && Number.isFinite(savedPanelPosition.left) && Number.isFinite(savedPanelPosition.top)) {
+      setPanelPosition(savedPanelPosition.left, savedPanelPosition.top);
+    }
+
+    let dragState = null;
+    function beginDrag(event, handle, isMinimizedControl = false) {
+      if (event.button !== 0) return;
+      if (!isMinimizedControl && event.target.closest('button')) return;
+      const rect = panel.getBoundingClientRect();
+      dragState = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        left: rect.left,
+        top: rect.top,
+        moved: false,
+        isMinimizedControl,
+      };
+      handle.setPointerCapture(event.pointerId);
+      panel.classList.add('dragging');
+      event.preventDefault();
+    }
+    function moveDrag(event) {
+      if (!dragState || dragState.pointerId !== event.pointerId) return;
+      if (Math.abs(event.clientX - dragState.x) + Math.abs(event.clientY - dragState.y) > 5) dragState.moved = true;
+      setPanelPosition(dragState.left + event.clientX - dragState.x, dragState.top + event.clientY - dragState.y);
+    }
+    const stopDragging = (event) => {
+      if (!dragState || dragState.pointerId !== event.pointerId) return;
+      const { moved, isMinimizedControl } = dragState;
+      const rect = panel.getBoundingClientRect();
+      setPanelPosition(rect.left, rect.top, true);
+      panel.classList.remove('dragging');
+      dragState = null;
+      if (moved && isMinimizedControl) {
+        suppressExpandClick = true;
+        setTimeout(() => { suppressExpandClick = false; }, 0);
+      }
+    };
+    dragHandle.addEventListener('pointerdown', (event) => beginDrag(event, dragHandle));
+    dragHandle.addEventListener('pointermove', moveDrag);
+    dragHandle.addEventListener('pointerup', stopDragging);
+    dragHandle.addEventListener('pointercancel', stopDragging);
+    expandButton.addEventListener('pointerdown', (event) => beginDrag(event, expandButton, true));
+    expandButton.addEventListener('pointermove', moveDrag);
+    expandButton.addEventListener('pointerup', stopDragging);
+    expandButton.addEventListener('pointercancel', stopDragging);
+    window.addEventListener('resize', () => {
+      if (!panel.classList.contains('minimized')) {
+        const rect = panel.getBoundingClientRect();
+        setPanelPosition(rect.left, rect.top, true);
+      }
+    });
+
+    document.getElementById('reveal-hint').addEventListener('click', async () => {
+      const button = document.getElementById('reveal-hint');
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/challenge/${challengeId}/hint`, { method: 'POST' });
+        const data = await response.json();
+        if (response.status === 409 && data.redirect) return window.location.assign(data.redirect);
+        if (!response.ok) throw new Error(data.error || 'Não foi possível revelar a dica.');
+        hintsUsed = data.hints_used;
+        renderHints();
+      } catch (error) {
+        feedback.textContent = error.message;
+        feedback.className = 'feedback-error';
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById('flag-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = event.currentTarget.querySelector('button');
+      button.disabled = true;
+      feedback.textContent = 'Verificando flag…';
+      feedback.className = '';
+      try {
+        const response = await fetch(`/api/challenge/${challengeId}/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ flag: document.getElementById('flag-input').value })
+        });
+        const data = await response.json();
+        if (response.status === 409 && data.redirect) return window.location.assign(data.redirect);
+        feedback.textContent = data.message || data.error;
+        feedback.className = data.solved ? 'feedback-success' : 'feedback-error';
+        if (data.solved) {
+          isSolved = true;
+          document.getElementById('panel-status').textContent = 'RESOLVIDO';
+          document.getElementById('panel-points').textContent = Number(document.getElementById('panel-points').textContent) + data.points;
+          document.getElementById('next-challenge').hidden = challengeId >= {{ challenges|length }};
+          document.querySelector(`.course-step[href*="challenge=${challengeId}"]`)?.classList.add('completed');
+          document.getElementById('flag-input').disabled = true;
+          renderHints();
+        }
+      } catch (error) {
+        feedback.textContent = error.message;
+        feedback.className = 'feedback-error';
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    async function refreshParticipantState() {
+      try {
+        const response = await fetch('/api/participant-state');
+        const data = await response.json();
+        if (response.status === 409 && data.redirect) return window.location.assign(data.redirect);
+        if (!response.ok) return;
+        document.getElementById('panel-points').textContent = data.points;
+        eventRemainingSeconds = data.remaining_seconds;
+        eventCountdownUpdatedAt = Date.now();
+        const solved = data.challenges.filter((item) => item.status === 'solved').length;
+        document.getElementById('panel-progress-fill').style.width = `${solved / data.challenges.length * 100}%`;
+        const active = data.challenges.find((item) => item.id === challengeId);
+        if (active) {
+          hintsUsed = Math.max(hintsUsed, active.hints_used);
+          isSolved = isSolved || active.status === 'solved';
+          const localizedStatus = { open: 'EM ABERTO', solved: 'RESOLVIDO', skipped: 'PULADO' };
+          document.getElementById('panel-status').textContent = localizedStatus[active.status] || active.status;
+          renderHints();
+        }
+      } catch (_) {
+        // Keep the challenge usable during a short network interruption.
+      }
+    }
+
+    renderHints();
+    updateTimer();
+    refreshParticipantState();
+    setInterval(updateTimer, 1000);
+    setInterval(refreshParticipantState, 5000);
+  })();
+</script>
+{% endblock %}

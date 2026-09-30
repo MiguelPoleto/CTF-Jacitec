@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="challenge-detail-shell">
+  <div class="challenge-toolbar">
+    <a href="{{ url_for('challenge_index') }}" class="secondary-btn">◀ Lista de desafios</a>
+    <a href="{{ url_for('participant_dashboard') }}" class="secondary-btn">Painel</a>
+  </div>
+
+  <article class="challenge-detail-card">
+    <div class="challenge-detail-header">
+      <div>
+        <p class="eyebrow">{{ ctf.code }}</p>
+        <h1>Desafio {{ challenge.id }} · {{ challenge.name }}</h1>
+      </div>
+      <span class="badge">{{ challenge.difficulty }} · {{ challenge.points }} pts</span>
+    </div>
+
+    <div class="challenge-description">
+      <p>{{ challenge.description }}</p>
+    </div>
+
+    <div class="task-box">
+      <h2>Objetivo</h2>
+      <p>Analise o contexto do problema, use as ferramentas corretas e resolva o desafio sem depender de uma única pista.</p>
+      <ul>
+        {% for hint in challenge.hints %}
+          <li>{{ loop.index }}. {{ hint }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    {% if record.status == 'solved' %}
+      <div class="notice success">Este desafio já foi resolvido. Você ganhou {{ record.score_earned }} pontos.</div>
+    {% else %}
+      <form method="post" action="{{ url_for('submit_flag') }}" class="challenge-form">
+        <input type="hidden" name="challenge_id" value="{{ challenge.id }}" />
+        {% if challenge.flags|length > 1 %}
+          {% for flag in challenge.flags %}
+            <label for="flag_{{ loop.index }}">Flag {{ loop.index }}</label>
+            <input id="flag_{{ loop.index }}" name="flag_{{ loop.index }}" type="text" placeholder="Digite a flag {{ loop.index }}" required />
+          {% endfor %}
+        {% else %}
+          <label for="flag">Flag</label>
+          <input id="flag" name="flag" type="text" placeholder="Digite a flag" required />
+        {% endif %}
+        <button type="submit" class="primary-btn">Enviar resposta</button>
+      </form>
+    {% endif %}
+
+    <div class="challenge-nav">
+      {% if challenge.id > 1 %}
+        <a href="{{ url_for('challenge_detail', challenge_id=challenge.id - 1) }}" class="secondary-btn">Desafio anterior</a>
+      {% endif %}
+      {% if challenge.id < challenge_list|length %}
+        <a href="{{ url_for('challenge_detail', challenge_id=challenge.id + 1) }}" class="secondary-btn">Próximo desafio</a>
+      {% endif %}
+    </div>
+  </article>
+</section>
+{% endblock %}

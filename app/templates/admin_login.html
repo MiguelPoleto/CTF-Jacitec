@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="auth-box small-box">
+  <h1>JACITEC CTF — ADMIN</h1>
+  <div class="notice warning">
+    Esta área é exclusiva da administração do CTF e não faz parte da competição. Não tente acessar esta página como participante.
+  </div>
+
+  {% if error %}
+    <div class="notice error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('admin_login') }}">
+    <label for="username">Usuário</label>
+    <input id="username" name="username" type="text" value="admin" required />
+
+    <label for="password">Senha</label>
+    <input id="password" name="password" type="password" value="adm2026" required />
+
+    <button type="submit" class="primary-btn">ENTRAR</button>
+  </form>
+
+  <a href="{{ url_for('index') }}" class="link-btn secondary-btn">VOLTAR PARA O INÍCIO</a>
+</section>
+{% endblock %}
