@@ -84,6 +84,19 @@
   </form>
 </dialog>
 
+<dialog class="event-ended-dialog" id="event-ended-dialog" aria-labelledby="event-ended-title">
+  <div class="event-ended-content">
+    <span class="event-ended-icon">✓</span>
+    <p class="panel-eyebrow">{{ ctf.code }}</p>
+    <h2 id="event-ended-title">Este CTF foi finalizado</h2>
+    <p>O tempo do evento terminou ou a organização encerrou a competição. Sua participação foi registrada. O que deseja fazer agora?</p>
+    <div class="event-ended-actions">
+      <a id="event-ranking-link" class="event-ranking-button" href="#">Ver classificação deste CTF <span>→</span></a>
+      <a id="event-home-link" class="event-home-button" href="{{ url_for('ctf_home') }}">Ir para a página inicial</a>
+    </div>
+  </div>
+</dialog>
+
 <script>
   (() => {
     const challengeId = {{ active_challenge.id }};
@@ -94,6 +107,7 @@
     const expandButton = document.getElementById('panel-expand');
     const dragHandle = document.getElementById('panel-drag-handle');
     const finishDialog = document.getElementById('finish-dialog');
+    const eventEndedDialog = document.getElementById('event-ended-dialog');
     const hintsList = document.getElementById('hint-list');
     const hintCount = document.getElementById('hint-count');
     const feedback = document.getElementById('submission-feedback');
@@ -139,6 +153,12 @@
         const remaining = Math.max(0, eventRemainingSeconds - Math.floor((Date.now() - eventCountdownUpdatedAt) / 1000));
         document.getElementById('event-countdown').textContent = formatDuration(remaining);
       }
+    }
+
+    function showEventEnded(data) {
+      document.getElementById('event-ranking-link').href = data.ranking_url || '/ranking';
+      document.getElementById('event-home-link').href = data.home_url || '{{ url_for("ctf_home") }}';
+      if (!eventEndedDialog.open) eventEndedDialog.showModal();
     }
 
     minimizeButton.addEventListener('click', () => {
@@ -253,7 +273,7 @@
       try {
         const response = await fetch(`/api/challenge/${challengeId}/hint`, { method: 'POST' });
         const data = await response.json();
-        if (response.status === 409 && data.redirect) return window.location.assign(data.redirect);
+        if (response.status === 409 && data.status === 'FINALIZADO') return showEventEnded(data);
         if (!response.ok) throw new Error(data.error || 'Não foi possível revelar a dica.');
         hintsUsed = data.hints_used;
         renderHints();
@@ -277,7 +297,7 @@
           body: JSON.stringify({ flag: document.getElementById('flag-input').value })
         });
         const data = await response.json();
-        if (response.status === 409 && data.redirect) return window.location.assign(data.redirect);
+        if (response.status === 409 && data.status === 'FINALIZADO') return showEventEnded(data);
         feedback.textContent = data.message || data.error;
         feedback.className = data.solved ? 'feedback-success' : 'feedback-error';
         if (data.solved) {
@@ -301,7 +321,7 @@
       try {
         const response = await fetch('/api/participant-state');
         const data = await response.json();
-        if (response.status === 409 && data.redirect) return window.location.assign(data.redirect);
+        if (response.status === 409 && data.status === 'FINALIZADO') return showEventEnded(data);
         if (!response.ok) return;
         document.getElementById('panel-points').textContent = data.points;
         eventRemainingSeconds = data.remaining_seconds;

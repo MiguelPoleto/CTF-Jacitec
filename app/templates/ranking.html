@@ -1,39 +1,46 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="leaderboard-card">
-  <div class="board-header">
-    <h1>🏆 JACITEC CTF</h1>
-    <a href="{{ url_for('ctf_home') }}" class="link-btn">Voltar ao início</a>
-  </div>
+<main class="ranking-page">
+  <header class="ranking-nav">
+    <a href="{{ url_for('ctf_home') }}" class="landing-brand"><span class="brand-symbol">J</span><span>JACITEC <small>CYBER GAMES</small></span></a>
+    <a href="{{ url_for('ctf_home') }}" class="ranking-back">← Voltar ao início</a>
+  </header>
 
-  <div id="ranking-status" class="status-pill">Carregando ranking...</div>
+  <section class="ranking-hero">
+    <div>
+      <p class="eyebrow-line"><span>PLACAR OFICIAL</span> · JACITEC CYBER GAMES</p>
+      <h1>Quem está no<br><em>topo do jogo?</em></h1>
+      <p>Acompanhe a disputa em tempo real e reveja os resultados de eventos anteriores.</p>
+    </div>
+    <div class="ranking-event-card">
+      <span class="event-card-label">EVENTO ATUAL</span>
+      <strong>{% if ctf %}{{ ctf.code }}{% else %}Sem evento ativo{% endif %}</strong>
+      <span id="ranking-status" class="status-pill">Carregando classificação...</span>
+    </div>
+  </section>
 
   {% if ctf %}
     <div class="ctf-summary">
-      <span>Código: <strong>{{ ctf.code }}</strong></span>
-      <span>Status: <strong>{{ ctf.status }}</strong></span>
+      <span><i class="summary-dot"></i>{{ 'Disputa ao vivo' if ctf.status == 'ATIVO' else 'Resultado oficial' }}</span>
+      {% if ctf.max_duration_minutes %}<span>⏱ Limite: <strong>{{ ctf.max_duration_minutes }} min</strong></span>{% endif %}
     </div>
   {% endif %}
 
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Participante</th>
-        <th>Pontos</th>
-        <th>Tempo</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody id="ranking-body"></tbody>
-  </table>
+  <section class="ranking-board">
+    <div class="board-heading"><div><span class="section-kicker">CLASSIFICAÇÃO</span><h2>Placar do evento</h2></div><span class="live-refresh"><i></i> ATUALIZAÇÃO AUTOMÁTICA</span></div>
+    <div class="ranking-table-wrap"><table>
+      <thead><tr><th>POSIÇÃO</th><th>PARTICIPANTE</th><th>PONTOS</th><th>TEMPO</th><th>STATUS</th></tr></thead>
+      <tbody id="ranking-body"></tbody>
+    </table></div>
+  </section>
 
-  <div class="history-panel">
-    <h2>CTFs anteriores</h2>
+  <section class="history-panel ranking-history">
+    <div class="board-heading"><div><span class="section-kicker">MEMÓRIA DA COMPETIÇÃO</span><h2>Eventos anteriores</h2></div><span class="history-caption">Resultados preservados</span></div>
     <div id="history-list" class="history-list"></div>
-  </div>
-</section>
+  </section>
+  <footer class="ranking-footer"><span>JACITEC CYBER GAMES</span><a href="{{ url_for('ctf_home') }}">Voltar à página inicial ↑</a></footer>
+</main>
 
 <script>
   (() => {
@@ -113,7 +120,7 @@
           const archiveLink = document.createElement('a');
           archiveLink.href = `/ctf/${item.id}/archive`;
           archiveLink.className = 'archive-link';
-          archiveLink.textContent = item.code;
+          archiveLink.textContent = `${item.code} · Ver classificação e dashboard →`;
           const date = document.createElement('time');
           date.dataset.datetime = item.finished_at || item.created_at;
           date.textContent = date.dataset.datetime;

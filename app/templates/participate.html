@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="participation-page">
+  <header class="participation-nav">
+    <a href="{{ url_for('ctf_home') }}" class="landing-brand"><span class="brand-symbol">J</span><span>JACITEC <small>CYBER GAMES</small></span></a>
+    <a href="{{ url_for('ctf_home') }}" class="participation-back">← Voltar ao início</a>
+  </header>
+
+  <section class="participation-heading">
+    <p class="eyebrow-line"><span>02</span> PREPARE-SE PARA INVESTIGAR</p>
+    <h1>Aprender segurança<br>é <em>mão na massa.</em></h1>
+    <p>Entre na competição e investigue aplicações web simuladas. Você vai usar ferramentas reais de análise para encontrar pistas e capturar flags.</p>
+  </section>
+
+  <section class="participation-content">
+    <div class="technology-column">
+      <div class="participation-section-heading"><span class="section-kicker">SEU KIT DE INVESTIGAÇÃO</span><h2>Tecnologias e ferramentas</h2><p>Não precisa instalar nada para entrar. Os desafios são feitos no navegador; estas ferramentas ajudam durante a investigação.</p></div>
+      <div class="technology-list">
+        <article class="technology-card"><span class="technology-number">01</span><div><strong>Navegador e DevTools</strong><p>Inspecione HTML, JavaScript, requisições, cookies e cabeçalhos HTTP pelo painel do navegador.</p><small>ELEMENTS · NETWORK · SOURCES</small></div></article>
+        <article class="technology-card"><span class="technology-number">02</span><div><strong>Burp Suite Community</strong><p>Intercepte e repita requisições para entender como os sites respondem a diferentes entradas.</p><small>PROXY · REPEATER</small></div></article>
+        <article class="technology-card"><span class="technology-number">03</span><div><strong>Terminal e curl</strong><p>Faça requisições, consulte arquivos públicos e compare respostas HTTP diretamente.</p><small>HTTP · ROTAS · RESPOSTAS</small></div></article>
+        <article class="technology-card"><span class="technology-number">04</span><div><strong>Codificação e análise</strong><p>Base64, leitura de código-fonte e observação cuidadosa completam o kit para os desafios iniciais.</p><small>BASE64 · HTML · JAVASCRIPT</small></div></article>
+      </div>
+      <div class="participation-note"><span>ⓘ</span><p>Os laboratórios são ambientes simulados e isolados, criados apenas para aprendizado. Teste somente os sites fornecidos dentro do CTF.</p></div>
+    </div>
+
+    <aside class="participation-access">
+      <div class="access-card-top"><span class="section-kicker">ENTRADA DO EVENTO</span><span class="access-lock">⌁</span></div>
+      <div class="access-event-status {% if ctf %}is-live{% endif %}"><i></i>{{ 'CTF disponível para entrada' if ctf else 'Nenhum CTF ativo no momento' }}</div>
+      <h2>Identifique sua<br>participação.</h2>
+      <p>Informe o nome que aparecerá na classificação e o token fornecido pelo organizador.</p>
+
+      {% if error %}<div class="notice error participation-error">{{ error }}</div>{% endif %}
+
+      <form method="post" action="{{ url_for('join_ctf') }}" class="participation-form">
+        <label for="participant-name">Nome do participante</label>
+        <input id="participant-name" name="name" type="text" placeholder="Seu nome ou apelido" autocomplete="name" required />
+        <label for="entry-token">Token de entrada</label>
+        <input id="entry-token" name="code" type="text" placeholder="JCTF-XXXXXXXX" autocapitalize="characters" autocomplete="off" required />
+        <button class="participation-submit" type="submit" {% if not ctf %}disabled{% endif %}>{{ 'Entrar na competição' if ctf else 'Aguardando próximo CTF' }} <span>→</span></button>
+      </form>
+      {% if ctf %}<small class="access-footnote">Use o token compartilhado pelo organizador.</small>{% else %}<small class="access-footnote">Assim que o administrador iniciar o evento, você poderá entrar aqui.</small>{% endif %}
+      <div class="access-card-footer"><span>8 DESAFIOS PROGRESSIVOS</span><span>JACITEC CTF</span></div>
+    </aside>
+  </section>
+
+  <footer class="participation-footer"><span>JACITEC CYBER GAMES</span><a href="{{ url_for('public_ranking_page') }}">Ver classificação →</a></footer>
+</main>
+{% endblock %}

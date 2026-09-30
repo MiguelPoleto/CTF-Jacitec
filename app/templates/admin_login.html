@@ -1,26 +1,27 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="auth-box small-box">
-  <h1>JACITEC CTF — ADMIN</h1>
-  <div class="notice warning">
-    Esta área é exclusiva da administração do CTF e não faz parte da competição. Não tente acessar esta página como participante.
-  </div>
+<main class="admin-login-page">
+  <a href="{{ url_for('ctf_home') }}" class="landing-brand"><span class="brand-symbol">J</span><span>JACITEC <small>CYBER GAMES</small></span></a>
+  <section class="admin-login-card">
+    <div class="admin-login-icon">⌘</div>
+    <p class="section-kicker">ÁREA RESTRITA</p>
+    <h1>Painel de<br>administração</h1>
+    <p class="admin-login-intro">Acesso exclusivo à equipe organizadora. Esta área não faz parte dos desafios.</p>
+    <div class="notice warning">Participantes: volte para a página inicial. Não tente usar esta tela durante a competição.</div>
 
-  {% if error %}
-    <div class="notice error">{{ error }}</div>
-  {% endif %}
+    {% if error %}<div class="notice error">{{ error }}</div>{% endif %}
 
-  <form method="post" action="{{ url_for('admin_login') }}">
-    <label for="username">Usuário</label>
-    <input id="username" name="username" type="text" value="admin" required />
+    <form method="post" action="{{ url_for('admin_login') }}" class="admin-login-form">
+      <label for="username">Usuário administrativo</label>
+      <input id="username" name="username" type="text" placeholder="Digite seu usuário" autocomplete="username" required />
+      <label for="password">Senha</label>
+      <input id="password" name="password" type="password" placeholder="Digite sua senha" autocomplete="current-password" required />
+      <button type="submit" class="admin-login-submit">Acessar painel <span>→</span></button>
+    </form>
 
-    <label for="password">Senha</label>
-    <input id="password" name="password" type="password" value="adm2026" required />
-
-    <button type="submit" class="primary-btn">ENTRAR</button>
-  </form>
-
-  <a href="{{ url_for('index') }}" class="link-btn secondary-btn">VOLTAR PARA O INÍCIO</a>
-</section>
+    <a href="{{ url_for('ctf_home') }}" class="admin-login-back">← Voltar para o início do CTF</a>
+  </section>
+  <span class="admin-login-foot">ACESSO MONITORADO · JACITEC CTF</span>
+</main>
 {% endblock %}

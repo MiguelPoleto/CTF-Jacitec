@@ -32,14 +32,20 @@ def test_finished_ctf_redirect_and_history_are_exposed(monkeypatch, tmp_path):
     hidden_resource_redirect = client.get('/lab/2/robots.txt', follow_redirects=False)
     assert hidden_resource_redirect.status_code == 302
     assert hidden_resource_redirect.headers['Location'].endswith('/ranking')
+    ended_state = client.get('/api/participant-state')
+    assert ended_state.status_code == 409
+    ended_payload = ended_state.get_json()
+    assert ended_payload['status'] == 'FINALIZADO'
+    assert ended_payload['ranking_url'].endswith('/ctf/1/archive')
+    assert ended_payload['home_url'] == '/inicio'
 
     home_after_finish = client.get('/', follow_redirects=True)
     assert home_after_finish.request.path == '/'
-    assert b'ENTRAR NO CTF' in home_after_finish.data
+    assert b'JACITEC CYBER GAMES' in home_after_finish.data
     assert b'href="/inicio"' in client.get('/ranking').data
     explicit_home = client.get('/inicio', follow_redirects=False)
     assert explicit_home.status_code == 200
-    assert b'ENTRAR NO CTF' in explicit_home.data
+    assert b'JACITEC CYBER GAMES' in explicit_home.data
 
     history = client.get('/api/ctf-history').get_json()
     assert history['ctfs']
@@ -61,10 +67,11 @@ def test_three_hints_still_award_a_point(monkeypatch, tmp_path):
     client.post('/join', data={'name': 'Bob', 'code': ctf_code}, follow_redirects=False)
 
     for _ in range(3):
-        client.post('/dashboard/hint', data={'challenge_id': 1}, follow_redirects=False)
+        client.post('/api/challenge/1/hint')
 
     challenge_flag = 'JACITEC{source_hidden_01}'
-    client.post('/dashboard/flag', data={'challenge_id': 1, 'flag': challenge_flag}, follow_redirects=False)
+    response = client.post('/api/challenge/1/submit', json={'flag': challenge_flag})
+    assert response.status_code == 200
 
     with sqlite3.connect(database_path) as conn:
         row = conn.execute(
@@ -89,6 +96,9 @@ def test_single_workspace_and_local_challenge_sites_work(monkeypatch, tmp_path):
     assert b'id="challenge-site"' in workspace.data
     assert b'id="control-panel"' in workspace.data
     assert b'Ver ranking' not in workspace.data
+    assert client.get('/desafios').status_code == 404
+    assert client.get('/challenge/1').status_code == 404
+    assert client.post('/dashboard/flag').status_code == 404
 
     for challenge_id in range(1, 9):
         response = client.get(f'/lab/{challenge_id}')
@@ -130,6 +140,7 @@ def test_participant_can_confirm_finish_without_ending_global_ctf(monkeypatch, t
     workspace = client.get('/dashboard')
     assert b'Finalizar minha participa' in workspace.data
     assert b'finish-dialog' in workspace.data
+    assert b'event-ended-dialog' in workspace.data
 
     response = client.post('/dashboard/finish', follow_redirects=False)
     assert response.status_code == 302
@@ -140,7 +151,7 @@ def test_participant_can_confirm_finish_without_ending_global_ctf(monkeypatch, t
     jordan = next(row for row in ranking if row['name'] == 'Jordan')
     assert jordan['participation_status'] == 'Finalizou antes do encerramento'
     home_response = client.get('/inicio')
-    assert b'ENTRAR NO CTF' in home_response.data
+    assert b'JACITEC CYBER GAMES' in home_response.data
     rejoin_response = client.post('/join', data={'name': 'Jordan', 'code': ctf_code}, follow_redirects=False)
     assert rejoin_response.status_code == 302
     assert rejoin_response.headers['Location'].endswith('/dashboard')
@@ -154,6 +165,9 @@ def test_admin_duration_automatically_finalizes_and_archives_ctf(monkeypatch, tm
     admin_dashboard = client.get('/admin')
     assert b'name="max_duration_minutes"' in admin_dashboard.data
     client.post('/admin/generate', data={'max_duration_minutes': '1'})
+    active_admin_page = client.get('/admin')
+    assert b'id="finalize-dialog"' in active_admin_page.data
+    assert b'id="delete-dialog"' in active_admin_page.data
     ctf_code = client.get('/api/ctf-status').get_json()['code']
     client.post('/join', data={'name': 'Rafa', 'code': ctf_code})
 
@@ -168,6 +182,26 @@ def test_admin_duration_automatically_finalizes_and_archives_ctf(monkeypatch, tm
     assert archive.status_code == 200
     assert b'Rafa' in archive.data
     assert b'Encerrado pelo administrador/tempo limite' in archive.data
+
+
+def test_admin_can_delete_only_finalized_ctf_archive(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    app = create_app(testing=True)
+    client = app.test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/generate')
+    active_id = client.get('/api/ctf-status').get_json()
+    with sqlite3.connect(app_module.DATABASE_PATH) as conn:
+        active_ctf_id = conn.execute('SELECT id FROM ctfs WHERE code = ?', (active_id['code'],)).fetchone()[0]
+
+    blocked_delete = client.post(f'/admin/ctf/{active_ctf_id}/delete', follow_redirects=False)
+    assert blocked_delete.status_code == 302
+    assert client.get('/ctf/%s/archive' % active_ctf_id).status_code == 200
+
+    client.post('/admin/finalize')
+    deleted = client.post(f'/admin/ctf/{active_ctf_id}/delete', follow_redirects=False)
+    assert deleted.status_code == 302
+    assert client.get('/ctf/%s/archive' % active_ctf_id).status_code == 302
 
 
 def test_scenario_subpages_are_available(monkeypatch, tmp_path):
@@ -221,3 +255,29 @@ def test_app_status_and_join_flow_work(monkeypatch, tmp_path):
 
     join_response = client.post('/join', data={'name': 'Joao', 'code': ctf_status['code']}, follow_redirects=False)
     assert join_response.status_code == 302
+
+
+def test_landing_participation_cta_opens_technology_and_token_page(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    app = create_app(testing=True)
+    client = app.test_client()
+    landing = client.get('/inicio')
+    assert b'href="/participar"' in landing.data
+    assert b'id="entrar"' not in landing.data
+    assert b'name="code"' not in landing.data
+
+    participation = client.get('/participar')
+    assert participation.status_code == 200
+    assert b'Tecnologias e ferramentas' in participation.data
+    assert b'name="name"' in participation.data
+    assert b'name="code"' in participation.data
+    assert b'Burp Suite Community' in participation.data
+    assert b'curl' in participation.data
+
+
+def test_admin_entry_is_discreet_but_linked_from_landing(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    app = create_app(testing=True)
+    response = app.test_client().get('/inicio')
+    assert b'class="admin-stealth-link"' in response.data
+    assert b'Equipe' in response.data

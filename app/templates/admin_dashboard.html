@@ -1,62 +1,114 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="admin-layout">
-  <div class="panel header-panel">
-    <div>
-      <h1>JACITEC CTF — ADMIN</h1>
-      <p>Status: <strong>{{ '🟢 CTF ATIVO' if ctf else '🟡 AGUARDANDO' }}</strong></p>
-      <p>Código atual: <strong>{{ ctf.code if ctf else 'Nenhum CTF ativo' }}</strong></p>
-      {% if ctf and ctf.max_duration_minutes %}<p>Duração máxima: <strong>{{ ctf.max_duration_minutes }} minutos</strong></p>{% endif %}
+<main class="admin-page">
+  <header class="admin-topbar">
+    <a href="{{ url_for('admin_dashboard') }}" class="landing-brand"><span class="brand-symbol">J</span><span>JACITEC <small>ADMIN CONSOLE</small></span></a>
+    <div class="admin-topbar-right"><span class="admin-secure"><i></i> SESSÃO ADMINISTRATIVA</span><a href="{{ url_for('admin_logout') }}">Sair da conta ↗</a></div>
+  </header>
+
+  <section class="admin-welcome">
+    <div><p class="section-kicker">CENTRAL DE CONTROLE</p><h1>Visão geral</h1><p>Gerencie eventos, acompanhe participantes e consulte resultados arquivados.</p></div>
+    <div class="admin-event-state {% if ctf %}active{% endif %}"><span class="state-pulse"></span><div><small>STATUS DO EVENTO</small><strong>{{ 'CTF EM ANDAMENTO' if ctf else 'AGUARDANDO EVENTO' }}</strong></div></div>
+  </section>
+
+  {% if admin_notice %}<div class="notice warning admin-alert">{{ admin_notice }}</div>{% endif %}
+
+  <section class="admin-stats">
+    <article class="admin-stat-card"><span>EVENTO ATUAL</span><strong>{{ ctf.code if ctf else '—' }}</strong><small>{{ 'Código para participantes' if ctf else 'Nenhum evento ativo' }}</small></article>
+    <article class="admin-stat-card"><span>PARTICIPANTES</span><strong>{{ participant_count }}</strong><small>Inscritos neste evento</small></article>
+    <article class="admin-stat-card"><span>EM ANDAMENTO</span><strong>{{ active_count }}</strong><small>Participantes ativos</small></article>
+    <article class="admin-stat-card"><span>FINALIZARAM</span><strong>{{ finished_count }}</strong><small>Participações encerradas</small></article>
+  </section>
+
+  <div class="admin-content-grid">
+    <div class="admin-main-column">
+      <section class="admin-panel admin-ranking-panel">
+        <div class="admin-panel-heading"><div><p class="section-kicker">ACOMPANHAMENTO</p><h2>Classificação ao vivo</h2></div><a href="{{ url_for('public_ranking_page') }}">Abrir tabela pública ↗</a></div>
+        {% if ranking %}
+          <div class="admin-ranking-list">
+            {% for row in ranking[:10] %}
+              <div class="admin-rank-row">
+                <span class="admin-rank-number {% if loop.index <= 3 %}rank-medal{% endif %}">{{ '%02d'|format(loop.index) }}</span>
+                <span class="admin-rank-name">{{ row.name }}<small>{{ 'Finalizou antes do encerramento' if row.finished_at else 'Em andamento' if ctf else 'Encerrado pelo admin/limite de tempo' }}</small></span>
+                <strong>{{ row.points }} <small>PTS</small></strong>
+                <time>{{ '%02d:%02d:%02d'|format(row.elapsed // 3600, (row.elapsed % 3600) // 60, row.elapsed % 60) }}</time>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}<div class="admin-empty"><span>◎</span><strong>A disputa começa com o primeiro participante.</strong><p>Inicie um CTF e compartilhe o código do evento.</p></div>{% endif %}
+      </section>
+
+      <section class="admin-panel admin-archive-panel">
+        <div class="admin-panel-heading"><div><p class="section-kicker">RESULTADOS PRESERVADOS</p><h2>Arquivo de CTFs</h2></div><span>{{ history|length }} eventos</span></div>
+        <div class="admin-archive-list">
+          {% for item in history %}
+            <article class="admin-archive-card">
+              <div class="archive-code-mark">CTF</div>
+              <div class="archive-card-main"><strong>{{ item.ctf.code }}</strong><span><time data-datetime="{{ item.ctf.created_at }}">{{ item.ctf.created_at }}</time> · {{ item.participants }} participantes</span></div>
+              <span class="archive-status">{{ item.ctf.status }}</span>
+              <a href="{{ url_for('ctf_archive_page', ctf_id=item.ctf.id) }}" aria-label="Ver classificação e dashboard salvo {{ item.ctf.code }}">Ver resultados ↗</a>
+              {% if item.ctf.status == 'FINALIZADO' %}
+                <button type="button" class="archive-delete-trigger" data-ctf-id="{{ item.ctf.id }}" data-ctf-code="{{ item.ctf.code }}" aria-label="Excluir dashboard {{ item.ctf.code }}">×</button>
+              {% endif %}
+            </article>
+          {% else %}<p class="admin-archive-empty">Os eventos encerrados aparecerão aqui com suas classificações salvas.</p>{% endfor %}
+        </div>
+      </section>
     </div>
-    <div class="admin-actions">
-      <form method="post" action="{{ url_for('generate_ctf') }}">
-        <label for="max-duration">Duração máxima do CTF (minutos; deixe vazio para não limitar)</label>
-        <input id="max-duration" name="max_duration_minutes" type="number" min="1" max="1440" value="60" placeholder="60" />
-        <button type="submit" class="primary-btn">GERAR NOVO CTF</button>
-      </form>
-      {% if ctf %}
-      <form method="post" action="{{ url_for('finalize_ctf') }}">
-        <button type="submit" class="danger-btn">FINALIZAR CTF</button>
-      </form>
-      {% endif %}
-      <a href="{{ url_for('admin_logout') }}" class="link-btn">Sair</a>
-    </div>
-  </div>
 
-  {% if admin_notice %}<div class="notice warning">{{ admin_notice }}</div>{% endif %}
-
-  <div class="panel stats-panel">
-    <div>Participantes: <strong>{{ participant_count }}</strong></div>
-    <div>Em andamento: <strong>{{ active_count }}</strong></div>
-    <div>Finalizados: <strong>{{ finished_count }}</strong></div>
+    <aside class="admin-side-column">
+      <section class="admin-panel create-event-panel">
+        <p class="section-kicker">NOVA DISPUTA</p><h2>Preparar CTF</h2>
+        <p>Gere um código de acesso para começar uma nova competição.</p>
+        <form method="post" action="{{ url_for('generate_ctf') }}">
+          <label for="max-duration">Duração máxima</label>
+          <div class="duration-input"><input id="max-duration" name="max_duration_minutes" type="number" min="1" max="1440" value="60" placeholder="60" /><span>minutos</span></div>
+          <small>De 1 a 1440 minutos. Use 60 para uma hora.</small>
+          <button type="submit" class="create-event-button">GERAR CÓDIGO <span>↗</span></button>
+        </form>
+        {% if ctf %}
+          <div class="admin-current-code"><small>CÓDIGO PARA COMPARTILHAR</small><strong>{{ ctf.code }}</strong>{% if ctf.max_duration_minutes %}<span>Limite: {{ ctf.max_duration_minutes }} min</span>{% endif %}</div>
+          <button type="button" class="danger-btn finalize-open" id="finalize-open">ENCERRAR EVENTO</button>
+        {% endif %}
+      </section>
+      <div class="admin-side-note"><span>LEMBRETE</span><p>Ao gerar um novo evento, o CTF ativo será encerrado e salvo automaticamente no arquivo.</p></div>
+    </aside>
   </div>
+  <footer class="admin-footer"><span>JACITEC CYBER GAMES · PAINEL ADMINISTRATIVO</span><a href="{{ url_for('ctf_home') }}">Ir para o site público ↗</a></footer>
 
-  <div class="panel leaderboard-panel">
-    <h2>RANKING</h2>
-    <ol>
-      {% for row in ranking[:10] %}
-      <li>{{ row.name }} — {{ row.points }} pts — {{ row.elapsed // 3600 }}:{{ '%02d' % ((row.elapsed % 3600) // 60) }}:{{ '%02d' % (row.elapsed % 60) }} — {{ 'Finalizou antes do encerramento' if row.finished_at else 'Em andamento' if ctf else 'Encerrado pelo administrador/tempo limite' }}</li>
-      {% else %}
-      <li>Nenhum participante registrado ainda.</li>
-      {% endfor %}
-    </ol>
-  </div>
+  <dialog class="admin-confirm-dialog" id="finalize-dialog" aria-labelledby="finalize-dialog-title">
+    <form method="post" action="{{ url_for('finalize_ctf') }}">
+      <span class="confirm-icon">!</span>
+      <p class="section-kicker">CONFIRMAÇÃO</p>
+      <h2 id="finalize-dialog-title">Encerrar este CTF?</h2>
+      <p>O evento <strong>{{ ctf.code if ctf else '' }}</strong> será finalizado imediatamente. Participantes ativos verão a tela de encerramento e poderão abrir o resultado arquivado.</p>
+      <div class="confirm-actions"><button type="button" class="confirm-cancel" data-dialog-close>Continuar evento</button><button type="submit" class="confirm-danger">Sim, encerrar CTF</button></div>
+    </form>
+  </dialog>
 
-  <div class="panel history-panel">
-    <h2>CTFs anteriores</h2>
-    {% for item in history %}
-      <div class="history-item">
-        <strong>{{ item.ctf.code }}</strong>
-        <span>Criado: <time data-datetime="{{ item.ctf.created_at }}">{{ item.ctf.created_at }}</time></span>
-        {% if item.ctf.finished_at %}<span>Finalizado: <time data-datetime="{{ item.ctf.finished_at }}">{{ item.ctf.finished_at }}</time></span>{% endif %}
-        <span>Participantes: {{ item.participants }}</span>
-        <span>Status: {{ item.ctf.status }}</span>
-        <a class="secondary-btn" href="{{ url_for('ctf_archive_page', ctf_id=item.ctf.id) }}">Ver dashboard salvo</a>
-      </div>
-    {% else %}
-      <p>Nenhum CTF finalizado ainda.</p>
-    {% endfor %}
-  </div>
-</section>
+  <dialog class="admin-confirm-dialog" id="delete-dialog" aria-labelledby="delete-dialog-title">
+    <form method="post" id="delete-archive-form" action="">
+      <span class="confirm-icon delete-icon">×</span>
+      <p class="section-kicker">AÇÃO PERMANENTE</p>
+      <h2 id="delete-dialog-title">Excluir dashboard arquivado?</h2>
+      <p>Isso apagará <strong id="delete-ctf-code"></strong>, participantes, pontuações, dicas e logs associados. Essa ação não pode ser desfeita.</p>
+      <div class="confirm-actions"><button type="button" class="confirm-cancel" data-dialog-close>Cancelar</button><button type="submit" class="confirm-danger">Excluir permanentemente</button></div>
+    </form>
+  </dialog>
+
+  <script>
+    (() => {
+      const finalizeDialog = document.getElementById('finalize-dialog');
+      const deleteDialog = document.getElementById('delete-dialog');
+      document.getElementById('finalize-open')?.addEventListener('click', () => finalizeDialog.showModal());
+      document.querySelectorAll('[data-dialog-close]').forEach((button) => button.addEventListener('click', () => button.closest('dialog').close()));
+      document.querySelectorAll('.archive-delete-trigger').forEach((button) => button.addEventListener('click', () => {
+        document.getElementById('delete-ctf-code').textContent = button.dataset.ctfCode;
+        document.getElementById('delete-archive-form').action = `/admin/ctf/${button.dataset.ctfId}/delete`;
+        deleteDialog.showModal();
+      }));
+    })();
+  </script>
+</main>
 {% endblock %}

@@ -1,40 +1,50 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="auth-box">
-  <div class="brand-block">
-    <h1>JACITEC CTF</h1>
-    <p>Capture The Flag 2026</p>
-  </div>
+<main class="landing-page">
+  <header class="landing-nav">
+    <a href="{{ url_for('ctf_home') }}" class="landing-brand"><span class="brand-symbol">J</span><span>JACITEC <small>CYBER GAMES</small></span></a>
+    <nav aria-label="Navegação principal">
+      <a href="#como-funciona">Como funciona</a>
+      <a href="{{ url_for('public_ranking_page') }}">Classificação</a>
+    </nav>
+    <div class="event-indicator {% if ctf %}is-live{% endif %}"><span></span>{{ 'CTF AO VIVO' if ctf else 'AGUARDANDO PRÓXIMO CTF' }}</div>
+  </header>
 
-  {% if error %}
-    <div class="notice error">{{ error }}</div>
-  {% endif %}
+  {% if error %}<div class="landing-error notice error">{{ error }}</div>{% endif %}
 
-  <form method="post" action="{{ url_for('join_ctf') }}">
-    <label for="name">Nome</label>
-    <input id="name" name="name" type="text" placeholder="Seu nome" required />
+  <section class="landing-hero">
+    <div class="hero-copy">
+      <p class="eyebrow-line"><span>01</span> DESAFIE SUA CURIOSIDADE</p>
+      <h1>O próximo nível<br>começa com <em>uma pista.</em></h1>
+      <p class="hero-description">Investigue aplicações, encontre vulnerabilidades e capture as flags. Uma experiência prática de segurança web, feita para aprender jogando.</p>
+      <div class="hero-actions">
+        <a href="{{ url_for('participation_page') }}" class="hero-primary">Participar do CTF <span>↗</span></a>
+        <a href="{{ url_for('public_ranking_page') }}" class="hero-secondary">Ver classificação <span>→</span></a>
+      </div>
+      <div class="hero-proof"><span class="proof-dots"><i></i><i></i><i></i></span><span>8 desafios · do básico ao avançado</span></div>
+    </div>
 
-    <label for="code">Código do CTF</label>
-    <input id="code" name="code" type="text" placeholder="JCTF-XXXX" required />
+    <div class="hero-art" aria-hidden="true">
+      <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+      <div class="hero-crosshair">+</div>
+      <div class="terminal-card">
+        <div class="terminal-top"><span></span><span></span><span></span><b>terminal — ctf</b></div>
+        <div class="terminal-body"><p><span class="terminal-muted">participante@jacitec</span>:~$ iniciar investigação</p><p class="terminal-output">Conexão segura estabelecida</p><p class="terminal-output">8 desafios encontrados<span class="terminal-cursor">_</span></p><div class="terminal-progress"><span></span></div><small>PROGRESSO DO SISTEMA <b>01 / 08</b></small></div>
+      </div>
+      <div class="floating-tag tag-flag"><span>✳</span> FLAG ENCONTRADA</div>
+      <div class="floating-tag tag-score"><strong>+10</strong><span> pontos</span></div>
+      <div class="hero-orb"></div>
+    </div>
+  </section>
 
-    <button type="submit" class="primary-btn">ENTRAR NO CTF</button>
-  </form>
+  <section class="landing-bottom" id="como-funciona">
+    <div class="landing-note"><span class="note-index">01 / COMEÇAR</span><p>Entre com seu nome e o código compartilhado pelo administrador.</p></div>
+    <div class="landing-note"><span class="note-index">02 / INVESTIGAR</span><p>Explore os sites de laboratório. Cada detalhe pode esconder uma pista.</p></div>
+    <div class="landing-note"><span class="note-index">03 / CAPTURAR</span><p>Envie as flags, acompanhe seus pontos e suba na classificação.</p></div>
+  </section>
 
-  <div class="divider"></div>
-
-  <a class="secondary-btn" href="{{ url_for('public_ranking_page') }}">🏆 TABELA</a>
-  <a class="tiny-link" href="{{ url_for('admin_login_page') }}">Admin</a>
-</section>
-
-<section class="tool-box">
-  <h2>Ferramentas recomendadas</h2>
-  <ul>
-    <li><strong>🌐 Navegador:</strong> Chrome, Firefox ou Edge.</li>
-    <li><strong>🛠️ DevTools:</strong> Elements, Console, Network, Application e Sources.</li>
-    <li><strong>🔎 Burp Suite:</strong> Community é suficiente para os desafios web.</li>
-    <li><strong>💻 Terminal:</strong> útil para testes simples e encoding.</li>
-    <li><strong>🔐 Encoding:</strong> Base64, URL e ferramentas rápidas de decode.</li>
-  </ul>
-</section>
+  <footer class="landing-footer"><span>JACITEC CYBER GAMES</span><span>APRENDA · INVESTIGUE · EVOLUA</span><span>2026</span></footer>
+  <a class="admin-stealth-link" href="{{ url_for('admin_login_page') }}" aria-label="Acesso administrativo">Equipe · Admin ↗</a>
+</main>
 {% endblock %}

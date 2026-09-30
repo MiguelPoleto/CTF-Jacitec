@@ -1,49 +1,69 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<section class="leaderboard-card archive-board">
-  <div class="board-header">
-    <div>
-      <p class="panel-eyebrow">ARQUIVO DO CTF</p>
-      <h1>🏆 {{ ctf.code }}</h1>
+<main class="archive-page">
+  <header class="archive-nav">
+    <a href="{{ url_for('ctf_home') }}" class="landing-brand"><span class="brand-symbol">J</span><span>JACITEC <small>CYBER GAMES</small></span></a>
+    <div class="archive-nav-actions"><span class="archive-nav-label">RESULTADO ARQUIVADO</span><a href="{{ url_for('public_ranking_page') }}">Todos os eventos ↗</a></div>
+  </header>
+
+  <section class="archive-hero">
+    <div class="archive-hero-copy">
+      <p class="eyebrow-line"><span>PLACAR OFICIAL</span> · EVENTO ENCERRADO</p>
+      <h1>{{ ctf.code }}</h1>
+      <p>Classificação final e resumo das atividades desta edição.</p>
     </div>
-    <a href="{{ url_for('public_ranking_page') }}" class="link-btn">Voltar ao ranking atual</a>
-  </div>
+    <div class="archive-status-card"><span class="archive-status-symbol">✓</span><div><small>STATUS DO EVENTO</small><strong>{{ 'CTF EM ANDAMENTO' if ctf.status == 'ATIVO' else 'FINALIZADO' }}</strong></div></div>
+  </section>
 
-  <div class="ctf-summary">
-    <span>Status: <strong>{{ ctf.status }}</strong></span>
-    <span>Iniciado: <time data-datetime="{{ ctf.created_at }}">{{ ctf.created_at }}</time></span>
-    {% if ctf.finished_at %}<span>Encerrado: <time data-datetime="{{ ctf.finished_at }}">{{ ctf.finished_at }}</time></span>{% endif %}
-    {% if ctf.max_duration_minutes %}<span>Duração máxima: <strong>{{ ctf.max_duration_minutes }} min</strong></span>{% endif %}
-    <span>Participantes: <strong>{{ ranking|length }}</strong></span>
-  </div>
+  <section class="archive-metrics">
+    <article><span>PARTICIPANTES</span><strong>{{ ranking|length }}</strong></article>
+    <article><span>INÍCIO</span><strong><time data-datetime="{{ ctf.created_at }}">{{ ctf.created_at }}</time></strong></article>
+    <article><span>ENCERRAMENTO</span><strong>{% if ctf.finished_at %}<time data-datetime="{{ ctf.finished_at }}">{{ ctf.finished_at }}</time>{% else %}Ainda ativo{% endif %}</strong></article>
+    <article><span>DURAÇÃO MÁXIMA</span><strong>{{ ctf.max_duration_minutes ~ ' min' if ctf.max_duration_minutes else 'Sem limite' }}</strong></article>
+  </section>
 
-  <h2>Classificação salva</h2>
-  <div class="table-scroll">
-    <table>
-      <thead><tr><th>Posição</th><th>Participante</th><th>Pontos</th><th>Tempo</th><th>Desafios</th><th>Status</th><th>Detalhes</th></tr></thead>
-      <tbody>
-        {% for row in ranking %}
-          <tr class="{% if loop.index == 1 %}podium-first{% elif loop.index == 2 %}podium-second{% elif loop.index == 3 %}podium-third{% endif %}">
-            <td>{{ loop.index }}</td>
-            <td>{{ row.name }}</td>
-            <td>{{ row.points }}</td>
-            <td>{{ '%02d:%02d:%02d'|format(row.elapsed // 3600, (row.elapsed % 3600) // 60, row.elapsed % 60) }}</td>
-            <td>{{ row.challenge_count }} / {{ challenge_list|length }}</td>
-            <td>{{ row.participation_status }}</td>
-            <td><details class="archive-details"><summary>Ver respostas</summary>
-              <ul>
-                {% for result in row.challenge_results %}
-                  <li><strong>{{ result.name }}</strong> · {{ 'Resolvido' if result.status == 'solved' else 'Pulado' if result.status == 'skipped' else 'Não resolvido' }} · {{ result.score_earned }} pts · {{ result.hints_used }} dicas{% if result.solved_at %} · <time data-datetime="{{ result.solved_at }}">{{ result.solved_at }}</time>{% endif %}</li>
-                {% endfor %}
-              </ul>
-            </details></td>
-          </tr>
-        {% else %}
-          <tr><td colspan="7">Este CTF não teve participantes registrados.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
+  <section class="archive-results-panel">
+    <div class="archive-section-heading">
+      <div><p class="section-kicker">RESULTADO PRESERVADO</p><h2>Classificação final</h2></div>
+      <span>{{ ranking|length }} participantes</span>
+    </div>
+    <div class="archive-table-wrap">
+      <table class="archive-results-table">
+        <thead><tr><th>POSIÇÃO</th><th>PARTICIPANTE</th><th>PONTOS</th><th>TEMPO</th><th>DESAFIOS RESOLVIDOS</th><th>STATUS</th></tr></thead>
+        <tbody>
+          {% for row in ranking %}
+            <tr class="{% if loop.index == 1 %}archive-first{% elif loop.index == 2 %}archive-second{% elif loop.index == 3 %}archive-third{% endif %}">
+              <td><span class="archive-position">{% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ '%02d'|format(loop.index) }}{% endif %}</span></td>
+              <td><strong class="archive-participant-name">{{ row.name }}</strong></td>
+              <td><strong class="archive-points">{{ row.points }} <small>PTS</small></strong></td>
+              <td><time class="archive-elapsed">{{ '%02d:%02d:%02d'|format(row.elapsed // 3600, (row.elapsed % 3600) // 60, row.elapsed % 60) }}</time></td>
+              <td>{{ row.challenge_count }} <span class="archive-muted">/ {{ challenge_list|length }}</span></td>
+              <td><span class="archive-participant-status {% if row.finished_at %}participant-ended{% endif %}">{{ row.participation_status }}</span></td>
+            </tr>
+            <tr class="archive-detail-row"><td colspan="6">
+              <details class="archive-challenge-details">
+                <summary>Ver resumo dos desafios <span>＋</span></summary>
+                <div class="archive-challenge-grid">
+                  {% for result in row.challenge_results %}
+                    <article class="archive-challenge-card {% if result.status == 'solved' %}challenge-solved{% endif %}">
+                      <div><strong>{{ '%02d'|format(loop.index) }}</strong><span>{{ 'Resolvido' if result.status == 'solved' else 'Pulado' if result.status == 'skipped' else 'Não resolvido' }}</span></div>
+                      <h3>{{ result.name }}</h3>
+                      <p>{{ result.score_earned }} pts · {{ result.hints_used }} dicas</p>
+                      {% if result.solved_at %}<time data-datetime="{{ result.solved_at }}">{{ result.solved_at }}</time>{% endif %}
+                    </article>
+                  {% endfor %}
+                </div>
+              </details>
+            </td></tr>
+          {% else %}
+            <tr><td colspan="6" class="archive-empty-state">Este CTF não teve participantes registrados.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="archive-footer"><a href="{{ url_for('ctf_home') }}">← Voltar ao início</a><span>JACITEC CYBER GAMES · {{ ctf.code }}</span><a href="{{ url_for('public_ranking_page') }}">Ver todos os eventos →</a></footer>
+</main>
 {% endblock %}

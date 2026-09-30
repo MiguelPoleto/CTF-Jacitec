@@ -240,6 +240,29 @@ def ctf_remaining_seconds(ctf):
     return max(0, int(started.timestamp() + ctf["max_duration_minutes"] * 60 - datetime.now(timezone.utc).timestamp()))
 
 
+def participant_event_summary(participant_id):
+    if not participant_id:
+        return None
+    conn = get_db()
+    participant = conn.execute(
+        "SELECT id, ctf_id, finished_at FROM participants WHERE id = ?",
+        (participant_id,),
+    ).fetchone()
+    if not participant:
+        conn.close()
+        return None
+    ctf = conn.execute("SELECT id, code, status FROM ctfs WHERE id = ?", (participant["ctf_id"],)).fetchone()
+    conn.close()
+    if not ctf:
+        return None
+    return {
+        "ctf_id": ctf["id"],
+        "code": ctf["code"],
+        "ctf_status": ctf["status"],
+        "participant_finished": bool(participant["finished_at"]),
+    }
+
+
 def participant_is_active(participant_id, ctf=None):
     ctf = ctf or current_ctf()
     if not participant_id or not ctf:
@@ -431,21 +454,13 @@ def create_app(testing=False):
         session.pop("participant_name", None)
         return render_template("index.html", ctf=current_ctf())
 
-    @app.get("/desafios")
-    def challenge_index():
-        return redirect(url_for("participant_dashboard"))
-
-    @app.get("/challenge/<int:challenge_id>")
-    def challenge_detail(challenge_id):
-        return redirect(url_for("participant_dashboard", challenge=challenge_id))
+    @app.get("/participar")
+    def participation_page():
+        return render_template("participate.html", ctf=current_ctf())
 
     @app.get("/lab/2/robots.txt")
     def lab_robots():
         return "User-agent: *\nDisallow: /lab/2/files/report\n", 200, {"Content-Type": "text/plain; charset=utf-8"}
-
-    @app.get("/lab/2/arquivos/relatorio")
-    def lab_hidden_report():
-        return render_template("lab_hidden_report.html")
 
     @app.get("/lab/<int:challenge_id>")
     def lab_page(challenge_id):
@@ -465,10 +480,17 @@ def create_app(testing=False):
 
     @app.get("/lab/<int:challenge_id>/<path:page>")
     def lab_subpage(challenge_id, page):
-        if challenge_id == 2 and page == "robots.txt":
-            return lab_robots()
         if challenge_id == 2 and page == "files/report":
-            return render_template("lab_hidden_report.html")
+            challenge = CHALLENGES[1]
+            return render_template("lab_site.html", challenge=challenge, ctf=current_ctf(), page=page)
+        if challenge_id == 8 and page == "audit-log":
+            return jsonify({
+                "system": "ReservaFácil / exportação de auditoria",
+                "entries": [
+                    {"event": "reserva.criada", "resource": "sala-reuniao-2"},
+                    {"event": "nota_migracao_legada", "reference": CHALLENGES[7]["flags"][0]},
+                ],
+            })
         challenge = next((item for item in CHALLENGES if item["id"] == challenge_id), None)
         if not challenge:
             return redirect(url_for("participant_dashboard"))
@@ -476,16 +498,6 @@ def create_app(testing=False):
         if challenge_id == 5:
             response.headers["X-Campus-Notice"] = challenge["flags"][0]
         return response
-
-    @app.get("/lab/8/audit-log")
-    def lab_booking_audit_log():
-        return jsonify({
-            "system": "ReservaFácil / exportação de auditoria",
-            "entries": [
-                {"event": "reserva.criada", "resource": "sala-reuniao-2"},
-                {"event": "nota_migracao_legada", "reference": CHALLENGES[7]["flags"][0]},
-            ],
-        })
 
     @app.get("/lab/6/profile/<int:profile_id>")
     def lab_profile(profile_id):
@@ -513,11 +525,11 @@ def create_app(testing=False):
         code = (request.form.get("code") or "").strip().upper()
         ctf = current_ctf()
         if not ctf:
-            return render_template("index.html", error="Nenhum CTF está ativo no momento. Aguarde o administrador iniciar a competição.")
+            return render_template("participate.html", ctf=ctf, error="Nenhum CTF está ativo no momento. Aguarde o administrador iniciar a competição.")
         if not name:
-            return render_template("index.html", error="Informe o seu nome para entrar no CTF.", ctf=ctf)
+            return render_template("participate.html", error="Informe o seu nome para entrar no CTF.", ctf=ctf)
         if ctf["code"] != code:
-            return render_template("index.html", error="Código do CTF inválido.", ctf=ctf)
+            return render_template("participate.html", error="Token de entrada inválido.", ctf=ctf)
 
         conn = get_db()
         existing = conn.execute(
@@ -601,14 +613,20 @@ def create_app(testing=False):
         ctf = current_ctf()
         if not participant_id:
             return jsonify({"error": "Sessão expirada"}), 401
-        if not ctf:
-            return jsonify({"status": "FINALIZADO", "redirect": url_for("public_ranking_page")}), 409
+        event = participant_event_summary(participant_id)
+        if not event:
+            return jsonify({"error": "Participação não encontrada"}), 404
+        if not ctf or event["ctf_id"] != ctf["id"] or event["participant_finished"]:
+            return jsonify({
+                "status": "FINALIZADO",
+                "code": event["code"],
+                "ranking_url": url_for("ctf_archive_page", ctf_id=event["ctf_id"]),
+                "home_url": url_for("ctf_home"),
+            }), 409
 
         conn = get_db()
         participant = conn.execute("SELECT * FROM participants WHERE id = ?", (participant_id,)).fetchone()
         conn.close()
-        if not participant or participant["ctf_id"] != ctf["id"] or participant["finished_at"]:
-            return jsonify({"status": "FINALIZADO", "redirect": url_for("public_ranking_page")}), 409
 
         stats = get_participant_stats(participant_id)
         challenge_states = []
@@ -636,7 +654,10 @@ def create_app(testing=False):
         if not participant_id:
             return jsonify({"error": "Sessão expirada"}), 401
         if not participant_is_active(participant_id):
-            return jsonify({"status": "FINALIZADO", "redirect": url_for("public_ranking_page")}), 409
+            event = participant_event_summary(participant_id)
+            if not event:
+                return jsonify({"error": "Participação não encontrada"}), 404
+            return jsonify({"status": "FINALIZADO", "code": event["code"], "ranking_url": url_for("ctf_archive_page", ctf_id=event["ctf_id"]), "home_url": url_for("ctf_home")}), 409
         challenge = next((item for item in CHALLENGES if item["id"] == challenge_id), None)
         if not challenge:
             return jsonify({"error": "Desafio não encontrado"}), 404
@@ -664,7 +685,10 @@ def create_app(testing=False):
         if not participant_id:
             return jsonify({"error": "Sessão expirada"}), 401
         if not participant_is_active(participant_id):
-            return jsonify({"status": "FINALIZADO", "redirect": url_for("public_ranking_page")}), 409
+            event = participant_event_summary(participant_id)
+            if not event:
+                return jsonify({"error": "Participação não encontrada"}), 404
+            return jsonify({"status": "FINALIZADO", "code": event["code"], "ranking_url": url_for("ctf_archive_page", ctf_id=event["ctf_id"]), "home_url": url_for("ctf_home")}), 409
         challenge = next((item for item in CHALLENGES if item["id"] == challenge_id), None)
         if not challenge:
             return jsonify({"error": "Desafio não encontrado"}), 404
@@ -686,105 +710,18 @@ def create_app(testing=False):
         log_event(current_ctf()["id"], participant_id, "flag_correct", f"challenge:{challenge_id}:{score}")
         return jsonify({"solved": True, "points": score, "message": f"Correto! +{score} pontos."})
 
-    @app.post("/dashboard/flag")
-    def submit_flag():
-        participant_id = session.get("participant_id")
-        if not participant_id:
-            return redirect(url_for("index"))
-        if not current_ctf():
-            return redirect(url_for("public_ranking_page"))
-        challenge_id = int(request.form.get("challenge_id", 0))
-        submitted_values = []
-        direct = (request.form.get("flag") or "").strip()
-        if direct:
-            submitted_values.append(direct)
-        for index in range(1, 6):
-            value = (request.form.get(f"flag_{index}") or "").strip()
-            if value:
-                submitted_values.append(value)
-        challenge = next((item for item in CHALLENGES if item["id"] == challenge_id), None)
-        if not challenge:
-            return redirect(url_for("participant_dashboard"))
-        rec = challenge_record(participant_id, challenge_id)
-        if rec["status"] == "solved":
-            return redirect(url_for("participant_dashboard"))
-        if any(submitted.upper() in [flag.upper() for flag in challenge["flags"]] for submitted in submitted_values):
-            score = challenge_points_for_hint(challenge, rec["hints_used"])
-            conn = get_db()
-            conn.execute(
-                "UPDATE participant_challenges SET status='solved', score_earned=?, solved_at=? WHERE participant_id=? AND challenge_id=?",
-                (score, timestamp_now(), participant_id, challenge_id),
-            )
-            conn.commit()
-            conn.close()
-            log_event(current_ctf()["id"], participant_id, "flag_correct", f"challenge:{challenge_id}:{score}")
-            return redirect(url_for("participant_dashboard"))
-        attempted = ";".join(submitted_values)
-        log_event(current_ctf()["id"] if current_ctf() else None, participant_id, "flag_incorrect", f"challenge:{challenge_id}:{attempted}")
-        return redirect(url_for("participant_dashboard"))
-
-    @app.post("/dashboard/hint")
-    def use_hint():
-        participant_id = session.get("participant_id")
-        if not participant_id:
-            return redirect(url_for("index"))
-        if not current_ctf():
-            return redirect(url_for("public_ranking_page"))
-        challenge_id = int(request.form.get("challenge_id", 0))
-        challenge = next((item for item in CHALLENGES if item["id"] == challenge_id), None)
-        if not challenge:
-            return redirect(url_for("participant_dashboard"))
-        rec = challenge_record(participant_id, challenge_id)
-        if rec["status"] == "solved":
-            return redirect(url_for("participant_dashboard"))
-        new_hints_used = min(rec["hints_used"] + 1, len(challenge["hints"]))
-        conn = get_db()
-        conn.execute(
-            "UPDATE participant_challenges SET hints_used = ?, status = CASE WHEN status='open' THEN 'open' ELSE status END WHERE participant_id = ? AND challenge_id = ?",
-            (new_hints_used, participant_id, challenge_id),
-        )
-        conn.commit()
-        conn.close()
-        log_event(current_ctf()["id"] if current_ctf() else None, participant_id, "hint_used", f"challenge:{challenge_id}:{new_hints_used}")
-        return redirect(url_for("participant_dashboard"))
-
-    @app.post("/dashboard/skip")
-    def skip_challenge():
-        participant_id = session.get("participant_id")
-        if not participant_id:
-            return redirect(url_for("index"))
-        if not current_ctf():
-            return redirect(url_for("public_ranking_page"))
-        challenge_id = int(request.form.get("challenge_id", 0))
-        rec = challenge_record(participant_id, challenge_id)
-        if rec["status"] == "solved":
-            return redirect(url_for("participant_dashboard"))
-        conn = get_db()
-        conn.execute(
-            "UPDATE participant_challenges SET status='skipped', score_earned=0, skipped_at=? WHERE participant_id=? AND challenge_id=?",
-            (timestamp_now(), participant_id, challenge_id),
-        )
-        conn.commit()
-        conn.close()
-        log_event(current_ctf()["id"] if current_ctf() else None, participant_id, "challenge_skipped", f"challenge:{challenge_id}")
-        return redirect(url_for("participant_dashboard"))
-
     @app.post("/dashboard/finish")
     def finish_participation():
         participant_id = session.get("participant_id")
         if not participant_id:
             return redirect(url_for("index"))
         ctf = current_ctf()
-        if not ctf:
+        if not ctf or not participant_is_active(participant_id, ctf):
             return redirect(url_for("public_ranking_page"))
         conn = get_db()
-        participant = conn.execute("SELECT ctf_id FROM participants WHERE id = ?", (participant_id,)).fetchone()
-        if not participant or participant["ctf_id"] != ctf["id"]:
-            conn.close()
-            return redirect(url_for("public_ranking_page"))
         conn.execute(
-            "UPDATE participants SET finished_at = ? WHERE id = ?",
-            (timestamp_now(), participant_id),
+            "UPDATE participants SET finished_at = ? WHERE id = ? AND ctf_id = ?",
+            (timestamp_now(), participant_id, ctf["id"]),
         )
         conn.commit()
         conn.close()
@@ -857,6 +794,34 @@ def create_app(testing=False):
             ]
         return render_template("ctf_archive.html", ctf=ctf, ranking=ranking)
 
+    @app.post("/admin/ctf/<int:ctf_id>/delete")
+    def delete_ctf_archive(ctf_id):
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        conn = get_db()
+        ctf = conn.execute("SELECT status FROM ctfs WHERE id = ?", (ctf_id,)).fetchone()
+        if not ctf:
+            conn.close()
+            session["admin_notice"] = "Esse CTF não existe ou já foi excluído."
+            return redirect(url_for("admin_dashboard"))
+        if ctf["status"] == "ATIVO":
+            conn.close()
+            session["admin_notice"] = "Não é possível excluir um CTF ativo. Finalize o evento primeiro."
+            return redirect(url_for("admin_dashboard"))
+        participant_ids = conn.execute("SELECT id FROM participants WHERE ctf_id = ?", (ctf_id,)).fetchall()
+        ids = [row["id"] for row in participant_ids]
+        if ids:
+            placeholders = ",".join("?" for _ in ids)
+            conn.execute(f"DELETE FROM participant_challenges WHERE participant_id IN ({placeholders})", ids)
+            conn.execute(f"DELETE FROM logs WHERE participant_id IN ({placeholders})", ids)
+        conn.execute("DELETE FROM logs WHERE ctf_id = ?", (ctf_id,))
+        conn.execute("DELETE FROM participants WHERE ctf_id = ?", (ctf_id,))
+        conn.execute("DELETE FROM ctfs WHERE id = ?", (ctf_id,))
+        conn.commit()
+        conn.close()
+        session["admin_notice"] = "Dashboard arquivado e dados do CTF excluídos."
+        return redirect(url_for("admin_dashboard"))
+
     @app.get("/api/ctf-history")
     def api_ctf_history():
         return jsonify({"ctfs": ctf_history()})
@@ -887,28 +852,20 @@ def create_app(testing=False):
             return redirect(url_for("admin_login_page"))
         ctf = current_ctf()
         admin_notice = session.pop("admin_notice", None)
-        history = []
         conn = get_db()
-        history_rows = conn.execute("SELECT * FROM ctfs ORDER BY created_at DESC").fetchall()
+        history_rows = conn.execute("SELECT * FROM ctfs ORDER BY created_at DESC, id DESC").fetchall()
+        history = []
         for item in history_rows:
-            item_conn = get_db()
-            participant_count = item_conn.execute("SELECT COUNT(*) as total FROM participants WHERE ctf_id = ?", (item["id"],)).fetchone()["total"]
-            item_conn.close()
-            history.append({
-                "ctf": dict(item),
-                "participants": participant_count,
-            })
+            participant_count = conn.execute(
+                "SELECT COUNT(*) AS total FROM participants WHERE ctf_id = ?",
+                (item["id"],),
+            ).fetchone()["total"]
+            history.append({"ctf": dict(item), "participants": participant_count})
         conn.close()
-        if ctf:
-            ranking = participant_ranking(ctf["id"])
-            participant_count = len(ranking)
-            active_count = sum(1 for row in ranking if not row["finished_at"])
-            finished_count = sum(1 for row in ranking if row["finished_at"])
-        else:
-            ranking = []
-            participant_count = 0
-            active_count = 0
-            finished_count = 0
+        ranking = participant_ranking(ctf["id"]) if ctf else []
+        participant_count = len(ranking)
+        active_count = sum(1 for row in ranking if not row["finished_at"])
+        finished_count = sum(1 for row in ranking if row["finished_at"])
         return render_template(
             "admin_dashboard.html",
             ctf=ctf,
