@@ -41,11 +41,11 @@ def test_finished_ctf_redirect_and_history_are_exposed(monkeypatch, tmp_path):
 
     home_after_finish = client.get('/', follow_redirects=True)
     assert home_after_finish.request.path == '/'
-    assert b'JACITEC CYBER GAMES' in home_after_finish.data
+    assert b'JACITEC CTF' in home_after_finish.data
     assert b'href="/inicio"' in client.get('/ranking').data
     explicit_home = client.get('/inicio', follow_redirects=False)
     assert explicit_home.status_code == 200
-    assert b'JACITEC CYBER GAMES' in explicit_home.data
+    assert b'JACITEC CTF' in explicit_home.data
 
     history = client.get('/api/ctf-history').get_json()
     assert history['ctfs']
@@ -151,7 +151,7 @@ def test_participant_can_confirm_finish_without_ending_global_ctf(monkeypatch, t
     jordan = next(row for row in ranking if row['name'] == 'Jordan')
     assert jordan['participation_status'] == 'Finalizou antes do encerramento'
     home_response = client.get('/inicio')
-    assert b'JACITEC CYBER GAMES' in home_response.data
+    assert b'JACITEC CTF' in home_response.data
     rejoin_response = client.post('/join', data={'name': 'Jordan', 'code': ctf_code}, follow_redirects=False)
     assert rejoin_response.status_code == 302
     assert rejoin_response.headers['Location'].endswith('/dashboard')

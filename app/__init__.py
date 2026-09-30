@@ -1,5 +1,6 @@
 import os
 import random
+import re
 import sqlite3
 import string
 import base64
@@ -134,6 +135,254 @@ CHALLENGES = [
     },
 ]
 
+# Catálogos independentes permitem reaproveitar a plataforma em várias edições
+# sem revelar ao organizador qual atividade específica será sorteada.  A primeira
+# lista mantém os oito laboratórios originais para preservar as edições já criadas.
+for _challenge in CHALLENGES:
+    _challenge["list_id"] = "lista-1"
+    _challenge["mechanism"] = "legacy"
+for _challenge_id, _mechanism in {1: "source", 2: "robots", 3: "base64", 4: "js", 5: "header", 6: "idor", 7: "search", 8: "audit"}.items():
+    CHALLENGES[_challenge_id - 1]["mechanism"] = _mechanism
+CHALLENGES[4]["difficulty"] = "Médio"
+CHALLENGES[7]["difficulty"] = "Difícil"
+
+_EXTRA_CHALLENGES = [
+    (9, "Rascunho esquecido", "Fácil", "source", "O portal editorial deixou um rascunho no HTML."),
+    (10, "Manifesto público", "Fácil", "manifest", "Um arquivo de configuração do navegador contém uma pista."),
+    (11, "Metadados da galeria", "Fácil", "metadata", "A ficha de uma imagem tem mais dados que a tela mostra."),
+    (12, "Resposta temporária", "Fácil", "header", "Um serviço devolve uma pista apenas nos cabeçalhos HTTP."),
+    (13, "Parâmetro perdido", "Médio", "idor", "Um identificador de documento não deveria conceder acesso a outro arquivo."),
+    (14, "Filtro de inventário", "Médio", "search", "A busca foi implementada sem tratar corretamente a entrada."),
+    (15, "Backup previsível", "Médio", "robots", "Um arquivo de descoberta aponta para material esquecido."),
+    (16, "Token de migração", "Médio", "base64", "Uma aplicação antiga ainda publica um token codificado."),
+    (17, "Console de manutenção", "Difícil", "js", "O painel frontend carrega uma configuração que não deveria ser pública."),
+    (18, "Cadeia de redirecionamento", "Difícil", "redirect", "Siga as respostas HTTP para encontrar a evidência correta."),
+    (19, "Auditoria exposta", "Difícil", "audit", "Um endpoint de auditoria precisa ser descoberto e interpretado."),
+    (20, "Dupla verificação", "Difícil", "header", "A informação está em uma resposta que exige inspecionar HTTP."),
+    (21, "Comentário de implantação", "Fácil", "source", "Uma página institucional publicou uma nota interna."),
+    (22, "Arquivo de rotas", "Fácil", "robots", "Rotas públicas nem sempre aparecem na navegação."),
+    (23, "Texto transportado", "Fácil", "base64", "Uma mensagem foi codificada, mas não protegida."),
+    (24, "Versão em cache", "Fácil", "js", "O bundle do frontend contém uma anotação útil."),
+    (25, "Consulta de pedidos", "Médio", "idor", "Um recurso sequencial exige testar autorização, não adivinhação."),
+    (26, "Pesquisa de acervo", "Médio", "search", "A busca deve ser analisada com um interceptador ou DevTools."),
+    (27, "Arquivo de manutenção", "Médio", "manifest", "Uma configuração exposta aponta para uma rota operacional."),
+    (28, "Cookie de ambiente", "Médio", "header", "A resposta possui um metadado que o HTML não revela."),
+    (29, "Relatório de incidente", "Difícil", "audit", "Correlacione uma rota descoberta e o retorno estruturado."),
+    (30, "Documento com acesso cruzado", "Difícil", "idor", "A validação de acesso depende de mais que trocar um número."),
+    (31, "Busca avançada", "Difícil", "search", "A evidência aparece somente após manipular a requisição de busca."),
+    (32, "Entrega contínua", "Difícil", "redirect", "Inspecione cada etapa de uma resposta redirecionada."),
+    (33, "Fonte da newsletter", "Fácil", "source", "O código-fonte de uma newsletter tem uma observação interna."),
+    (34, "Descoberta responsável", "Fácil", "robots", "Leia os arquivos de descoberta antes de enumerar caminhos."),
+    (35, "Mensagem serializada", "Fácil", "base64", "Uma sequência codificada precisa ser decifrada."),
+    (36, "Preferências públicas", "Fácil", "manifest", "As preferências web expõem uma pista de configuração."),
+    (37, "Perfil de fornecedor", "Médio", "idor", "Teste a autorização do recurso, em vez de somente o endereço."),
+    (38, "Catálogo interno", "Médio", "search", "Observe e repita a requisição antes de alterar a entrada."),
+    (39, "Cabeçalho de diagnóstico", "Médio", "header", "Use as ferramentas HTTP para enxergar a resposta inteira."),
+    (40, "Bundle de homologação", "Médio", "js", "Uma variável de ambiente ficou publicada no JavaScript."),
+    (41, "Trilha de auditoria", "Difícil", "audit", "O endpoint é intencionalmente pouco visível, mas está no fluxo."),
+    (42, "Reserva fora do escopo", "Difícil", "idor", "É necessário entender a sessão e o recurso antes de testar."),
+    (43, "Consulta composta", "Difícil", "search", "Use uma ferramenta de repetição de requisições para validar a hipótese."),
+    (44, "Protocolo de entrega", "Difícil", "redirect", "Os cabeçalhos e códigos de status formam a pista final."),
+    (45, "Rascunho editorial", "Fácil", "source", "Uma página de conteúdo manteve uma anotação fora da interface."),
+    (46, "Nota de navegador", "Fácil", "manifest", "A configuração do navegador aponta para uma pista publicada."),
+    (47, "Biblioteca de imagens", "Fácil", "metadata", "Uma imagem de acervo foi entregue com metadados úteis."),
+    (48, "Serviço de catálogo", "Fácil", "robots", "Um arquivo de descoberta lista uma rota que não está no menu."),
+    (49, "Registro legível", "Fácil", "base64", "Uma mensagem codificada precisa ser interpretada."),
+    (50, "Relatório de interface", "Fácil", "js", "O frontend ainda traz uma variável de manutenção."),
+    (51, "Canal de suporte", "Médio", "header", "A resposta técnica contém uma informação fora do corpo HTML."),
+    (52, "Auditoria de fornecedor", "Difícil", "audit", "O fluxo de status revela uma trilha de auditoria."),
+    (53, "Documento delegado", "Difícil", "idor", "A autorização do recurso deve ser observada e reproduzida."),
+    (54, "Última entrega", "Difícil", "redirect", "A cadeia HTTP precisa ser acompanhada até o recibo."),
+]
+# A dica 1 de cada mecanismo sempre nomeia a ferramenta específica necessária
+# para resolver o laboratório, conforme pedido: quem precisa de DevTools, de um
+# decodificador Base64, de um interceptador de requisições etc. deve descobrir
+# isso já na primeira dica, sem precisar gastar uma dica só para "adivinhar" a
+# ferramenta certa.
+HINTS_BY_MECHANISM = {
+    "source": [
+        "Ferramenta necessária: o código-fonte da página (botão direito → \"Ver/Exibir código-fonte\", ou Ctrl+U / Cmd+Option+U).",
+        "Nem tudo que existe no HTML aparece renderizado na tela — procure por comentários e trechos ocultos.",
+        "Percorra o documento inteiro, incluindo o que vem antes do <body> e depois do </body>.",
+    ],
+    "robots": [
+        "Ferramenta necessária: o arquivo robots.txt do site (acesse diretamente pela URL, ex.: /robots.txt).",
+        "Esse arquivo lista caminhos que os buscadores não devem indexar — mas o navegador consegue acessá-los normalmente.",
+        "Abra manualmente qualquer rota listada como \"Disallow\" para ver o que ela entrega.",
+    ],
+    "base64": [
+        "Ferramenta necessária: um decodificador Base64 (ex.: CyberChef, ou o terminal com `base64 -d`).",
+        "O texto codificado não é criptografia — qualquer decodificador Base64 revela o conteúdo original.",
+        "Copie exatamente a string codificada, sem espaços extras, antes de decodificar.",
+    ],
+    "js": [
+        "Ferramenta necessária: DevTools do navegador (abas Console e Sources) para inspecionar o JavaScript carregado.",
+        "Variáveis globais definidas em scripts ficam acessíveis digitando o nome delas no Console.",
+        "Procure por arquivos .js carregados pela página e leia o conteúdo na aba Sources.",
+    ],
+    "header": [
+        "Ferramenta necessária: DevTools (aba Network) ou `curl -I` para inspecionar os cabeçalhos completos da resposta HTTP.",
+        "A interface visual não mostra tudo — os metadados podem estar apenas no cabeçalho da resposta.",
+        "Repita a requisição da página principal e leia cada cabeçalho de resposta, um por um.",
+    ],
+    "idor": [
+        "Ferramenta necessária: DevTools (aba Network) ou um interceptador de requisições (ex.: Burp Suite) para repetir a chamada alterando parâmetros e cabeçalhos.",
+        "Depois de ver a requisição original, tente trocar o identificador do recurso e observe a resposta.",
+        "A autorização pode depender de um cabeçalho que a primeira resposta já revelou — reenvie a requisição incluindo-o.",
+    ],
+    "search": [
+        "Ferramenta necessária: DevTools (aba Network) ou Burp Suite para observar e reenviar a requisição feita pelo formulário de busca.",
+        "Depois de ver como o parâmetro de busca é enviado, teste substituí-lo por uma expressão lógica.",
+        "Uma condição sempre verdadeira na consulta pode revelar registros que não deveriam aparecer.",
+    ],
+    "audit": [
+        "Ferramenta necessária: DevTools (aba Network) ou `curl` para inspecionar a resposta completa e os cabeçalhos do endpoint de status.",
+        "O cabeçalho da resposta pode apontar diretamente para a rota de auditoria que você precisa visitar.",
+        "Depois de descobrir a rota, acesse-a diretamente e leia o corpo da resposta com atenção.",
+    ],
+    "manifest": [
+        "Ferramenta necessária: DevTools (abas Network ou Application) para localizar o arquivo app.webmanifest carregado pela página.",
+        "O navegador busca esse arquivo automaticamente ao carregar a página — filtre por \"manifest\" na aba Network.",
+        "Abra o conteúdo do manifesto diretamente pela URL para ler todos os campos.",
+    ],
+    "metadata": [
+        "Ferramenta necessária: DevTools (aba Network) para inspecionar os cabeçalhos de resposta do recurso de imagem/prévia.",
+        "O elemento pode estar oculto na página, mas a requisição dele ainda aparece na aba Network.",
+        "Leia os cabeçalhos customizados da resposta, não apenas o corpo retornado.",
+    ],
+    "redirect": [
+        "Ferramenta necessária: DevTools (aba Network, com \"Preserve log\" ativado) ou `curl -IL` para acompanhar toda a cadeia de redirecionamentos HTTP.",
+        "Cada etapa da cadeia pode carregar um cabeçalho próprio — não olhe apenas a resposta final.",
+        "Siga o redirecionamento passo a passo até a resposta que já não redireciona mais.",
+    ],
+}
+
+
+def _hints_for(mechanism):
+    return list(HINTS_BY_MECHANISM.get(mechanism, [
+        "Comece observando o comportamento normal da aplicação.",
+        "Use a ferramenta indicada no enunciado para comparar a resposta.",
+        "A pista está no mecanismo técnico do laboratório, não na interface visível.",
+    ]))
+
+
+for _challenge in CHALLENGES:
+    _challenge["hints"] = _hints_for(_challenge["mechanism"])
+
+for _id, _name, _difficulty, _mechanism, _description in _EXTRA_CHALLENGES:
+    _list_number = 1 if _id <= 20 else 2 if _id <= 32 else 3
+    _points = {"Fácil": 10, "Médio": 20, "Difícil": 30}[_difficulty]
+    _deductions = [0, _points // 4, _points // 2, _points - 1]
+    CHALLENGES.append({
+        "id": _id, "title": f"Desafio {_id}", "name": _name, "points": _points,
+        "difficulty": _difficulty, "list_id": f"lista-{_list_number}", "mechanism": _mechanism,
+        "flags": [f"JACITEC{{catalog_{_id}_{_mechanism}}}"], "description": _description,
+        "hints": _hints_for(_mechanism),
+        "hint_deductions": _deductions,
+    })
+
+# Três coleções homogêneas: 10 fáceis, 5 médias e 3 difíceis em cada uma.
+_CATALOG_LAYOUT = {
+    "lista-1": {"Fácil": {1, 2, 3, 4, 5, 9, 10, 11, 12, 18}, "Médio": {6, 7, 13, 14, 15}, "Difícil": {8, 16, 17}},
+    "lista-2": {"Fácil": set(range(19, 29)), "Médio": set(range(29, 34)), "Difícil": set(range(34, 37))},
+    "lista-3": {"Fácil": set(range(37, 47)), "Médio": set(range(47, 52)), "Difícil": set(range(52, 55))},
+}
+for _list_id, _by_difficulty in _CATALOG_LAYOUT.items():
+    for _difficulty, _ids in _by_difficulty.items():
+        for _id in _ids:
+            _challenge = next(item for item in CHALLENGES if item["id"] == _id)
+            _challenge["list_id"] = _list_id
+            _challenge["difficulty"] = _difficulty
+            _challenge["points"] = {"Fácil": 5, "Médio": 8, "Difícil": 10}[_difficulty]
+            _challenge["hint_deductions"] = [0, 1, 2, 3]
+
+# Os oito laboratórios originais (id 1-8) têm cada um seu próprio site
+# artesanal em lab_site.html. Os 46 laboratórios extra reaproveitam essas
+# mesmas paletas/CSS já com bom contraste, alternando marca e nome para dar
+# variedade visual sem repetir o layout genérico único que causava textos e
+# botões praticamente invisíveis (texto claro sobre fundo claro).
+SITE_THEMES = [
+    {"n": 1, "header": "blog-header", "content": "blog-layout", "button": "scenario-cta",
+     "brands": [("PAPEL", "VIVO"), ("ARCHIVO", "EDITORIAL"), ("FOLHA", "ABERTA")]},
+    {"n": 2, "header": "trail-header", "content": "trail-content", "button": "scenario-cta",
+     "brands": [("ROTA", "LIVRE"), ("HORIZONTE", "TRAVEL"), ("CAMINHO", "ABERTO")]},
+    {"n": 3, "header": "dev-header", "content": "dev-content", "button": "dev-button",
+     "brands": [("BYTE", "DESK"), ("STACK", "FORGE"), ("CODE", "HAVEN")]},
+    {"n": 4, "header": "arcade-header", "content": "arcade-content", "button": "arcade-button",
+     "brands": [("RETRO", "CIRCUIT"), ("NEON", "QUEST"), ("PIXEL", "FORGE")]},
+    {"n": 5, "header": "market-header", "content": "market-content", "button": "market-button",
+     "brands": [("MERCADO", "VERDE"), ("OFICINA", "NOVA"), ("BAZAR", "CIRCULAR")]},
+    {"n": 6, "header": "cloud-header", "content": "cloud-content", "button": "cloud-button",
+     "brands": [("DATA", "HIVE"), ("NUVEM", "SEGURA"), ("ARQUIVO", "X")]},
+    {"n": 7, "header": "ticket-header", "content": "ticket-content", "button": "ticket-button",
+     "brands": [("CITY", "PULSE"), ("AFTER", "HOURS"), ("LUZ", "NOTURNA")]},
+    {"n": 8, "header": "booking-header", "content": "booking-content", "button": "booking-button",
+     "brands": [("ESPAÇO", "ÁGIL"), ("SALA", "CERTA"), ("WORK", "HUB")]},
+]
+# Cópia de apoio por skin visual (tom/ambientação), independente da marca
+# sorteada — dá a cada um dos 46 laboratórios extras um site com hero, guia,
+# status e equipe coerentes com a paleta, em vez do único template genérico
+# reaproveitado para todos eles.
+THEME_COPY = {
+    1: {"kicker": "ESTÚDIO EDITORIAL INDEPENDENTE", "hero": "Boas histórias também escondem bons detalhes.",
+        "body": "Publicamos ensaios, notas de bastidor e pequenos projetos experimentais.",
+        "guide_title": "Sobre a publicação", "guide_body": "Um pequeno time editorial que também cuida do próprio código — às vezes com mais cuidado do lado do texto do que do lado técnico.",
+        "status_title": "Estado da publicação", "team_title": "Quem escreve por aqui",
+        "team_body": "Uma equipe enxuta de editores e desenvolvedores dividindo a mesma redação."},
+    2: {"kicker": "AGÊNCIA DE VIAGENS INDEPENDENTE", "hero": "Todo bom roteiro tem uma nota de rodapé.",
+        "body": "Guias de viagem, roteiros autorais e recomendações de quem já foi.",
+        "guide_title": "Como organizamos os roteiros", "guide_body": "Nossos guias combinam recomendações locais com informações práticas — nem sempre tudo cabe na página principal.",
+        "status_title": "Status da operação", "team_title": "Nossos guias locais",
+        "team_body": "Viajantes experientes que testam cada roteiro antes de publicar."},
+    3: {"kicker": "PLATAFORMA PARA TIMES DE PRODUTO", "hero": "Ferramentas internas, sem complicação.",
+        "body": "Uma API simples para equipes pequenas automatizarem tarefas repetitivas.",
+        "guide_title": "Documentação rápida", "guide_body": "A maior parte da integração é direta, mas alguns detalhes de implantação só aparecem inspecionando o ambiente.",
+        "status_title": "Status da plataforma", "team_title": "Equipe de engenharia",
+        "team_body": "Um time pequeno mantendo uma base de código enxuta."},
+    4: {"kicker": "ARCADE DIGITAL RETRÔ", "hero": "Toda boa pontuação tem uma história por trás.",
+        "body": "Uma coleção de jogos independentes com estética retrô e comunidade ativa.",
+        "guide_title": "Como funciona a plataforma", "guide_body": "Progresso, conquistas e configurações do jogador ficam sincronizados — nem tudo aparece na tela principal.",
+        "status_title": "Status dos servidores", "team_title": "Time de desenvolvimento",
+        "team_body": "Uma equipe indie apaixonada por jogos old-school."},
+    5: {"kicker": "LOJA DE ITENS SEMINOVOS", "hero": "Boas peças merecem uma segunda história.",
+        "body": "Curadoria de itens vintage, restaurados e conferidos um a um.",
+        "guide_title": "Como cuidamos de cada peça", "guide_body": "Cada item passa por uma checagem antes de entrar no catálogo — o processo é mais detalhado do que parece na vitrine.",
+        "status_title": "Status da operação", "team_title": "Equipe da oficina",
+        "team_body": "Curadores e restauradores cuidando de cada peça."},
+    6: {"kicker": "ARMAZENAMENTO EM NUVEM", "hero": "Seus arquivos, sempre ao alcance.",
+        "body": "Compartilhamento simples de arquivos para pessoas e pequenas equipes.",
+        "guide_title": "Segurança e acesso", "guide_body": "O controle de acesso a arquivos compartilhados depende de mais validações do que a interface mostra diretamente.",
+        "status_title": "Status do serviço", "team_title": "Equipe de infraestrutura",
+        "team_body": "Um time pequeno cuidando de armazenamento e sincronização."},
+    7: {"kicker": "INGRESSOS PARA EVENTOS LOCAIS", "hero": "Sua próxima noite começa com uma boa busca.",
+        "body": "Descubra shows, exposições e eventos independentes perto de você.",
+        "guide_title": "Como funciona a busca", "guide_body": "O catálogo de eventos é maior do que o que aparece na home — a busca é o caminho para o resto do acervo.",
+        "status_title": "Status da bilheteria", "team_title": "Equipe de curadoria",
+        "team_body": "Curadores locais selecionando os melhores eventos."},
+    8: {"kicker": "RESERVA DE ESPAÇOS DE TRABALHO", "hero": "Espaço certo, sem fricção.",
+        "body": "Reserva simples de salas e espaços para equipes híbridas.",
+        "guide_title": "Como gerenciamos reservas", "guide_body": "O sistema clássico de reservas ainda mantém alguns registros operacionais visíveis para quem sabe onde procurar.",
+        "status_title": "Status da agenda", "team_title": "Equipe de operações",
+        "team_body": "Um time pequeno cuidando da disponibilidade dos espaços."},
+}
+for _challenge in CHALLENGES:
+    if _challenge["id"] <= 8:
+        continue
+    _theme = SITE_THEMES[(_challenge["id"] - 9) % len(SITE_THEMES)]
+    _brand_main, _brand_accent = _theme["brands"][((_challenge["id"] - 9) // len(SITE_THEMES)) % len(_theme["brands"])]
+    _challenge["site"] = {
+        "theme": _theme["n"], "header": _theme["header"], "content": _theme["content"], "button": _theme["button"],
+        "brand_main": _brand_main, "brand_accent": _brand_accent,
+        **THEME_COPY[_theme["n"]],
+    }
+
+CHALLENGE_BY_ID = {challenge["id"]: challenge for challenge in CHALLENGES}
+CHALLENGE_LISTS = {
+    "lista-1": {"label": "Lista de desafios 1", "description": "Fundamentos de segurança web e laboratórios clássicos."},
+    "lista-2": {"label": "Lista de desafios 2", "description": "Uma edição alternativa com novos cenários e técnicas."},
+    "lista-3": {"label": "Lista de desafios 3", "description": "Terceira coleção para evitar repetição entre edições."},
+}
+
 
 def timestamp_now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -176,6 +425,27 @@ def init_db():
     ctf_columns = {row["name"] for row in conn.execute("PRAGMA table_info(ctfs)").fetchall()}
     if "max_duration_minutes" not in ctf_columns:
         conn.execute("ALTER TABLE ctfs ADD COLUMN max_duration_minutes INTEGER")
+    if "challenge_list_id" not in ctf_columns:
+        conn.execute("ALTER TABLE ctfs ADD COLUMN challenge_list_id TEXT")
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ctf_challenges (
+            ctf_id INTEGER NOT NULL,
+            challenge_id INTEGER NOT NULL,
+            position INTEGER NOT NULL,
+            base_points INTEGER,
+            hint_penalty INTEGER,
+            PRIMARY KEY (ctf_id, challenge_id),
+            UNIQUE (ctf_id, position),
+            FOREIGN KEY(ctf_id) REFERENCES ctfs(id)
+        )
+        """
+    )
+    ctf_challenge_columns = {row["name"] for row in conn.execute("PRAGMA table_info(ctf_challenges)").fetchall()}
+    if "base_points" not in ctf_challenge_columns:
+        conn.execute("ALTER TABLE ctf_challenges ADD COLUMN base_points INTEGER")
+    if "hint_penalty" not in ctf_challenge_columns:
+        conn.execute("ALTER TABLE ctf_challenges ADD COLUMN hint_penalty INTEGER")
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS participant_challenges (
@@ -206,6 +476,58 @@ def init_db():
     )
     conn.commit()
     conn.close()
+
+
+def challenges_for_ctf(ctf_id):
+    """Return the immutable, ordered challenge selection for one CTF.
+
+    Older databases/events did not store selections; their legacy eight are kept
+    available as a safe migration fallback.
+    """
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT challenge_id, base_points, hint_penalty FROM ctf_challenges WHERE ctf_id = ? ORDER BY position", (ctf_id,)
+    ).fetchall()
+    conn.close()
+    if not rows:
+        return CHALLENGES[:8]
+    selected = []
+    for row in rows:
+        challenge = CHALLENGE_BY_ID.get(row["challenge_id"])
+        if challenge:
+            challenge = dict(challenge)
+            if row["base_points"] is not None:
+                challenge["event_points"] = row["base_points"]
+                challenge["event_hint_penalty"] = row["hint_penalty"] or 0
+            selected.append(challenge)
+    return selected
+
+
+def active_challenges():
+    ctf = current_ctf()
+    return challenges_for_ctf(ctf["id"]) if ctf else []
+
+
+def challenge_for_ctf(ctf_id, challenge_id):
+    return next((item for item in challenges_for_ctf(ctf_id) if item["id"] == challenge_id), None)
+
+
+def challenge_pool(list_id, difficulty):
+    """The full catalog for one list/difficulty: always 10 fáceis, 5 médios e
+    3 difíceis per list. Editions freely reuse challenges across events — the
+    catalog is meant to be drawn from repeatedly, not exhausted."""
+    return [item for item in CHALLENGES if item["list_id"] == list_id and item["difficulty"] == difficulty]
+
+
+def normalize_event_scores(challenges):
+    """Allocate exactly 1,000 maximum points using the 5/8/10 difficulty weights."""
+    weights = [challenge["points"] for challenge in challenges]
+    total_weight = sum(weights)
+    raw = [1000 * weight / total_weight for weight in weights]
+    bases = [int(value) for value in raw]
+    for index in sorted(range(len(raw)), key=lambda item: raw[item] - bases[item], reverse=True)[:1000 - sum(bases)]:
+        bases[index] += 1
+    return [(base, max(1, round(base / weight))) for base, weight in zip(bases, weights)]
 
 
 def log_event(ctf_id=None, participant_id=None, event="", detail=""):
@@ -276,6 +598,43 @@ def participant_is_active(participant_id, ctf=None):
     return bool(row and row["ctf_id"] == ctf["id"] and not row["finished_at"])
 
 
+# Faixas Unicode de emojis/símbolos gráficos — usadas para barrar nomes com
+# emoji ou spam de símbolos, mantendo acentos e letras normais permitidos.
+_EMOJI_PATTERN = re.compile(
+    "["
+    "\U0001F1E6-\U0001F1FF"
+    "\U0001F300-\U0001FAFF"
+    "\U00002600-\U000027BF"
+    "\U0001F000-\U0001F0FF"
+    "\U00002190-\U000021FF"
+    "\U00002B00-\U00002BFF"
+    "\U0000FE0F"
+    "\U0000200D"
+    "]"
+)
+
+
+def validate_participant_name(raw_name):
+    """Valida o nome informado ao entrar no CTF.
+
+    Retorna (nome_limpo, None) se válido, ou (None, mensagem_de_erro) caso
+    contrário. Bloqueia nomes vazios, muito longos, com emoji ou com
+    repetição excessiva de um mesmo caractere (spam).
+    """
+    name = " ".join((raw_name or "").split())
+    if not name:
+        return None, "Informe o seu nome para entrar no CTF."
+    if len(name) > 30:
+        return None, "O nome deve ter no máximo 30 caracteres."
+    if _EMOJI_PATTERN.search(name):
+        return None, "O nome não pode conter emojis."
+    if re.search(r"(.)\1{3,}", name):
+        return None, "Escolha um nome sem repetições excessivas do mesmo caractere."
+    if not re.search(r"[A-Za-zÀ-ÖØ-öø-ÿ]", name):
+        return None, "O nome deve conter ao menos uma letra."
+    return name, None
+
+
 def generate_ctf_code():
     alphabet = string.ascii_uppercase + string.digits
     return "JCTF-" + "".join(random.choice(alphabet) for _ in range(8))
@@ -327,6 +686,11 @@ def challenge_record(participant_id, challenge_id):
 
 
 def challenge_points_for_hint(challenge, hints_used):
+    if "event_points" in challenge:
+        score = max(0, challenge["event_points"] - challenge.get("event_hint_penalty", 0) * hints_used)
+        if hints_used > 0:
+            return max(1, score)
+        return score
     deduction_index = min(hints_used, len(challenge["hint_deductions"]) - 1)
     deduced = challenge["hint_deductions"][deduction_index]
     score = max(0, challenge["points"] - deduced)
@@ -408,12 +772,83 @@ def participant_ranking(ctf_id):
     return sorted(data, key=lambda item: (-item["points"], item["elapsed"], item["name"].lower()))
 
 
+DIFFICULTY_ORDER = ["Fácil", "Médio", "Difícil"]
+
+
+def score_breakdown(participant_id):
+    """Per-difficulty score summary used by the score-breakdown modal.
+
+    Always relative to the specific 1,000-point event the participant played,
+    since the same difficulty can be worth different base points across events
+    depending on the composition the admin chose (see normalize_event_scores).
+    """
+    conn = get_db()
+    participant = conn.execute(
+        "SELECT id, name, ctf_id FROM participants WHERE id = ?", (participant_id,)
+    ).fetchone()
+    if not participant:
+        conn.close()
+        return None
+    rows = conn.execute(
+        "SELECT challenge_id, status, hints_used, score_earned FROM participant_challenges WHERE participant_id = ?",
+        (participant_id,),
+    ).fetchall()
+    conn.close()
+
+    event_challenges = {item["id"]: item for item in challenges_for_ctf(participant["ctf_id"])}
+    buckets = {
+        difficulty: {"label": difficulty, "solved": 0, "total": 0, "earned": 0, "max": 0, "hint_penalty": 0}
+        for difficulty in DIFFICULTY_ORDER
+    }
+    for challenge in event_challenges.values():
+        difficulty = challenge["difficulty"] if challenge["difficulty"] in buckets else "Difícil"
+        buckets[difficulty]["total"] += 1
+        buckets[difficulty]["max"] += challenge.get("event_points", challenge["points"])
+
+    hints_used_total = 0
+    for row in rows:
+        challenge = event_challenges.get(row["challenge_id"])
+        if not challenge:
+            continue
+        difficulty = challenge["difficulty"] if challenge["difficulty"] in buckets else "Difícil"
+        hints_used_total += row["hints_used"] or 0
+        if row["status"] == "solved":
+            max_points = challenge.get("event_points", challenge["points"])
+            earned = row["score_earned"] or 0
+            buckets[difficulty]["solved"] += 1
+            buckets[difficulty]["earned"] += earned
+            buckets[difficulty]["hint_penalty"] += max(0, max_points - earned)
+
+    total_earned = sum(bucket["earned"] for bucket in buckets.values())
+    total_max = sum(bucket["max"] for bucket in buckets.values())
+    return {
+        "id": participant["id"],
+        "name": participant["name"],
+        "by_difficulty": [buckets[difficulty] for difficulty in DIFFICULTY_ORDER],
+        "total_earned": total_earned,
+        "total_max": total_max,
+        "hints_used": hints_used_total,
+    }
+
+
+# Discreet line-art eye icon (matches the site's plain, monochrome icon
+# glyphs like the panel's ⌖ reset button) used everywhere a "ver detalhes"
+# action needs an icon, instead of a colorful emoji.
+EYE_ICON_SVG = (
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" '
+    'focusable="false"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12Z"/>'
+    '<circle cx="12" cy="12" r="3"/></svg>'
+)
+
+
 def make_app_config():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "jacitec-secret")
     app.config["TEMPLATES_AUTO_RELOAD"] = True
     app.jinja_env.globals["current_ctf"] = current_ctf
     app.jinja_env.globals["challenge_list"] = CHALLENGES
+    app.jinja_env.globals["eye_icon_svg"] = EYE_ICON_SVG
     app.jinja_env.filters["b64encode"] = lambda value: base64.b64encode(value.encode("utf-8")).decode("ascii")
     return app
 
@@ -462,6 +897,85 @@ def create_app(testing=False):
     def lab_robots():
         return "User-agent: *\nDisallow: /lab/2/files/report\n", 200, {"Content-Type": "text/plain; charset=utf-8"}
 
+    @app.get("/lab/<int:challenge_id>/robots.txt")
+    def catalog_robots(challenge_id):
+        ctf = current_ctf()
+        challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
+        if not challenge or challenge.get("mechanism") != "robots":
+            return "", 404
+        return f"User-agent: *\nDisallow: /lab/{challenge_id}/operations/audit\n", 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+    @app.get("/lab/<int:challenge_id>/operations/audit")
+    def catalog_audit(challenge_id):
+        ctf = current_ctf()
+        challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
+        if not challenge:
+            return jsonify({"error": "Atividade indisponível"}), 404
+        return jsonify({"audit": "laboratório", "reference": challenge["flags"][0]})
+
+    def selected_catalog_challenge(challenge_id, mechanism=None):
+        ctf = current_ctf()
+        challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
+        if not challenge or (mechanism and challenge.get("mechanism") != mechanism):
+            return None
+        return challenge
+
+    @app.get("/lab/<int:challenge_id>/app.webmanifest")
+    def catalog_manifest(challenge_id):
+        challenge = selected_catalog_challenge(challenge_id, "manifest")
+        if not challenge:
+            return jsonify({"error": "Recurso indisponível"}), 404
+        return jsonify({"name": "JACITEC Lab", "maintenance_note": challenge["flags"][0]})
+
+    @app.get("/lab/<int:challenge_id>/asset-preview")
+    def catalog_asset_preview(challenge_id):
+        challenge = selected_catalog_challenge(challenge_id, "metadata")
+        if not challenge:
+            return "", 404
+        return "preview", 200, {"X-Image-Description": challenge["flags"][0], "Content-Type": "text/plain"}
+
+    @app.get("/lab/<int:challenge_id>/api/record/<int:record_id>")
+    def catalog_record(challenge_id, record_id):
+        challenge = selected_catalog_challenge(challenge_id, "idor")
+        if not challenge:
+            return jsonify({"error": "Recurso indisponível"}), 404
+        if record_id == 700:
+            return jsonify({"id": 700, "owner": "participante", "status": "disponível"}), 200, {"X-Lab-Delegation": f"delegate-{challenge_id}"}
+        if record_id == 701 and request.headers.get("X-Lab-Delegation") == f"delegate-{challenge_id}":
+            return jsonify({"id": 701, "owner": "arquivo de treinamento", "reference": challenge["flags"][0]})
+        return jsonify({"error": "Autorização delegada necessária", "required": "X-Lab-Delegation"}), 403
+
+    @app.get("/lab/<int:challenge_id>/api/search")
+    def catalog_search(challenge_id):
+        challenge = selected_catalog_challenge(challenge_id, "search")
+        if not challenge:
+            return jsonify({"error": "Recurso indisponível"}), 404
+        query = request.args.get("q", "")
+        if "'" in query and ("or" in query.lower() or "1=1" in query.replace(" ", "")):
+            return jsonify({"results": [{"title": "Registro de treinamento", "reference": challenge["flags"][0]}]})
+        return jsonify({"results": [], "message": "Nenhum resultado para a busca informada."})
+
+    @app.get("/lab/<int:challenge_id>/operations/ping")
+    def catalog_audit_ping(challenge_id):
+        challenge = selected_catalog_challenge(challenge_id, "audit")
+        if not challenge:
+            return "", 404
+        return jsonify({"status": "ok"}), 200, {"X-Audit-Path": f"/lab/{challenge_id}/operations/audit"}
+
+    @app.get("/lab/<int:challenge_id>/delivery/start")
+    def catalog_delivery_start(challenge_id):
+        challenge = selected_catalog_challenge(challenge_id, "redirect")
+        if not challenge:
+            return "", 404
+        return redirect(url_for("catalog_delivery_receipt", challenge_id=challenge_id), code=302)
+
+    @app.get("/lab/<int:challenge_id>/delivery/receipt")
+    def catalog_delivery_receipt(challenge_id):
+        challenge = selected_catalog_challenge(challenge_id, "redirect")
+        if not challenge:
+            return "", 404
+        return "Entrega concluída.", 200, {"X-Delivery-Receipt": challenge["flags"][0]}
+
     @app.get("/lab/<int:challenge_id>")
     def lab_page(challenge_id):
         participant_id = session.get("participant_id")
@@ -470,11 +984,11 @@ def create_app(testing=False):
         ctf = current_ctf()
         if not ctf:
             return redirect(url_for("public_ranking_page"))
-        challenge = next((item for item in CHALLENGES if item["id"] == challenge_id), None)
+        challenge = challenge_for_ctf(ctf["id"], challenge_id)
         if not challenge:
             return redirect(url_for("participant_dashboard"))
         response = make_response(render_template("lab_site.html", challenge=challenge, ctf=ctf, page="home"))
-        if challenge_id == 5:
+        if challenge.get("mechanism") == "header":
             response.headers["X-Campus-Notice"] = challenge["flags"][0]
         return response
 
@@ -491,27 +1005,45 @@ def create_app(testing=False):
                     {"event": "nota_migracao_legada", "reference": CHALLENGES[7]["flags"][0]},
                 ],
             })
-        challenge = next((item for item in CHALLENGES if item["id"] == challenge_id), None)
+        ctf = current_ctf()
+        challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
         if not challenge:
             return redirect(url_for("participant_dashboard"))
         response = make_response(render_template("lab_site.html", challenge=challenge, ctf=current_ctf(), page=page))
-        if challenge_id == 5:
+        if challenge.get("mechanism") == "header":
             response.headers["X-Campus-Notice"] = challenge["flags"][0]
         return response
 
     @app.get("/lab/6/profile/<int:profile_id>")
     def lab_profile(profile_id):
+        ctf = current_ctf()
+        if not ctf or not challenge_for_ctf(ctf["id"], 6):
+            return jsonify({"error": "Atividade indisponível"}), 404
         profiles = {
             101: {"id": 101, "name": "Ana Souza", "course": "Sistemas de Informação", "public": True},
-            102: {"id": 102, "name": "Arquivo de pesquisa", "course": "Laboratório Web", "public": False, "note": CHALLENGES[5]["flags"][0]},
+            102: {"id": 102, "name": "Arquivo de pesquisa", "course": "Laboratório Web", "public": False},
         }
         profile = profiles.get(profile_id)
         if not profile:
             return jsonify({"error": "Perfil não encontrado"}), 404
-        return jsonify(profile)
+        response = jsonify(profile)
+        if profile_id == 101:
+            # A chave só é observável no tráfego HTTP.  O participante precisa
+            # usar DevTools/Network, curl ou um repetidor para fazer a requisição
+            # autorizada ao recurso de outro perfil.
+            response.headers["X-Workspace-Access"] = "cv-training-06"
+        elif request.headers.get("X-Workspace-Access") == "cv-training-06":
+            profile["note"] = CHALLENGE_BY_ID[6]["flags"][0]
+            response = jsonify(profile)
+        else:
+            return jsonify({"error": "Acesso adicional necessário", "required": "X-Workspace-Access"}), 403
+        return response
 
     @app.get("/lab/7/search")
     def lab_search():
+        ctf = current_ctf()
+        if not ctf or not challenge_for_ctf(ctf["id"], 7):
+            return jsonify({"error": "Atividade indisponível"}), 404
         query = request.args.get("q", "")
         if "'" in query and ("or" in query.lower() or "1=1" in query.replace(" ", "")):
             return jsonify({"results": [
@@ -521,21 +1053,24 @@ def create_app(testing=False):
 
     @app.post("/join")
     def join_ctf():
-        name = (request.form.get("name") or "").strip()
-        code = (request.form.get("code") or "").strip().upper()
         ctf = current_ctf()
         if not ctf:
             return render_template("participate.html", ctf=ctf, error="Nenhum CTF está ativo no momento. Aguarde o administrador iniciar a competição.")
-        if not name:
-            return render_template("participate.html", error="Informe o seu nome para entrar no CTF.", ctf=ctf)
+        name, name_error = validate_participant_name(request.form.get("name"))
+        if name_error:
+            return render_template("participate.html", error=name_error, ctf=ctf)
+        code = (request.form.get("code") or "").strip().upper()
         if ctf["code"] != code:
             return render_template("participate.html", error="Token de entrada inválido.", ctf=ctf)
 
         conn = get_db()
         existing = conn.execute(
-            "SELECT * FROM participants WHERE ctf_id = ? AND name = ? AND finished_at IS NULL ORDER BY id DESC LIMIT 1",
+            "SELECT * FROM participants WHERE ctf_id = ? AND LOWER(name) = LOWER(?) AND finished_at IS NULL ORDER BY id DESC LIMIT 1",
             (ctf["id"], name),
         ).fetchone()
+        if existing and existing["id"] != session.get("participant_id"):
+            conn.close()
+            return render_template("participate.html", error="Esse nome já está em uso por um participante ativo neste CTF. Escolha outro nome.", ctf=ctf)
         if existing:
             participant_id = existing["id"]
         else:
@@ -545,7 +1080,7 @@ def create_app(testing=False):
                 (ctf["id"], name, now),
             )
             participant_id = cursor.lastrowid
-            for challenge in CHALLENGES:
+            for challenge in challenges_for_ctf(ctf["id"]):
                 conn.execute(
                     "INSERT INTO participant_challenges (participant_id, challenge_id, status, hints_used, score_earned) VALUES (?, ?, 'open', 0, 0)",
                     (participant_id, challenge["id"]),
@@ -583,7 +1118,8 @@ def create_app(testing=False):
         challenge_status = []
         rows = []
         conn = get_db()
-        for challenge in CHALLENGES:
+        event_challenges = challenges_for_ctf(ctf["id"])
+        for challenge in event_challenges:
             rec = challenge_record(participant_id, challenge["id"])
             rows.append({
                 "challenge": challenge,
@@ -592,10 +1128,11 @@ def create_app(testing=False):
             })
         conn.close()
         stats = get_participant_stats(participant_id)
-        active_challenge_id = request.args.get("challenge", default=1, type=int)
-        if active_challenge_id not in range(1, len(CHALLENGES) + 1):
-            active_challenge_id = 1
-        active_challenge = CHALLENGES[active_challenge_id - 1]
+        active_challenge_id = request.args.get("challenge", default=event_challenges[0]["id"], type=int)
+        if active_challenge_id not in {item["id"] for item in event_challenges}:
+            active_challenge_id = event_challenges[0]["id"]
+        active_challenge = CHALLENGE_BY_ID[active_challenge_id]
+        active_index = next(index for index, item in enumerate(event_challenges) if item["id"] == active_challenge_id)
         active_record = next(row["record"] for row in rows if row["challenge"]["id"] == active_challenge_id)
         return render_template(
             "participant_dashboard.html",
@@ -605,6 +1142,8 @@ def create_app(testing=False):
             stats=stats,
             active_challenge=active_challenge,
             active_record=active_record,
+            active_position=active_index + 1,
+            next_challenge=event_challenges[active_index + 1] if active_index + 1 < len(event_challenges) else None,
         )
 
     @app.get("/api/participant-state")
@@ -630,7 +1169,7 @@ def create_app(testing=False):
 
         stats = get_participant_stats(participant_id)
         challenge_states = []
-        for challenge in CHALLENGES:
+        for challenge in challenges_for_ctf(ctf["id"]):
             record = challenge_record(participant_id, challenge["id"])
             challenge_states.append({
                 "id": challenge["id"],
@@ -658,7 +1197,8 @@ def create_app(testing=False):
             if not event:
                 return jsonify({"error": "Participação não encontrada"}), 404
             return jsonify({"status": "FINALIZADO", "code": event["code"], "ranking_url": url_for("ctf_archive_page", ctf_id=event["ctf_id"]), "home_url": url_for("ctf_home")}), 409
-        challenge = next((item for item in CHALLENGES if item["id"] == challenge_id), None)
+        ctf = current_ctf()
+        challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
         if not challenge:
             return jsonify({"error": "Desafio não encontrado"}), 404
         record = challenge_record(participant_id, challenge_id)
@@ -689,7 +1229,8 @@ def create_app(testing=False):
             if not event:
                 return jsonify({"error": "Participação não encontrada"}), 404
             return jsonify({"status": "FINALIZADO", "code": event["code"], "ranking_url": url_for("ctf_archive_page", ctf_id=event["ctf_id"]), "home_url": url_for("ctf_home")}), 409
-        challenge = next((item for item in CHALLENGES if item["id"] == challenge_id), None)
+        ctf = current_ctf()
+        challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
         if not challenge:
             return jsonify({"error": "Desafio não encontrado"}), 404
         record = challenge_record(participant_id, challenge_id)
@@ -730,13 +1271,15 @@ def create_app(testing=False):
 
     @app.get("/ranking")
     def public_ranking_page():
-        ctf = last_ctf_for_display()
+        # Without a live CTF the page is an archive index, not a misleading
+        # "current" ranking for the most recent past edition.
+        ctf = current_ctf()
         history = ctf_history()
         return render_template("ranking.html", ctf=ctf, history=history)
 
     @app.get("/api/ranking")
     def api_ranking():
-        ctf = last_ctf_for_display()
+        ctf = current_ctf()
         if not ctf:
             return jsonify({"status": "AGUARDANDO", "ranking": []})
         ranking = participant_ranking(ctf["id"])
@@ -752,6 +1295,13 @@ def create_app(testing=False):
                 "participation_status": "Finalizou antes do encerramento" if item["finished_at"] else "Em andamento" if ctf["status"] == "ATIVO" else "Encerrado pelo administrador/tempo limite",
             })
         return jsonify({"status": ctf["status"], "ranking": ranked})
+
+    @app.get("/api/score-breakdown/<int:participant_id>")
+    def score_breakdown_api(participant_id):
+        breakdown = score_breakdown(participant_id)
+        if breakdown is None:
+            return jsonify({"error": "Participante não encontrado"}), 404
+        return jsonify(breakdown)
 
     @app.get("/ctf/<int:ctf_id>/archive")
     def ctf_archive_page(ctf_id):
@@ -792,7 +1342,7 @@ def create_app(testing=False):
                 for result in saved_results
                 if 1 <= result["challenge_id"] <= len(CHALLENGES)
             ]
-        return render_template("ctf_archive.html", ctf=ctf, ranking=ranking)
+        return render_template("ctf_archive.html", ctf=ctf, ranking=ranking, challenge_count=len(challenges_for_ctf(ctf_id)))
 
     @app.post("/admin/ctf/<int:ctf_id>/delete")
     def delete_ctf_archive(ctf_id):
@@ -875,6 +1425,8 @@ def create_app(testing=False):
             active_count=active_count,
             finished_count=finished_count,
             admin_notice=admin_notice,
+            challenge_lists=CHALLENGE_LISTS,
+            challenge_availability={key: {difficulty: len(challenge_pool(key, difficulty)) for difficulty in ("Fácil", "Médio", "Difícil")} for key in CHALLENGE_LISTS},
         )
 
     @app.post("/admin/generate")
@@ -889,13 +1441,55 @@ def create_app(testing=False):
         if max_duration_minutes is not None and not 1 <= max_duration_minutes <= 1440:
             session["admin_notice"] = "Informe a duração máxima em minutos, entre 1 e 1440."
             return redirect(url_for("admin_dashboard"))
+        list_id = request.form.get("challenge_list", "lista-1")
+        if list_id not in CHALLENGE_LISTS:
+            session["admin_notice"] = "Escolha uma lista de desafios válida."
+            return redirect(url_for("admin_dashboard"))
+        # Keep bare POSTs from pre-selection integrations compatible with the
+        # original eight-lab event. The admin form always submits these fields
+        # and therefore always uses the randomized workflow below.
+        legacy_default_request = not any(request.form.get(field) is not None for field in ("challenge_list", "easy_count", "medium_count", "hard_count"))
+        requested = {}
+        for difficulty, field, default in (("Fácil", "easy_count", 4), ("Médio", "medium_count", 3), ("Difícil", "hard_count", 1)):
+            raw_count = (request.form.get(field) or str(default)).strip()
+            try:
+                requested[difficulty] = int(raw_count)
+            except ValueError:
+                requested[difficulty] = -1
+            available = challenge_pool(list_id, difficulty)
+            if requested[difficulty] < 0 or requested[difficulty] > len(available):
+                session["admin_notice"] = f"Não há desafios {difficulty.lower()} inéditos suficientes nessa lista. Escolha outra composição ou lista."
+                return redirect(url_for("admin_dashboard"))
+        total_challenges = sum(requested.values())
+        if not 1 <= total_challenges <= 8:
+            session["admin_notice"] = "Escolha entre 1 e 8 desafios no total."
+            return redirect(url_for("admin_dashboard"))
+        if legacy_default_request:
+            selected = CHALLENGES[:8]
+        else:
+            selected = []
+            for difficulty in ("Fácil", "Médio", "Difícil"):
+                selected.extend(random.sample(challenge_pool(list_id, difficulty), requested[difficulty]))
+            random.shuffle(selected)
+        # A pontuação máxima de qualquer edição é sempre 1.000 pontos, não
+        # importa quantos desafios fáceis/médios/difíceis o administrador
+        # escolher: o peso de cada dificuldade é redistribuído proporcionalmente.
+        normalized_scores = normalize_event_scores(selected)
         conn = get_db()
         conn.execute("UPDATE ctfs SET status='FINALIZADO', finished_at=? WHERE status='ATIVO'", (timestamp_now(),))
         code = generate_ctf_code()
         now = timestamp_now()
-        conn.execute("INSERT INTO ctfs (code, status, created_at, max_duration_minutes) VALUES (?, 'ATIVO', ?, ?)", (code, now, max_duration_minutes))
+        conn.execute("INSERT INTO ctfs (code, status, created_at, max_duration_minutes, challenge_list_id) VALUES (?, 'ATIVO', ?, ?, ?)", (code, now, max_duration_minutes, list_id))
         conn.commit()
         ctf_id = conn.execute("SELECT id FROM ctfs WHERE code = ? ORDER BY id DESC LIMIT 1", (code,)).fetchone()["id"]
+        conn.executemany(
+            "INSERT INTO ctf_challenges (ctf_id, challenge_id, position, base_points, hint_penalty) VALUES (?, ?, ?, ?, ?)",
+            [
+                (ctf_id, challenge["id"], position, base_points, hint_penalty)
+                for position, (challenge, (base_points, hint_penalty)) in enumerate(zip(selected, normalized_scores), start=1)
+            ],
+        )
+        conn.commit()
         conn.close()
         log_event(ctf_id, None, "ctf_started", code)
         return redirect(url_for("admin_dashboard"))

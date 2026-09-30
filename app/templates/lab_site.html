@@ -2,7 +2,7 @@
 
 {% block content %}
 {% set root = '/lab/' ~ challenge.id %}
-<div class="scenario scenario-{{ challenge.id }}">
+<div class="scenario scenario-{{ challenge.site.theme if challenge.id > 8 else challenge.id }}">
   {% if challenge.id == 1 %}
     <!-- JACITEC{source_hidden_01} -->
     <header class="scenario-header blog-header"><a href="{{ root }}" class="scenario-logo">NORTH<span>STAR</span></a><nav><a href="{{ root }}/journal">Diário</a><a href="{{ root }}/about">Sobre</a><a href="{{ root }}/contact">Contato</a></nav><a class="scenario-cta" href="{{ root }}/contact">Vamos conversar</a></header>
@@ -60,9 +60,9 @@
     <main class="scenario-content cloud-content">
       {% if page == 'shared' %}<p class="scenario-kicker">COMPARTILHADOS COM VOCÊ</p><h1>Arquivos compartilhados</h1><div class="scenario-card">planejamento-trimestral.pdf · Compartilhado pela equipe de Design</div><div class="scenario-card">identidade-visual.zip · Compartilhado pelo Estúdio</div>
       {% elif page == 'settings' %}<p class="scenario-kicker">CONFIGURAÇÕES DA CONTA</p><h1>Segurança e privacidade</h1><div class="scenario-card">Autenticação em duas etapas <span class="healthy">Ativada</span></div><div class="scenario-card">Sessões ativas · 2 dispositivos</div>
-      {% elif page == 'files' or page == 'files/102' %}<p class="scenario-kicker">SUA NUVEM</p><h1>Meus arquivos</h1><p>Seus arquivos recentes e espaços de trabalho compartilhados.</p><div class="scenario-card">Anotações pessoais · Atualizado hoje</div><div class="scenario-card">Arquivo do projeto · Atualizado na semana passada</div><a href="{{ root }}/files/102">Abrir perfil compartilhado 102</a>
+      {% elif page == 'files' or page == 'files/101' %}<p class="scenario-kicker">SUA NUVEM</p><h1>Meus arquivos</h1><p>Seus arquivos recentes e espaços de trabalho compartilhados.</p><div class="scenario-card">Anotações pessoais · Atualizado hoje</div><div class="scenario-card">Arquivo do projeto · Atualizado na semana passada</div><a href="{{ root }}/files/101">Consultar meu perfil de proprietário</a>
       {% else %}<p class="scenario-kicker">ARMAZENAMENTO PRIVADO E SIMPLES</p><h1>Tudo de que você precisa, sempre à mão.</h1><p>Compartilhamento seguro de arquivos para pessoas e pequenas equipes.</p><a class="cloud-button" href="{{ root }}/files">Abrir meus arquivos</a><div class="cloud-file-list"><div>Arquivos recentes <b>4</b></div><div>Pastas compartilhadas <b>2</b></div><div>Espaço utilizado <b>18%</b></div></div>{% endif %}
-      {% if page == 'files/102' %}<section class="scenario-card"><h2>Consulta de perfil compartilhado</h2><p>O serviço antigo de compartilhamento usa identificadores numéricos de perfil. Inspecione a requisição feita ao abrir o perfil do proprietário.</p><div class="scenario-inline"><input id="cloud-profile-id" value="101"><button id="cloud-profile-load" class="cloud-button">Abrir proprietário</button></div><pre id="cloud-profile-output"></pre></section><script>document.getElementById('cloud-profile-load').addEventListener('click', async () => { const response = await fetch(`/lab/6/profile/${document.getElementById('cloud-profile-id').value}`); document.getElementById('cloud-profile-output').textContent = JSON.stringify(await response.json(), null, 2); });</script>{% endif %}
+      {% if page == 'files/101' %}<section class="scenario-card"><h2>Consulta de perfil</h2><p>O serviço legado usa perfis numéricos. Abra seu perfil primeiro e examine a requisição e os cabeçalhos de resposta; depois, valide a autorização do recurso compartilhado com uma ferramenta de repetição HTTP.</p><div class="scenario-inline"><input id="cloud-profile-id" value="101"><button id="cloud-profile-load" class="cloud-button">Consultar perfil</button></div><pre id="cloud-profile-output"></pre></section><script>document.getElementById('cloud-profile-load').addEventListener('click', async () => { const response = await fetch(`/lab/6/profile/${document.getElementById('cloud-profile-id').value}`); document.getElementById('cloud-profile-output').textContent = JSON.stringify(await response.json(), null, 2); });</script>{% endif %}
     </main>
 
   {% elif challenge.id == 7 %}
@@ -75,7 +75,7 @@
     </main>
     <script>document.getElementById('ticket-search')?.addEventListener('submit', async (event) => { event.preventDefault(); const params = new URLSearchParams(new FormData(event.currentTarget)); const response = await fetch(`/lab/7/search?${params}`); document.getElementById('ticket-results').textContent = JSON.stringify(await response.json(), null, 2); });</script>
 
-  {% else %}
+  {% elif challenge.id == 8 %}
     <header class="scenario-header booking-header"><a href="{{ root }}" class="scenario-logo">RESERVA<span>FÁCIL</span></a><nav><a href="{{ root }}/rooms">Salas</a><a href="{{ root }}/calendar">Agenda</a><a href="{{ root }}/help">Ajuda</a></nav><a class="booking-button" href="{{ root }}/calendar">Reservar uma sala</a></header>
     <main class="scenario-content booking-content">
       {% if page == 'rooms' %}<p class="scenario-kicker">ESPAÇOS FLEXÍVEIS PARA SUA EQUIPE</p><h1>Salas pensadas para o seu jeito de trabalhar.</h1><div class="scenario-columns"><article>Sala de oficina <p>12 pessoas · Quadro branco</p></article><article>Sala de foco <p>2 pessoas · Silenciosa</p></article><article>Sala de reunião 2 <p>8 pessoas · Pronta para vídeo</p></article></div>
@@ -83,7 +83,89 @@
       {% elif page == 'calendar' %}<p class="scenario-kicker">SEU ESPAÇO DE TRABALHO</p><h1>Agenda de salas</h1><div class="scenario-card"><b>Hoje · Salas disponíveis</b><p>09h · Sala de reunião 2</p><p>11h · Sala de foco</p><p>14h · Sala de oficina</p></div><div class="scenario-card"><h2>Aviso de migração</h2><p>O serviço clássico de reservas mantém uma exportação de auditoria legível por máquinas. Confira as requisições feitas por esta página da agenda.</p><a href="{{ root }}/audit-log">Status do serviço de agenda</a></div>
       {% else %}<section class="booking-hero"><p class="scenario-kicker">ESPAÇOS QUE FUNCIONAM PARA VOCÊ</p><h1>Reserve uma sala e volte ao que importa.</h1><p>Espaços de reunião simples e flexíveis para equipes que fazem acontecer.</p><a class="booking-button" href="{{ root }}/rooms">Conhecer as salas</a></section><div class="scenario-card"><h2>Precisa de uma sala esta semana?</h2><p>Veja a disponibilidade em todos os locais.</p><a href="{{ root }}/calendar">Abrir agenda →</a></div>{% endif %}
     </main>
+  {% else %}
+    <!-- {{ challenge.flags[0] if challenge.mechanism == 'source' else 'laboratorio de treinamento' }} -->
+    {% set site = challenge.site %}
+    <header class="scenario-header {{ site.header }}">
+      <a href="{{ root }}" class="scenario-logo">{{ site.brand_main }}<span>{{ site.brand_accent }}</span></a>
+      <nav><a href="{{ root }}/guide">Guia</a><a href="{{ root }}/status">Status</a><a href="{{ root }}/team">Equipe</a></nav>
+      <a class="{{ site.button }}" href="{{ root }}/guide">Ver guia</a>
+    </header>
+    <main class="scenario-content {{ site.content }}">
+      {% if page == 'guide' %}
+        <p class="scenario-kicker">{{ site.kicker }}</p><h1>{{ site.guide_title }}</h1><p>{{ site.guide_body }}</p>
+        <div class="scenario-card"><h2>{{ challenge.name }}</h2><p>Saiba mais sobre nós e como usar a plataforma no dia a dia.</p><a href="{{ root }}">← Voltar para a página inicial</a></div>
+      {% elif page == 'status' %}
+        <p class="scenario-kicker">{{ site.kicker }}</p><h1>{{ site.status_title }}</h1>
+        <div class="scenario-columns">
+          <article><b>API</b><p><span class="healthy">● Operacional</span></p></article>
+          <article><b>Autenticação</b><p><span class="healthy">● Operacional</span></p></article>
+          <article><b>Armazenamento</b><p><span class="healthy">● Operacional</span></p></article>
+        </div>
+        <div class="scenario-card"><h2>Nota de manutenção</h2><p>Nenhuma interrupção registrada nas últimas 24 horas.</p></div>
+      {% elif page == 'team' %}
+        <p class="scenario-kicker">{{ site.kicker }}</p><h1>{{ site.team_title }}</h1><p>{{ site.team_body }}</p>
+        <div class="scenario-columns">
+          <article><b>Coordenação</b><p>Planejamento e prioridades do time.</p></article>
+          <article><b>Operações</b><p>Cuidam do dia a dia do serviço.</p></article>
+          <article><b>Suporte</b><p>Respondem dúvidas de quem usa a plataforma.</p></article>
+        </div>
+      {% else %}
+        <p class="scenario-kicker">{{ site.kicker }}</p>
+        <h1>{{ site.hero }}</h1>
+        <p>{{ site.body }}</p>
+        <a class="{{ site.button }}" href="{{ root }}/guide">Conhecer o guia →</a>
+
+        {% if challenge.mechanism == 'idor' %}
+          <section class="scenario-card">
+            <h2>Minha conta</h2>
+            <p>Veja um resumo rápido do seu cadastro nesta plataforma.</p>
+            <button id="record-request" class="{{ site.button }}" type="button">Ver meus dados</button>
+            <pre id="lab-result" class="lab-output">Clique no botão para carregar seus dados.</pre>
+          </section>
+        {% elif challenge.mechanism == 'search' %}
+          <section class="scenario-card">
+            <h2>Buscar no catálogo</h2>
+            <form id="catalog-search" class="scenario-inline"><input name="q" placeholder="Digite um termo de busca"><button class="{{ site.button }}" type="submit">Buscar</button></form>
+            <pre id="lab-result" class="lab-output">Os resultados da sua busca aparecem aqui.</pre>
+          </section>
+        {% elif challenge.mechanism == 'audit' %}
+          <section class="scenario-card">
+            <h2>Central de status</h2>
+            <p>Verifique rapidamente se está tudo funcionando normalmente por aqui.</p>
+            <button id="audit-ping" class="{{ site.button }}" type="button">Verificar status</button>
+            <pre id="lab-result" class="lab-output">Aguardando verificação…</pre>
+          </section>
+        {% elif challenge.mechanism == 'redirect' %}
+          <section class="scenario-card">
+            <h2>Iniciar solicitação</h2>
+            <p>Comece o processo por aqui e acompanhe a confirmação.</p>
+            <a class="{{ site.button }}" href="{{ root }}/delivery/start">Iniciar agora</a>
+          </section>
+        {% elif challenge.mechanism == 'base64' %}
+          <section class="scenario-card">
+            <h2>Acesso para integrações</h2>
+            <p>Chave de acesso desta conta para sistemas parceiros:</p>
+            <pre class="lab-output">{{ challenge.flags[0]|b64encode }}</pre>
+          </section>
+        {% endif %}
+        {% if challenge.mechanism == 'manifest' %}<link rel="manifest" href="{{ root }}/app.webmanifest">{% endif %}
+        {% if challenge.mechanism == 'metadata' %}<img src="{{ root }}/asset-preview" alt="Prévia do acervo" hidden>{% endif %}
+
+        <div class="scenario-columns">
+          <article><b>Guia</b><p>Saiba mais sobre como usar a plataforma.</p></article>
+          <article><b>Status</b><p>Veja o estado atual dos nossos serviços.</p></article>
+          <article><b>Equipe</b><p>Conheça quem mantém esta plataforma.</p></article>
+        </div>
+      {% endif %}
+    </main>
+    {% if page not in ('guide', 'status', 'team') %}
+      {% if challenge.mechanism == 'js' %}<script>window.__labRelease = {{ challenge.flags[0]|tojson }};</script>{% endif %}
+      {% if challenge.mechanism == 'idor' %}<script>document.getElementById('record-request').addEventListener('click', async () => { const r = await fetch('{{ root }}/api/record/700'); document.getElementById('lab-result').textContent = JSON.stringify(await r.json(), null, 2); });</script>{% endif %}
+      {% if challenge.mechanism == 'search' %}<script>document.getElementById('catalog-search').addEventListener('submit', async (e) => { e.preventDefault(); const r = await fetch('{{ root }}/api/search?' + new URLSearchParams(new FormData(e.currentTarget))); document.getElementById('lab-result').textContent = JSON.stringify(await r.json(), null, 2); });</script>{% endif %}
+      {% if challenge.mechanism == 'audit' %}<script>document.getElementById('audit-ping').addEventListener('click', async () => { const r = await fetch('{{ root }}/operations/ping'); document.getElementById('lab-result').textContent = JSON.stringify(await r.json(), null, 2); });</script>{% endif %}
+    {% endif %}
   {% endif %}
-  <footer class="scenario-footer">{% if challenge.id == 1 %}Estúdio Northstar · independente por natureza{% elif challenge.id == 2 %}Viagens Wayfarer · siga pelo caminho mais bonito{% elif challenge.id == 3 %}Devdesk · ferramentas para equipes modernas{% elif challenge.id == 4 %}Pixel Arcade · escolha um bom jogo{% elif challenge.id == 5 %}Second Story · boas coisas, de novo{% elif challenge.id == 6 %}CloudVault · seus arquivos sempre à mão{% elif challenge.id == 7 %}Night Owl · sua cidade depois do anoitecer{% else %}ReservaFácil · espaço que funciona{% endif %}</footer>
+  <footer class="scenario-footer">{% if challenge.id == 1 %}Estúdio Northstar · independente por natureza{% elif challenge.id == 2 %}Viagens Wayfarer · siga pelo caminho mais bonito{% elif challenge.id == 3 %}Devdesk · ferramentas para equipes modernas{% elif challenge.id == 4 %}Pixel Arcade · escolha um bom jogo{% elif challenge.id == 5 %}Second Story · boas coisas, de novo{% elif challenge.id == 6 %}CloudVault · seus arquivos sempre à mão{% elif challenge.id == 7 %}Night Owl · sua cidade depois do anoitecer{% elif challenge.id == 8 %}ReservaFácil · espaço que funciona{% else %}{{ challenge.site.brand_main }}{{ challenge.site.brand_accent }}{% endif %}</footer>
 </div>
 {% endblock %}

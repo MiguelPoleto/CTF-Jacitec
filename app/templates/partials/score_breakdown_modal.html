@@ -1,0 +1,61 @@
+<dialog class="score-breakdown-dialog" id="score-breakdown-dialog" aria-labelledby="score-breakdown-title">
+  <div class="score-breakdown-content">
+    <span class="confirm-icon score-breakdown-icon">◎</span>
+    <p class="section-kicker">PONTUAÇÃO DETALHADA</p>
+    <h2 id="score-breakdown-title">Carregando…</h2>
+    <div class="score-breakdown-total">
+      <strong id="score-breakdown-total-value">– / –</strong>
+      <span>pontos totais</span>
+    </div>
+    <div class="score-breakdown-rows" id="score-breakdown-rows"></div>
+    <p class="score-breakdown-hints" id="score-breakdown-hints"></p>
+    <div class="confirm-actions"><button type="button" class="confirm-cancel" data-score-dialog-close>Fechar</button></div>
+  </div>
+</dialog>
+<script>
+  (() => {
+    const dialog = document.getElementById('score-breakdown-dialog');
+    if (!dialog || dialog.dataset.wired) return;
+    dialog.dataset.wired = '1';
+    const title = document.getElementById('score-breakdown-title');
+    const totalValue = document.getElementById('score-breakdown-total-value');
+    const rows = document.getElementById('score-breakdown-rows');
+    const hintsLine = document.getElementById('score-breakdown-hints');
+    dialog.querySelectorAll('[data-score-dialog-close]').forEach((btn) => btn.addEventListener('click', () => dialog.close()));
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+
+    window.openScoreBreakdown = async (participantId, participantName) => {
+      title.textContent = participantName ? `Pontuação de ${participantName}` : 'Pontuação detalhada';
+      totalValue.textContent = '… / …';
+      rows.replaceChildren();
+      hintsLine.textContent = '';
+      if (!dialog.open) dialog.showModal();
+      try {
+        const response = await fetch(`/api/score-breakdown/${participantId}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Não foi possível carregar a pontuação.');
+        title.textContent = `Pontuação de ${data.name}`;
+        totalValue.textContent = `${data.total_earned} / ${data.total_max}`;
+        data.by_difficulty.forEach((bucket) => {
+          const row = document.createElement('div');
+          row.className = 'score-breakdown-row';
+          const label = document.createElement('span');
+          label.className = 'score-breakdown-label';
+          label.textContent = bucket.label;
+          const value = document.createElement('strong');
+          value.textContent = `${bucket.earned} / ${bucket.max} pontos`;
+          const meta = document.createElement('small');
+          meta.textContent = `${bucket.solved}/${bucket.total} resolvidos` + (bucket.hint_penalty ? ` · -${bucket.hint_penalty} pts por dicas` : '');
+          row.append(label, value, meta);
+          rows.appendChild(row);
+        });
+        hintsLine.textContent = data.hints_used
+          ? `${data.hints_used} dica${data.hints_used === 1 ? '' : 's'} revelada${data.hints_used === 1 ? '' : 's'} no total.`
+          : 'Nenhuma dica foi usada.';
+      } catch (error) {
+        title.textContent = 'Não foi possível carregar';
+        hintsLine.textContent = error.message;
+      }
+    };
+  })();
+</script>

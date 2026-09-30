@@ -3,7 +3,7 @@
 {% block content %}
 <main class="admin-page">
   <header class="admin-topbar">
-    <a href="{{ url_for('admin_dashboard') }}" class="landing-brand"><span class="brand-symbol">J</span><span>JACITEC <small>ADMIN CONSOLE</small></span></a>
+    <a href="{{ url_for('admin_dashboard') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/ifes-logo.png') }}" alt="IFES" class="brand-symbol" /><span>JACITEC <small>ADMIN CONSOLE</small></span></a>
     <div class="admin-topbar-right"><span class="admin-secure"><i></i> SESSÃO ADMINISTRATIVA</span><a href="{{ url_for('admin_logout') }}">Sair da conta ↗</a></div>
   </header>
 
@@ -31,7 +31,7 @@
               <div class="admin-rank-row">
                 <span class="admin-rank-number {% if loop.index <= 3 %}rank-medal{% endif %}">{{ '%02d'|format(loop.index) }}</span>
                 <span class="admin-rank-name">{{ row.name }}<small>{{ 'Finalizou antes do encerramento' if row.finished_at else 'Em andamento' if ctf else 'Encerrado pelo admin/limite de tempo' }}</small></span>
-                <strong>{{ row.points }} <small>PTS</small></strong>
+                <span class="ranking-points-cell"><strong>{{ row.points }} <small>PTS</small></strong><button type="button" class="score-eye-btn" title="Ver pontuação detalhada" aria-label="Ver pontuação detalhada de {{ row.name }}" data-score-participant-id="{{ row.id }}" data-score-participant-name="{{ row.name }}">{{ eye_icon_svg|safe }}</button></span>
                 <time>{{ '%02d:%02d:%02d'|format(row.elapsed // 3600, (row.elapsed % 3600) // 60, row.elapsed % 60) }}</time>
               </div>
             {% endfor %}
@@ -60,8 +60,19 @@
     <aside class="admin-side-column">
       <section class="admin-panel create-event-panel">
         <p class="section-kicker">NOVA DISPUTA</p><h2>Preparar CTF</h2>
-        <p>Gere um código de acesso para começar uma nova competição.</p>
+        <p>Escolha a coleção e a composição. Os desafios específicos são sorteados e só ficam registrados nesta edição.</p>
         <form method="post" action="{{ url_for('generate_ctf') }}">
+          <label for="challenge-list">Lista de desafios</label>
+          <select id="challenge-list" name="challenge_list">
+            {% for key, item in challenge_lists.items() %}<option value="{{ key }}">{{ item.label }} · {{ item.description }}</option>{% endfor %}
+          </select>
+          <div class="challenge-counts">
+            <label>Fáceis<input name="easy_count" type="number" min="0" max="8" value="5" /></label>
+            <label>Médios<input name="medium_count" type="number" min="0" max="8" value="2" /></label>
+            <label>Difíceis<input name="hard_count" type="number" min="0" max="8" value="1" /></label>
+          </div>
+          <small id="challenge-total-note">Máximo de 8 desafios. O sorteio usa apenas a lista escolhida. A pontuação máxima é sempre 1.000 pontos, distribuídos entre os desafios escolhidos.</small>
+          <small id="challenge-availability" class="challenge-availability"></small>
           <label for="max-duration">Duração máxima</label>
           <div class="duration-input"><input id="max-duration" name="max_duration_minutes" type="number" min="1" max="1440" value="60" placeholder="60" /><span>minutos</span></div>
           <small>De 1 a 1440 minutos. Use 60 para uma hora.</small>
@@ -75,7 +86,7 @@
       <div class="admin-side-note"><span>LEMBRETE</span><p>Ao gerar um novo evento, o CTF ativo será encerrado e salvo automaticamente no arquivo.</p></div>
     </aside>
   </div>
-  <footer class="admin-footer"><span>JACITEC CYBER GAMES · PAINEL ADMINISTRATIVO</span><a href="{{ url_for('ctf_home') }}">Ir para o site público ↗</a></footer>
+  <footer class="admin-footer"><span>JACITEC CTF · PAINEL ADMINISTRATIVO</span><a href="{{ url_for('ctf_home') }}">Ir para o site público ↗</a></footer>
 
   <dialog class="admin-confirm-dialog" id="finalize-dialog" aria-labelledby="finalize-dialog-title">
     <form method="post" action="{{ url_for('finalize_ctf') }}">
@@ -108,7 +119,34 @@
         document.getElementById('delete-archive-form').action = `/admin/ctf/${button.dataset.ctfId}/delete`;
         deleteDialog.showModal();
       }));
+      const counts = [...document.querySelectorAll('.challenge-counts input')];
+      const totalNote = document.getElementById('challenge-total-note');
+      const listSelect = document.getElementById('challenge-list');
+      const availability = {{ challenge_availability|tojson }};
+      const availabilityNote = document.getElementById('challenge-availability');
+      const updateTotal = () => {
+        const total = counts.reduce((sum, input) => sum + (Number(input.value) || 0), 0);
+        totalNote.textContent = `${total}/8 desafios selecionados · pontuação máxima sempre 1.000 pontos, distribuída entre eles.`;
+        totalNote.classList.toggle('count-invalid', total < 1 || total > 8);
+      };
+      const updateAvailability = () => {
+        const current = availability[listSelect.value];
+        const labels = ['Fácil', 'Médio', 'Difícil'];
+        counts.forEach((input, index) => {
+          input.max = current[labels[index]];
+          if (Number(input.value) > Number(input.max)) input.value = input.max;
+        });
+        availabilityNote.textContent = `Catálogo desta lista: ${current['Fácil']} fáceis · ${current['Médio']} médios · ${current['Difícil']} difíceis (os desafios sorteados podem se repetir entre edições).`;
+        updateTotal();
+      };
+      counts.forEach((input) => input.addEventListener('input', updateTotal));
+      listSelect.addEventListener('change', updateAvailability);
+      updateAvailability();
+      document.querySelectorAll('[data-score-participant-id]').forEach((button) => {
+        button.addEventListener('click', () => window.openScoreBreakdown?.(button.dataset.scoreParticipantId, button.dataset.scoreParticipantName));
+      });
     })();
   </script>
 </main>
+{% include 'partials/score_breakdown_modal.html' %}
 {% endblock %}

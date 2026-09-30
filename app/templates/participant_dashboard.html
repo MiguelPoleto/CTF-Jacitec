@@ -17,7 +17,7 @@
     <a class="course-step {% if item.challenge.id == active_challenge.id %}selected{% endif %} {% if item.record.status == 'solved' %}completed{% endif %}"
        href="{{ url_for('participant_dashboard', challenge=item.challenge.id) }}"
        title="{{ item.challenge.name }}">
-      <span>{{ '%02d'|format(item.challenge.id) }}</span>
+      <span>{{ '%02d'|format(loop.index) }}</span>
       <small>{{ item.challenge.name }}</small>
     </a>
   {% endfor %}
@@ -32,14 +32,15 @@
     <div>
       <p class="panel-eyebrow">JACITEC CTF · {{ ctf.code }}</p>
       <h1 id="panel-challenge-title">{{ active_challenge.name }}</h1>
+      <span class="panel-drag-instruction">⋮⋮ Arraste para mover</span>
     </div>
-    <button class="panel-minimize" id="panel-minimize" type="button" aria-label="Minimizar painel">—</button>
+    <div class="panel-header-actions"><button class="panel-reset" id="panel-reset" type="button" aria-label="Redefinir posição do painel" title="Redefinir posição">⌖</button><button class="panel-minimize" id="panel-minimize" type="button" aria-label="Minimizar painel">—</button></div>
   </header>
 
   <div class="panel-metrics">
     <div><span>Tempo</span><strong id="panel-timer">00:00:00</strong></div>
-    <div><span>Pontos</span><strong id="panel-points">{{ stats.total }}</strong></div>
-    <div><span>Atividade</span><strong id="panel-activity">{{ active_challenge.id }}/{{ challenges|length }}</strong></div>
+    <div><span>Pontos</span><span class="ranking-points-cell"><strong id="panel-points">{{ stats.total }}</strong><button type="button" class="score-eye-btn" id="panel-score-breakdown" title="Ver pontuação detalhada" aria-label="Ver minha pontuação detalhada">{{ eye_icon_svg|safe }}</button></span></div>
+    <div><span>Atividade</span><strong id="panel-activity">{{ active_position }}/{{ challenges|length }}</strong></div>
     <div><span>Limite CTF</span><strong id="event-countdown">{{ ctf.max_duration_minutes ~ ' min' if ctf.max_duration_minutes else 'Sem limite' }}</strong></div>
   </div>
 
@@ -64,7 +65,7 @@
   <div class="panel-footer">
     <span>Iniciado em <time data-datetime="{{ participant.entered_at }}">{{ participant.entered_at }}</time></span>
   </div>
-  <a id="next-challenge" class="panel-next" href="{{ url_for('participant_dashboard', challenge=active_challenge.id + 1) }}" {% if active_record.status != 'solved' or active_challenge.id >= challenges|length %}hidden{% endif %}>Atividade seguinte →</a>
+  <a id="next-challenge" class="panel-next" href="{{ url_for('participant_dashboard', challenge=next_challenge.id) if next_challenge else '#' }}" {% if active_record.status != 'solved' or not next_challenge %}hidden{% endif %}>Atividade seguinte →</a>
   <button type="button" id="finish-open" class="panel-finish">Finalizar minha participação</button>
 </aside>
 
@@ -161,10 +162,59 @@
       if (!eventEndedDialog.open) eventEndedDialog.showModal();
     }
 
+    // The panel and the minimized pill are two differently-sized elements
+    // that can each be dragged anywhere on screen, including corners. Each
+    // gets its own clamp (based on its own size) and its own remembered
+    // position, so the pill can reach a corner the full panel never could.
+    // Maximizing re-lands the full panel near the pill's spot, clamped by the
+    // panel's real size, so it always reappears fully on-screen.
+    function readStoredPosition(key) {
+      try { return JSON.parse(localStorage.getItem(key)); }
+      catch (_) { return null; }
+    }
+    function writeStoredPosition(key, position) {
+      try { localStorage.setItem(key, JSON.stringify(position)); }
+      catch (_) { /* Storage may be unavailable in private browsing. */ }
+    }
+    function positionElement(el, left, top, save, storageKey) {
+      const maxLeft = Math.max(8, window.innerWidth - el.offsetWidth - 8);
+      const maxTop = Math.max(8, window.innerHeight - Math.min(el.offsetHeight, window.innerHeight - 16) - 8);
+      const position = {
+        left: Math.max(8, Math.min(left, maxLeft)),
+        top: Math.max(8, Math.min(top, maxTop)),
+      };
+      el.style.left = `${position.left}px`;
+      el.style.top = `${position.top}px`;
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+      if (save && storageKey) writeStoredPosition(storageKey, position);
+      return position;
+    }
+    const PANEL_KEY = 'jacitec-panel-position';
+    const MINI_KEY = 'jacitec-panel-mini-position';
+    function setPanelPosition(left, top, save = false) { return positionElement(panel, left, top, save, PANEL_KEY); }
+    function setMiniPosition(left, top, save = false) { return positionElement(expandButton, left, top, save, MINI_KEY); }
+
+    const savedPanelPosition = readStoredPosition(PANEL_KEY);
+    if (savedPanelPosition && Number.isFinite(savedPanelPosition.left) && Number.isFinite(savedPanelPosition.top)) {
+      setPanelPosition(savedPanelPosition.left, savedPanelPosition.top);
+    }
+
     minimizeButton.addEventListener('click', () => {
       panel.classList.add('minimized');
       expandButton.hidden = false;
-      syncExpandPosition();
+      const savedMiniPosition = readStoredPosition(MINI_KEY);
+      if (savedMiniPosition && Number.isFinite(savedMiniPosition.left) && Number.isFinite(savedMiniPosition.top)) {
+        setMiniPosition(savedMiniPosition.left, savedMiniPosition.top);
+      } else {
+        const rect = panel.getBoundingClientRect();
+        setMiniPosition(rect.left, rect.top);
+      }
+    });
+    document.getElementById('panel-reset').addEventListener('click', () => {
+      try { localStorage.removeItem(PANEL_KEY); localStorage.removeItem(MINI_KEY); } catch (_) { /* ignore */ }
+      setPanelPosition(Math.max(12, window.innerWidth - panel.offsetWidth - 22), 100, true);
+      if (!expandButton.hidden) setMiniPosition(Math.max(12, window.innerWidth - expandButton.offsetWidth - 22), 100, true);
     });
     let suppressExpandClick = false;
     expandButton.addEventListener('click', (event) => {
@@ -173,55 +223,21 @@
         suppressExpandClick = false;
         return;
       }
+      const miniRect = expandButton.getBoundingClientRect();
       panel.classList.remove('minimized');
       expandButton.hidden = true;
+      setPanelPosition(miniRect.left, miniRect.top, true);
     });
 
+    document.getElementById('panel-score-breakdown').addEventListener('click', () => window.openScoreBreakdown?.({{ participant.id }}, {{ participant.name|tojson }}));
     document.getElementById('finish-open').addEventListener('click', () => finishDialog.showModal());
     document.getElementById('finish-cancel').addEventListener('click', () => finishDialog.close());
 
-    const savedPanelPosition = (() => {
-      try { return JSON.parse(localStorage.getItem('jacitec-panel-position')); }
-      catch (_) { return null; }
-    })();
-
-    function setPanelPosition(left, top, save = false) {
-      const maxLeft = Math.max(8, window.innerWidth - panel.offsetWidth - 8);
-      const maxTop = Math.max(8, window.innerHeight - Math.min(panel.offsetHeight, window.innerHeight - 16) - 8);
-      const position = {
-        left: Math.max(8, Math.min(left, maxLeft)),
-        top: Math.max(8, Math.min(top, maxTop))
-      };
-      panel.style.left = `${position.left}px`;
-      panel.style.top = `${position.top}px`;
-      panel.style.right = 'auto';
-      panel.style.bottom = 'auto';
-      if (save) {
-        try { localStorage.setItem('jacitec-panel-position', JSON.stringify(position)); }
-        catch (_) { /* Storage may be unavailable in private browsing. */ }
-      }
-      syncExpandPosition();
-      return position;
-    }
-
-    function syncExpandPosition() {
-      if (expandButton.hidden) return;
-      const rect = panel.getBoundingClientRect();
-      expandButton.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - expandButton.offsetWidth - 8))}px`;
-      expandButton.style.top = `${Math.max(8, Math.min(rect.top, window.innerHeight - expandButton.offsetHeight - 8))}px`;
-      expandButton.style.right = 'auto';
-      expandButton.style.bottom = 'auto';
-    }
-
-    if (savedPanelPosition && Number.isFinite(savedPanelPosition.left) && Number.isFinite(savedPanelPosition.top)) {
-      setPanelPosition(savedPanelPosition.left, savedPanelPosition.top);
-    }
-
     let dragState = null;
-    function beginDrag(event, handle, isMinimizedControl = false) {
+    function beginDrag(event, handle, target) {
       if (event.button !== 0) return;
-      if (!isMinimizedControl && event.target.closest('button')) return;
-      const rect = panel.getBoundingClientRect();
+      if (target === panel && event.target.closest('button')) return;
+      const rect = target.getBoundingClientRect();
       dragState = {
         pointerId: event.pointerId,
         x: event.clientX,
@@ -229,34 +245,41 @@
         left: rect.left,
         top: rect.top,
         moved: false,
-        isMinimizedControl,
+        target,
       };
       handle.setPointerCapture(event.pointerId);
-      panel.classList.add('dragging');
+      if (target === panel) panel.classList.add('dragging');
       event.preventDefault();
     }
     function moveDrag(event) {
       if (!dragState || dragState.pointerId !== event.pointerId) return;
       if (Math.abs(event.clientX - dragState.x) + Math.abs(event.clientY - dragState.y) > 5) dragState.moved = true;
-      setPanelPosition(dragState.left + event.clientX - dragState.x, dragState.top + event.clientY - dragState.y);
+      const left = dragState.left + event.clientX - dragState.x;
+      const top = dragState.top + event.clientY - dragState.y;
+      if (dragState.target === panel) setPanelPosition(left, top);
+      else setMiniPosition(left, top);
     }
     const stopDragging = (event) => {
       if (!dragState || dragState.pointerId !== event.pointerId) return;
-      const { moved, isMinimizedControl } = dragState;
-      const rect = panel.getBoundingClientRect();
-      setPanelPosition(rect.left, rect.top, true);
-      panel.classList.remove('dragging');
+      const { moved, target } = dragState;
+      const rect = target.getBoundingClientRect();
+      if (target === panel) {
+        setPanelPosition(rect.left, rect.top, true);
+        panel.classList.remove('dragging');
+      } else {
+        setMiniPosition(rect.left, rect.top, true);
+      }
       dragState = null;
-      if (moved && isMinimizedControl) {
+      if (moved && target === expandButton) {
         suppressExpandClick = true;
         setTimeout(() => { suppressExpandClick = false; }, 0);
       }
     };
-    dragHandle.addEventListener('pointerdown', (event) => beginDrag(event, dragHandle));
+    dragHandle.addEventListener('pointerdown', (event) => beginDrag(event, dragHandle, panel));
     dragHandle.addEventListener('pointermove', moveDrag);
     dragHandle.addEventListener('pointerup', stopDragging);
     dragHandle.addEventListener('pointercancel', stopDragging);
-    expandButton.addEventListener('pointerdown', (event) => beginDrag(event, expandButton, true));
+    expandButton.addEventListener('pointerdown', (event) => beginDrag(event, expandButton, expandButton));
     expandButton.addEventListener('pointermove', moveDrag);
     expandButton.addEventListener('pointerup', stopDragging);
     expandButton.addEventListener('pointercancel', stopDragging);
@@ -264,6 +287,9 @@
       if (!panel.classList.contains('minimized')) {
         const rect = panel.getBoundingClientRect();
         setPanelPosition(rect.left, rect.top, true);
+      } else if (!expandButton.hidden) {
+        const rect = expandButton.getBoundingClientRect();
+        setMiniPosition(rect.left, rect.top, true);
       }
     });
 
@@ -304,7 +330,7 @@
           isSolved = true;
           document.getElementById('panel-status').textContent = 'RESOLVIDO';
           document.getElementById('panel-points').textContent = Number(document.getElementById('panel-points').textContent) + data.points;
-          document.getElementById('next-challenge').hidden = challengeId >= {{ challenges|length }};
+          document.getElementById('next-challenge').hidden = {{ 'false' if next_challenge else 'true' }};
           document.querySelector(`.course-step[href*="challenge=${challengeId}"]`)?.classList.add('completed');
           document.getElementById('flag-input').disabled = true;
           renderHints();
@@ -348,4 +374,5 @@
     setInterval(refreshParticipantState, 5000);
   })();
 </script>
+{% include 'partials/score_breakdown_modal.html' %}
 {% endblock %}

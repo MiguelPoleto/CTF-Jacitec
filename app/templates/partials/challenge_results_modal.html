@@ -1,0 +1,47 @@
+<dialog class="challenge-results-dialog" id="challenge-results-dialog" aria-labelledby="challenge-results-title">
+  <div class="challenge-results-content">
+    <span class="confirm-icon challenge-results-icon">▤</span>
+    <p class="section-kicker">RESUMO DOS DESAFIOS</p>
+    <h2 id="challenge-results-title">Desafios de …</h2>
+    <div class="archive-challenge-grid" id="challenge-results-grid"></div>
+    <div class="confirm-actions"><button type="button" class="confirm-cancel" data-challenge-results-close>Fechar</button></div>
+  </div>
+</dialog>
+<script>
+  (() => {
+    const dialog = document.getElementById('challenge-results-dialog');
+    if (!dialog || dialog.dataset.wired) return;
+    dialog.dataset.wired = '1';
+    const title = document.getElementById('challenge-results-title');
+    const grid = document.getElementById('challenge-results-grid');
+    dialog.querySelectorAll('[data-challenge-results-close]').forEach((btn) => btn.addEventListener('click', () => dialog.close()));
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+
+    window.openChallengeResults = (participantName, results) => {
+      title.textContent = `Desafios de ${participantName}`;
+      grid.replaceChildren();
+      results.forEach((result, index) => {
+        const card = document.createElement('article');
+        card.className = 'archive-challenge-card' + (result.status === 'solved' ? ' challenge-solved' : '');
+        const head = document.createElement('div');
+        const number = document.createElement('strong');
+        number.textContent = String(index + 1).padStart(2, '0');
+        const status = document.createElement('span');
+        status.textContent = result.status === 'solved' ? 'Resolvido' : result.status === 'skipped' ? 'Pulado' : 'Não resolvido';
+        head.append(number, status);
+        const heading = document.createElement('h3');
+        heading.textContent = result.name;
+        const meta = document.createElement('p');
+        meta.textContent = `${result.score_earned} pts · ${result.hints_used} dica(s)`;
+        card.append(head, heading, meta);
+        if (result.solved_at) {
+          const time = document.createElement('time');
+          time.textContent = result.solved_at;
+          card.appendChild(time);
+        }
+        grid.appendChild(card);
+      });
+      if (!dialog.open) dialog.showModal();
+    };
+  })();
+</script>

@@ -3,13 +3,13 @@
 {% block content %}
 <main class="ranking-page">
   <header class="ranking-nav">
-    <a href="{{ url_for('ctf_home') }}" class="landing-brand"><span class="brand-symbol">J</span><span>JACITEC <small>CYBER GAMES</small></span></a>
+    <a href="{{ url_for('ctf_home') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/ifes-logo.png') }}" alt="IFES" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
     <a href="{{ url_for('ctf_home') }}" class="ranking-back">← Voltar ao início</a>
   </header>
 
   <section class="ranking-hero">
     <div>
-      <p class="eyebrow-line"><span>PLACAR OFICIAL</span> · JACITEC CYBER GAMES</p>
+      <p class="eyebrow-line"><span>PLACAR OFICIAL</span> · JACITEC CTF</p>
       <h1>Quem está no<br><em>topo do jogo?</em></h1>
       <p>Acompanhe a disputa em tempo real e reveja os resultados de eventos anteriores.</p>
     </div>
@@ -30,7 +30,7 @@
   <section class="ranking-board">
     <div class="board-heading"><div><span class="section-kicker">CLASSIFICAÇÃO</span><h2>Placar do evento</h2></div><span class="live-refresh"><i></i> ATUALIZAÇÃO AUTOMÁTICA</span></div>
     <div class="ranking-table-wrap"><table>
-      <thead><tr><th>POSIÇÃO</th><th>PARTICIPANTE</th><th>PONTOS</th><th>TEMPO</th><th>STATUS</th></tr></thead>
+      <thead><tr><th>POSIÇÃO</th><th>PARTICIPANTE</th><th>PONTOS TOTAIS</th><th>TEMPO</th><th>STATUS</th></tr></thead>
       <tbody id="ranking-body"></tbody>
     </table></div>
   </section>
@@ -39,7 +39,7 @@
     <div class="board-heading"><div><span class="section-kicker">MEMÓRIA DA COMPETIÇÃO</span><h2>Eventos anteriores</h2></div><span class="history-caption">Resultados preservados</span></div>
     <div id="history-list" class="history-list"></div>
   </section>
-  <footer class="ranking-footer"><span>JACITEC CYBER GAMES</span><a href="{{ url_for('ctf_home') }}">Voltar à página inicial ↑</a></footer>
+  <footer class="ranking-footer"><span>JACITEC CTF</span><a href="{{ url_for('ctf_home') }}">Voltar à página inicial ↑</a></footer>
 </main>
 
 <script>
@@ -47,6 +47,7 @@
     const rankingBody = document.getElementById('ranking-body');
     const rankingStatus = document.getElementById('ranking-status');
     const historyList = document.getElementById('history-list');
+    const EYE_ICON_SVG = {{ eye_icon_svg|tojson }};
     const previousPositions = new Map();
     let lastFetch = Date.now();
 
@@ -86,11 +87,27 @@
           else if (entry.position === 3) row.classList.add('podium-third');
           if (oldPosition && entry.position < oldPosition) row.classList.add('rank-overtake');
 
-          const values = [String(entry.position), entry.name, `${entry.points} pts`, duration(entry.time), entry.participation_status];
+          const values = [String(entry.position), entry.name, null, duration(entry.time), entry.participation_status];
           values.forEach((value, index) => {
             const cell = document.createElement('td');
-            cell.textContent = value;
-            if (index === 3) cell.className = 'ranking-time';
+            if (index === 2) {
+              const wrapper = document.createElement('span');
+              wrapper.className = 'ranking-points-cell';
+              const pointsLabel = document.createElement('span');
+              pointsLabel.textContent = `${entry.points} pts`;
+              const eyeButton = document.createElement('button');
+              eyeButton.type = 'button';
+              eyeButton.className = 'score-eye-btn';
+              eyeButton.title = 'Ver pontuação detalhada';
+              eyeButton.setAttribute('aria-label', `Ver pontuação detalhada de ${entry.name}`);
+              eyeButton.innerHTML = EYE_ICON_SVG;
+              eyeButton.addEventListener('click', () => window.openScoreBreakdown?.(entry.id, entry.name));
+              wrapper.append(pointsLabel, eyeButton);
+              cell.appendChild(wrapper);
+            } else {
+              cell.textContent = value;
+              if (index === 3) cell.className = 'ranking-time';
+            }
             row.appendChild(cell);
           });
           fragment.appendChild(row);
@@ -158,4 +175,5 @@
     setInterval(tickRankingTimes, 1000);
   })();
 </script>
+{% include 'partials/score_breakdown_modal.html' %}
 {% endblock %}

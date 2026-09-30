@@ -3,7 +3,7 @@
 {% block content %}
 <main class="landing-page">
   <header class="landing-nav">
-    <a href="{{ url_for('ctf_home') }}" class="landing-brand"><span class="brand-symbol">J</span><span>JACITEC <small>CYBER GAMES</small></span></a>
+    <a href="{{ url_for('ctf_home') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/ifes-logo.png') }}" alt="IFES" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
     <nav aria-label="Navegação principal">
       <a href="#como-funciona">Como funciona</a>
       <a href="{{ url_for('public_ranking_page') }}">Classificação</a>
@@ -22,7 +22,7 @@
         <a href="{{ url_for('participation_page') }}" class="hero-primary">Participar do CTF <span>↗</span></a>
         <a href="{{ url_for('public_ranking_page') }}" class="hero-secondary">Ver classificação <span>→</span></a>
       </div>
-      <div class="hero-proof"><span class="proof-dots"><i></i><i></i><i></i></span><span>8 desafios · do básico ao avançado</span></div>
+      <div class="hero-proof"><span class="proof-dots"><i></i><i></i><i></i></span><span>Até 8 desafios · do básico ao avançado</span></div>
     </div>
 
     <div class="hero-art" aria-hidden="true">
@@ -44,7 +44,45 @@
     <div class="landing-note"><span class="note-index">03 / CAPTURAR</span><p>Envie as flags, acompanhe seus pontos e suba na classificação.</p></div>
   </section>
 
-  <footer class="landing-footer"><span>JACITEC CYBER GAMES</span><span>APRENDA · INVESTIGUE · EVOLUA</span><span>2026</span></footer>
+  <section class="landing-rules-section" aria-label="Regras do CTF">
+    <span class="note-index">REGRAS DO CTF</span>
+    <h2>Jogue limpo.</h2>
+    <ol class="rule-list">
+      <li><span class="rule-badge">01</span><p>Teste somente os laboratórios desta plataforma.</p></li>
+      <li><span class="rule-badge">02</span><p>Não compartilhe flags, soluções ou credenciais com outros participantes.</p></li>
+      <li><span class="rule-badge">03</span><p>Não use IA generativa para resolver desafios ou elaborar payloads.</p></li>
+      <li><span class="rule-badge">04</span><p>Não ataque a infraestrutura, participantes ou serviços externos.</p></li>
+    </ol>
+  </section>
+
+  <section class="landing-info-grid" aria-label="Pontuação">
+    <article class="landing-info-card landing-scoring-card">
+      <span class="note-index">COMO A PONTUAÇÃO FUNCIONA</span>
+      <h2>A pontuação máxima é sempre <strong class="scoring-highlight">1.000 pontos</strong>.</h2>
+      <p>Não importa quantos desafios fáceis, médios ou difíceis o organizador escolher para a edição: a plataforma redistribui o peso de cada dificuldade automaticamente, e a soma de tudo sempre fecha em 1.000 pontos no total.</p>
+
+      <div class="scoring-bar" role="img" aria-label="Distribuição de peso entre dificuldades: fácil, médio e difícil, do menor para o maior">
+        <span class="scoring-bar-segment easy" style="width: 26%">FÁCIL</span>
+        <span class="scoring-bar-segment medium" style="width: 34%">MÉDIO</span>
+        <span class="scoring-bar-segment hard" style="width: 40%">DIFÍCIL</span>
+      </div>
+      <p class="scoring-bar-caption">Exemplo de distribuição de peso — a proporção exata muda conforme a composição escolhida pelo organizador, mas o total final é sempre 1.000.</p>
+
+      <div class="scoring-rules-grid">
+        <div class="scoring-rule-tile"><strong>−1 dica</strong><span>reduz parte do valor do desafio</span></div>
+        <div class="scoring-rule-tile"><strong>mín. 1 pt</strong><span>mesmo usando todas as dicas</span></div>
+        <div class="scoring-rule-tile"><strong>tempo</strong><span>só decide empates, não tira pontos</span></div>
+      </div>
+
+      <p class="scoring-eye-note"><span class="scoring-eye-sample">{{ eye_icon_svg|safe }}</span> No ranking, clique nesse ícone ao lado da pontuação de qualquer participante para ver o detalhamento: quantos pontos vieram de fáceis, médios e difíceis, e quanto foi perdido em dicas.</p>
+    </article>
+  </section>
+
+  <footer class="landing-footer">
+    <span class="landing-footer-brand"><img src="{{ url_for('static', filename='img/ifes-logo.png') }}" alt="Instituto Federal do Espírito Santo" class="ifes-badge" />JACITEC CTF</span>
+    <span>Feito pelos alunos <a href="https://www.linkedin.com/in/miguelpoleto/" target="_blank" rel="noopener noreferrer" class="landing-credit-link">Miguel Santuchi Poleto</a> e <a href="https://www.linkedin.com/in/alessandromb/" target="_blank" rel="noopener noreferrer" class="landing-credit-link">Alessandro Mion Batista</a></span>
+    <span>2026</span>
+  </footer>
   <a class="admin-stealth-link" href="{{ url_for('admin_login_page') }}" aria-label="Acesso administrativo">Equipe · Admin ↗</a>
 </main>
 {% endblock %}
