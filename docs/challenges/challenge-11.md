@@ -1,22 +1,16 @@
-# Challenge 11
+# Challenge 11 — L1-F08
 
-Nome: Metadados da galeria
+Nome: Rascunho esquecido
+Lista: 1
 Dificuldade: Fácil
-Pontos: 10
+Identificador: L1-F08
 
-Flag: JACITEC{catalog_11_metadata}
+Flag: JACITEC{catalog_11_source}
 
-Conceito: metadados HTTP
+Conceito: Código-fonte HTML / comentários
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. A prévia é carregada em segundo plano. Inspecione os headers da requisição para encontrar sua descrição.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): O portal editorial deixou um rascunho no HTML.
 
-Ferramentas úteis:
-- DevTools → Network ou curl -I
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: o código-fonte da página (botão direito → "Ver/Exibir código-fonte", ou Ctrl+U / Cmd+Option+U).
+Dica 2: Nem tudo que existe no HTML aparece renderizado na tela — procure por comentários e trechos ocultos.
+Dica 3: Percorra o documento inteiro, incluindo o que vem antes do <body> e depois do </body>.

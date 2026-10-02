@@ -1,15 +1,15 @@
-# Challenge 43 — L3-F07
+# Challenge 51 — L3-M05
 
-Nome: Acervo fotográfico
+Nome: Prévia silenciosa
 Lista: 3
-Dificuldade: Fácil
-Identificador: L3-F07
+Dificuldade: Médio
+Identificador: L3-M05
 
-Flag: JACITEC{catalog_43_metadata}
+Flag: JACITEC{catalog_51_metadata}
 
 Conceito: Metadados de recursos
 
-Descrição (só para a organização): Uma foto do acervo foi entregue com metadados extras.
+Descrição (só para a organização): Uma prévia carregada em segundo plano tem metadados úteis.
 
 Dica 1: Ferramenta necessária: DevTools (aba Network) para inspecionar os cabeçalhos de resposta do recurso de imagem/prévia.
 Dica 2: O elemento pode estar oculto na página, mas a requisição dele ainda aparece na aba Network.

@@ -1,22 +1,16 @@
-# Challenge 25
+# Challenge 25 — L2-F07
 
-Nome: Consulta de pedidos
-Dificuldade: Médio
-Pontos: 20
+Nome: Biblioteca de imagens
+Lista: 2
+Dificuldade: Fácil
+Identificador: L2-F07
 
-Flag: JACITEC{catalog_25_idor}
+Flag: JACITEC{catalog_25_metadata}
 
-Conceito: IDOR / autorização
+Conceito: Metadados de recursos
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Consulte o recurso próprio, capture o cabeçalho de delegação e repita a requisição autorizada para o recurso de referência.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): Uma imagem de acervo foi entregue com metadados úteis.
 
-Ferramentas úteis:
-- DevTools → Network, curl ou Burp Repeater
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: DevTools (aba Network) para inspecionar os cabeçalhos de resposta do recurso de imagem/prévia.
+Dica 2: O elemento pode estar oculto na página, mas a requisição dele ainda aparece na aba Network.
+Dica 3: Leia os cabeçalhos customizados da resposta, não apenas o corpo retornado.

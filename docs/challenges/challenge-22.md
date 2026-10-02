@@ -1,22 +1,16 @@
-# Challenge 22
+# Challenge 22 — L2-F04
 
-Nome: Arquivo de rotas
+Nome: Versão em cache
+Lista: 2
 Dificuldade: Fácil
-Pontos: 10
+Identificador: L2-F04
 
-Flag: JACITEC{catalog_22_robots}
+Flag: JACITEC{catalog_22_js}
 
-Conceito: robots.txt / descoberta
+Conceito: JavaScript publicado no frontend
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Localize robots.txt, siga a rota não listada e leia a resposta da auditoria.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): O bundle do frontend contém uma anotação útil.
 
-Ferramentas úteis:
-- Navegador ou curl
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: DevTools do navegador (abas Console e Sources) para inspecionar o JavaScript carregado.
+Dica 2: Variáveis globais definidas em scripts ficam acessíveis digitando o nome delas no Console.
+Dica 3: Procure por arquivos .js carregados pela página e leia o conteúdo na aba Sources.

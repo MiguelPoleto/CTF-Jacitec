@@ -1,22 +1,16 @@
-# Challenge 16
+# Challenge 16 — L1-M05
 
-Nome: Token de migração
+Nome: Console de manutenção
+Lista: 1
 Dificuldade: Médio
-Pontos: 20
+Identificador: L1-M05
 
-Flag: JACITEC{catalog_16_base64}
+Flag: JACITEC{catalog_16_js}
 
-Conceito: Base64 / codificação
+Conceito: JavaScript publicado no frontend
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Decodifique o valor apresentado pelo laboratório; Base64 é representação, não proteção.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): O painel frontend carrega uma configuração que não deveria ser pública.
 
-Ferramentas úteis:
-- DevTools ou terminal
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: DevTools do navegador (abas Console e Sources) para inspecionar o JavaScript carregado.
+Dica 2: Variáveis globais definidas em scripts ficam acessíveis digitando o nome delas no Console.
+Dica 3: Procure por arquivos .js carregados pela página e leia o conteúdo na aba Sources.

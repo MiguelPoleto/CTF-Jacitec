@@ -1,22 +1,16 @@
-# Challenge 40
+# Challenge 40 — L3-F04
 
-Nome: Bundle de homologação
-Dificuldade: Médio
-Pontos: 20
+Nome: Relatório de interface
+Lista: 3
+Dificuldade: Fácil
+Identificador: L3-F04
 
 Flag: JACITEC{catalog_40_js}
 
-Conceito: JavaScript / configuração frontend
+Conceito: JavaScript publicado no frontend
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Abra Sources ou Console e examine a variável de configuração carregada pelo frontend.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): O frontend ainda traz uma variável de manutenção.
 
-Ferramentas úteis:
-- DevTools → Sources ou Console
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: DevTools do navegador (abas Console e Sources) para inspecionar o JavaScript carregado.
+Dica 2: Variáveis globais definidas em scripts ficam acessíveis digitando o nome delas no Console.
+Dica 3: Procure por arquivos .js carregados pela página e leia o conteúdo na aba Sources.

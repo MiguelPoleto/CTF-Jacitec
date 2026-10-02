@@ -1,22 +1,16 @@
-# Challenge 33
+# Challenge 33 — L2-M05
 
-Nome: Fonte da newsletter
-Dificuldade: Fácil
-Pontos: 10
+Nome: Catálogo interno
+Lista: 2
+Dificuldade: Médio
+Identificador: L2-M05
 
-Flag: JACITEC{catalog_33_source}
+Flag: JACITEC{catalog_33_search}
 
-Conceito: HTML / comentários
+Conceito: Validação de entrada em busca
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Inspecione o código-fonte da página e localize a anotação interna que não aparece na interface.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): Observe e repita a requisição antes de alterar a entrada.
 
-Ferramentas úteis:
-- DevTools → Elements ou View Source
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: DevTools (aba Network) ou Burp Suite para observar e reenviar a requisição feita pelo formulário de busca.
+Dica 2: Depois de ver como o parâmetro de busca é enviado, teste substituí-lo por uma expressão lógica.
+Dica 3: Uma condição sempre verdadeira na consulta pode revelar registros que não deveriam aparecer.

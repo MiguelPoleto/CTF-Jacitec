@@ -1,22 +1,16 @@
-# Challenge 41
+# Challenge 41 — L3-F05
 
-Nome: Trilha de auditoria
-Dificuldade: Difícil
-Pontos: 30
+Nome: Canal de suporte
+Lista: 3
+Dificuldade: Fácil
+Identificador: L3-F05
 
-Flag: JACITEC{catalog_41_audit}
+Flag: JACITEC{catalog_41_header}
 
-Conceito: auditoria / headers
+Conceito: Cabeçalhos de resposta HTTP
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Use o botão de status, inspecione o cabeçalho que aponta a rota de auditoria e abra a rota indicada.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): A resposta técnica contém uma informação fora do corpo HTML.
 
-Ferramentas úteis:
-- DevTools → Network ou curl
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: DevTools (aba Network) ou `curl -I` para inspecionar os cabeçalhos completos da resposta HTTP.
+Dica 2: A interface visual não mostra tudo — os metadados podem estar apenas no cabeçalho da resposta.
+Dica 3: Repita a requisição da página principal e leia cada cabeçalho de resposta, um por um.

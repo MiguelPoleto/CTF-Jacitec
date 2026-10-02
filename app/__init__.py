@@ -135,64 +135,67 @@ CHALLENGES = [
     },
 ]
 
-# Catálogos independentes permitem reaproveitar a plataforma em várias edições
-# sem revelar ao organizador qual atividade específica será sorteada.  A primeira
-# lista mantém os oito laboratórios originais para preservar as edições já criadas.
-for _challenge in CHALLENGES:
-    _challenge["list_id"] = "lista-1"
-    _challenge["mechanism"] = "legacy"
-for _challenge_id, _mechanism in {1: "source", 2: "robots", 3: "base64", 4: "js", 5: "header", 6: "idor", 7: "search", 8: "audit"}.items():
-    CHALLENGES[_challenge_id - 1]["mechanism"] = _mechanism
-CHALLENGES[4]["difficulty"] = "Médio"
-CHALLENGES[7]["difficulty"] = "Difícil"
+# Três listas independentes, cada uma com exatamente 10 fáceis, 5 médios e 3
+# difíceis (18 por lista, 54 no total). Cada desafio pertence a uma única lista
+# e tem dificuldade fixa — nada é reatribuído depois por faixa de id.
+# Os oito laboratórios originais (id 1-8) ficam na lista 1.
+for _challenge_id, _mechanism, _difficulty in (
+    (1, "source", "Fácil"), (2, "robots", "Fácil"), (3, "base64", "Fácil"), (4, "js", "Fácil"),
+    (5, "header", "Fácil"), (6, "idor", "Médio"), (7, "search", "Médio"), (8, "audit", "Difícil"),
+):
+    CHALLENGES[_challenge_id - 1].update({"list_id": "lista-1", "mechanism": _mechanism, "difficulty": _difficulty})
 
+# (id, lista, dificuldade, mecanismo, nome, descrição — esta só aparece para a organização)
 _EXTRA_CHALLENGES = [
-    (9, "Rascunho esquecido", "Fácil", "source", "O portal editorial deixou um rascunho no HTML."),
-    (10, "Manifesto público", "Fácil", "manifest", "Um arquivo de configuração do navegador contém uma pista."),
-    (11, "Metadados da galeria", "Fácil", "metadata", "A ficha de uma imagem tem mais dados que a tela mostra."),
-    (12, "Resposta temporária", "Fácil", "header", "Um serviço devolve uma pista apenas nos cabeçalhos HTTP."),
-    (13, "Parâmetro perdido", "Médio", "idor", "Um identificador de documento não deveria conceder acesso a outro arquivo."),
-    (14, "Filtro de inventário", "Médio", "search", "A busca foi implementada sem tratar corretamente a entrada."),
-    (15, "Backup previsível", "Médio", "robots", "Um arquivo de descoberta aponta para material esquecido."),
-    (16, "Token de migração", "Médio", "base64", "Uma aplicação antiga ainda publica um token codificado."),
-    (17, "Console de manutenção", "Difícil", "js", "O painel frontend carrega uma configuração que não deveria ser pública."),
-    (18, "Cadeia de redirecionamento", "Difícil", "redirect", "Siga as respostas HTTP para encontrar a evidência correta."),
-    (19, "Auditoria exposta", "Difícil", "audit", "Um endpoint de auditoria precisa ser descoberto e interpretado."),
-    (20, "Dupla verificação", "Difícil", "header", "A informação está em uma resposta que exige inspecionar HTTP."),
-    (21, "Comentário de implantação", "Fácil", "source", "Uma página institucional publicou uma nota interna."),
-    (22, "Arquivo de rotas", "Fácil", "robots", "Rotas públicas nem sempre aparecem na navegação."),
-    (23, "Texto transportado", "Fácil", "base64", "Uma mensagem foi codificada, mas não protegida."),
-    (24, "Versão em cache", "Fácil", "js", "O bundle do frontend contém uma anotação útil."),
-    (25, "Consulta de pedidos", "Médio", "idor", "Um recurso sequencial exige testar autorização, não adivinhação."),
-    (26, "Pesquisa de acervo", "Médio", "search", "A busca deve ser analisada com um interceptador ou DevTools."),
-    (27, "Arquivo de manutenção", "Médio", "manifest", "Uma configuração exposta aponta para uma rota operacional."),
-    (28, "Cookie de ambiente", "Médio", "header", "A resposta possui um metadado que o HTML não revela."),
-    (29, "Relatório de incidente", "Difícil", "audit", "Correlacione uma rota descoberta e o retorno estruturado."),
-    (30, "Documento com acesso cruzado", "Difícil", "idor", "A validação de acesso depende de mais que trocar um número."),
-    (31, "Busca avançada", "Difícil", "search", "A evidência aparece somente após manipular a requisição de busca."),
-    (32, "Entrega contínua", "Difícil", "redirect", "Inspecione cada etapa de uma resposta redirecionada."),
-    (33, "Fonte da newsletter", "Fácil", "source", "O código-fonte de uma newsletter tem uma observação interna."),
-    (34, "Descoberta responsável", "Fácil", "robots", "Leia os arquivos de descoberta antes de enumerar caminhos."),
-    (35, "Mensagem serializada", "Fácil", "base64", "Uma sequência codificada precisa ser decifrada."),
-    (36, "Preferências públicas", "Fácil", "manifest", "As preferências web expõem uma pista de configuração."),
-    (37, "Perfil de fornecedor", "Médio", "idor", "Teste a autorização do recurso, em vez de somente o endereço."),
-    (38, "Catálogo interno", "Médio", "search", "Observe e repita a requisição antes de alterar a entrada."),
-    (39, "Cabeçalho de diagnóstico", "Médio", "header", "Use as ferramentas HTTP para enxergar a resposta inteira."),
-    (40, "Bundle de homologação", "Médio", "js", "Uma variável de ambiente ficou publicada no JavaScript."),
-    (41, "Trilha de auditoria", "Difícil", "audit", "O endpoint é intencionalmente pouco visível, mas está no fluxo."),
-    (42, "Reserva fora do escopo", "Difícil", "idor", "É necessário entender a sessão e o recurso antes de testar."),
-    (43, "Consulta composta", "Difícil", "search", "Use uma ferramenta de repetição de requisições para validar a hipótese."),
-    (44, "Protocolo de entrega", "Difícil", "redirect", "Os cabeçalhos e códigos de status formam a pista final."),
-    (45, "Rascunho editorial", "Fácil", "source", "Uma página de conteúdo manteve uma anotação fora da interface."),
-    (46, "Nota de navegador", "Fácil", "manifest", "A configuração do navegador aponta para uma pista publicada."),
-    (47, "Biblioteca de imagens", "Fácil", "metadata", "Uma imagem de acervo foi entregue com metadados úteis."),
-    (48, "Serviço de catálogo", "Fácil", "robots", "Um arquivo de descoberta lista uma rota que não está no menu."),
-    (49, "Registro legível", "Fácil", "base64", "Uma mensagem codificada precisa ser interpretada."),
-    (50, "Relatório de interface", "Fácil", "js", "O frontend ainda traz uma variável de manutenção."),
-    (51, "Canal de suporte", "Médio", "header", "A resposta técnica contém uma informação fora do corpo HTML."),
-    (52, "Auditoria de fornecedor", "Difícil", "audit", "O fluxo de status revela uma trilha de auditoria."),
-    (53, "Documento delegado", "Difícil", "idor", "A autorização do recurso deve ser observada e reproduzida."),
-    (54, "Última entrega", "Difícil", "redirect", "A cadeia HTTP precisa ser acompanhada até o recibo."),
+    # Lista 1 — completa os 8 originais
+    (9, "lista-1", "Fácil", "manifest", "Manifesto público", "Um arquivo de configuração do navegador contém uma pista."),
+    (10, "lista-1", "Fácil", "metadata", "Metadados da galeria", "A ficha de uma imagem tem mais dados que a tela mostra."),
+    (11, "lista-1", "Fácil", "source", "Rascunho esquecido", "O portal editorial deixou um rascunho no HTML."),
+    (12, "lista-1", "Fácil", "robots", "Arquivo de rotas", "Rotas públicas nem sempre aparecem na navegação."),
+    (13, "lista-1", "Fácil", "base64", "Texto transportado", "Uma mensagem foi codificada, mas não protegida."),
+    (14, "lista-1", "Médio", "search", "Filtro de inventário", "A busca foi implementada sem tratar corretamente a entrada."),
+    (15, "lista-1", "Médio", "header", "Resposta temporária", "Um serviço devolve uma pista apenas nos cabeçalhos HTTP."),
+    (16, "lista-1", "Médio", "js", "Console de manutenção", "O painel frontend carrega uma configuração que não deveria ser pública."),
+    (17, "lista-1", "Difícil", "redirect", "Cadeia de redirecionamento", "Siga as respostas HTTP para encontrar a evidência correta."),
+    (18, "lista-1", "Difícil", "idor", "Documento com acesso cruzado", "A validação de acesso depende de mais que trocar um número."),
+    # Lista 2
+    (19, "lista-2", "Fácil", "source", "Comentário de implantação", "Uma página institucional publicou uma nota interna."),
+    (20, "lista-2", "Fácil", "robots", "Descoberta responsável", "Leia os arquivos de descoberta antes de enumerar caminhos."),
+    (21, "lista-2", "Fácil", "base64", "Token de migração", "Uma aplicação antiga ainda publica um token codificado."),
+    (22, "lista-2", "Fácil", "js", "Versão em cache", "O bundle do frontend contém uma anotação útil."),
+    (23, "lista-2", "Fácil", "header", "Cookie de ambiente", "A resposta possui um metadado que o HTML não revela."),
+    (24, "lista-2", "Fácil", "manifest", "Preferências públicas", "As preferências web expõem uma pista de configuração."),
+    (25, "lista-2", "Fácil", "metadata", "Biblioteca de imagens", "Uma imagem de acervo foi entregue com metadados úteis."),
+    (26, "lista-2", "Fácil", "source", "Fonte da newsletter", "O código-fonte de uma newsletter tem uma observação interna."),
+    (27, "lista-2", "Fácil", "robots", "Backup previsível", "Um arquivo de descoberta aponta para material esquecido."),
+    (28, "lista-2", "Fácil", "base64", "Mensagem serializada", "Uma sequência codificada precisa ser decifrada."),
+    (29, "lista-2", "Médio", "search", "Pesquisa de acervo", "A busca deve ser analisada com um interceptador ou DevTools."),
+    (30, "lista-2", "Médio", "header", "Cabeçalho de diagnóstico", "Use as ferramentas HTTP para enxergar a resposta inteira."),
+    (31, "lista-2", "Médio", "js", "Bundle de homologação", "Uma variável de ambiente ficou publicada no JavaScript."),
+    (32, "lista-2", "Médio", "metadata", "Ficha técnica da foto", "Os metadados de uma prévia trazem mais do que a legenda."),
+    (33, "lista-2", "Médio", "search", "Catálogo interno", "Observe e repita a requisição antes de alterar a entrada."),
+    (34, "lista-2", "Difícil", "idor", "Consulta de pedidos", "Um recurso sequencial exige testar autorização, não adivinhação."),
+    (35, "lista-2", "Difícil", "audit", "Relatório de incidente", "Correlacione uma rota descoberta e o retorno estruturado."),
+    (36, "lista-2", "Difícil", "redirect", "Entrega contínua", "Inspecione cada etapa de uma resposta redirecionada."),
+    # Lista 3
+    (37, "lista-3", "Fácil", "source", "Rascunho editorial", "Uma página de conteúdo manteve uma anotação fora da interface."),
+    (38, "lista-3", "Fácil", "robots", "Serviço de catálogo", "Um arquivo de descoberta lista uma rota que não está no menu."),
+    (39, "lista-3", "Fácil", "base64", "Registro legível", "Uma mensagem codificada precisa ser interpretada."),
+    (40, "lista-3", "Fácil", "js", "Relatório de interface", "O frontend ainda traz uma variável de manutenção."),
+    (41, "lista-3", "Fácil", "header", "Canal de suporte", "A resposta técnica contém uma informação fora do corpo HTML."),
+    (42, "lista-3", "Fácil", "manifest", "Nota de navegador", "A configuração do navegador aponta para uma pista publicada."),
+    (43, "lista-3", "Fácil", "metadata", "Acervo fotográfico", "Uma foto do acervo foi entregue com metadados extras."),
+    (44, "lista-3", "Fácil", "source", "Página institucional", "Uma página institucional guarda uma anotação no HTML."),
+    (45, "lista-3", "Fácil", "js", "Variável esquecida", "Uma variável de depuração ficou no JavaScript publicado."),
+    (46, "lista-3", "Fácil", "robots", "Rotas fora do menu", "O arquivo de descoberta revela um caminho não divulgado."),
+    (47, "lista-3", "Médio", "search", "Busca avançada", "A evidência aparece somente após manipular a requisição de busca."),
+    (48, "lista-3", "Médio", "search", "Consulta composta", "Use uma ferramenta de repetição de requisições para validar a hipótese."),
+    (49, "lista-3", "Médio", "header", "Dupla verificação", "A informação está em uma resposta que exige inspecionar HTTP."),
+    (50, "lista-3", "Médio", "manifest", "Arquivo de manutenção", "Uma configuração exposta aponta para uma rota operacional."),
+    (51, "lista-3", "Médio", "metadata", "Prévia silenciosa", "Uma prévia carregada em segundo plano tem metadados úteis."),
+    (52, "lista-3", "Difícil", "audit", "Trilha de auditoria", "O endpoint é intencionalmente pouco visível, mas está no fluxo."),
+    (53, "lista-3", "Difícil", "idor", "Perfil de fornecedor", "Teste a autorização do recurso, em vez de somente o endereço."),
+    (54, "lista-3", "Difícil", "redirect", "Protocolo de entrega", "Os cabeçalhos e códigos de status formam a pista final."),
 ]
 # A dica 1 de cada mecanismo sempre nomeia a ferramenta específica necessária
 # para resolver o laboratório, conforme pedido: quem precisa de DevTools, de um
@@ -269,32 +272,29 @@ def _hints_for(mechanism):
 for _challenge in CHALLENGES:
     _challenge["hints"] = _hints_for(_challenge["mechanism"])
 
-for _id, _name, _difficulty, _mechanism, _description in _EXTRA_CHALLENGES:
-    _list_number = 1 if _id <= 20 else 2 if _id <= 32 else 3
-    _points = {"Fácil": 10, "Médio": 20, "Difícil": 30}[_difficulty]
-    _deductions = [0, _points // 4, _points // 2, _points - 1]
+for _id, _list_id, _difficulty, _mechanism, _name, _description in _EXTRA_CHALLENGES:
     CHALLENGES.append({
-        "id": _id, "title": f"Desafio {_id}", "name": _name, "points": _points,
-        "difficulty": _difficulty, "list_id": f"lista-{_list_number}", "mechanism": _mechanism,
+        "id": _id, "title": f"Desafio {_id}", "name": _name,
+        "difficulty": _difficulty, "list_id": _list_id, "mechanism": _mechanism,
         "flags": [f"JACITEC{{catalog_{_id}_{_mechanism}}}"], "description": _description,
         "hints": _hints_for(_mechanism),
-        "hint_deductions": _deductions,
     })
 
-# Três coleções homogêneas: 10 fáceis, 5 médias e 3 difíceis em cada uma.
-_CATALOG_LAYOUT = {
-    "lista-1": {"Fácil": {1, 2, 3, 4, 5, 9, 10, 11, 12, 18}, "Médio": {6, 7, 13, 14, 15}, "Difícil": {8, 16, 17}},
-    "lista-2": {"Fácil": set(range(19, 29)), "Médio": set(range(29, 34)), "Difícil": set(range(34, 37))},
-    "lista-3": {"Fácil": set(range(37, 47)), "Médio": set(range(47, 52)), "Difícil": set(range(52, 55))},
-}
-for _list_id, _by_difficulty in _CATALOG_LAYOUT.items():
-    for _difficulty, _ids in _by_difficulty.items():
-        for _id in _ids:
-            _challenge = next(item for item in CHALLENGES if item["id"] == _id)
-            _challenge["list_id"] = _list_id
-            _challenge["difficulty"] = _difficulty
-            _challenge["points"] = {"Fácil": 5, "Médio": 8, "Difícil": 10}[_difficulty]
-            _challenge["hint_deductions"] = [0, 1, 2, 3]
+# Peso-base por dificuldade (antes da normalização para 1.000 pontos por
+# edição) e identificador legível de cada desafio: L<lista>-<F|M|D><nº>,
+# ex.: L2-M03 = lista 2, terceiro desafio médio.
+DIFFICULTY_LETTERS = {"Fácil": "F", "Médio": "M", "Difícil": "D"}
+_ordinals = {}
+for _challenge in sorted(CHALLENGES, key=lambda item: item["id"]):
+    _challenge["points"] = {"Fácil": 5, "Médio": 8, "Difícil": 10}[_challenge["difficulty"]]
+    _challenge["hint_deductions"] = [0, 1, 2, 3]
+    _key = (_challenge["list_id"], _challenge["difficulty"])
+    _ordinals[_key] = _ordinals.get(_key, 0) + 1
+    _challenge["list_number"] = int(_challenge["list_id"].split("-")[1])
+    _challenge["code"] = f"L{_challenge['list_number']}-{DIFFICULTY_LETTERS[_challenge['difficulty']]}{_ordinals[_key]:02d}"
+
+assert all(count == {"F": 10, "M": 5, "D": 3}[DIFFICULTY_LETTERS[difficulty]] for (_, difficulty), count in _ordinals.items()) and len(_ordinals) == 9, \
+    "Cada lista deve ter exatamente 10 fáceis, 5 médios e 3 difíceis."
 
 # Os oito laboratórios originais (id 1-8) têm cada um seu próprio site
 # artesanal em lab_site.html. Os 46 laboratórios extra reaproveitam essas
@@ -1319,6 +1319,8 @@ def create_app(testing=False):
             conn.close()
             ctf = dict(ctf_row)
         ranking = participant_ranking(ctf_id)
+        event_challenges = challenges_for_ctf(ctf_id)
+        event_order = {challenge["id"]: position for position, challenge in enumerate(event_challenges)}
         for item in ranking:
             item["participation_status"] = (
                 "Finalizou antes do encerramento" if item["finished_at"]
@@ -1334,16 +1336,18 @@ def create_app(testing=False):
             conn.close()
             item["challenge_results"] = [
                 {
-                    "name": CHALLENGES[result["challenge_id"] - 1]["name"],
+                    "name": CHALLENGE_BY_ID[result["challenge_id"]]["name"],
+                    "code": CHALLENGE_BY_ID[result["challenge_id"]]["code"],
+                    "difficulty": CHALLENGE_BY_ID[result["challenge_id"]]["difficulty"],
                     "status": result["status"],
                     "hints_used": result["hints_used"],
                     "score_earned": result["score_earned"],
                     "solved_at": result["solved_at"],
                 }
-                for result in saved_results
-                if 1 <= result["challenge_id"] <= len(CHALLENGES)
+                for result in sorted(saved_results, key=lambda row: event_order.get(row["challenge_id"], len(event_order)))
+                if result["challenge_id"] in CHALLENGE_BY_ID
             ]
-        return render_template("ctf_archive.html", ctf=ctf, ranking=ranking, challenge_count=len(challenges_for_ctf(ctf_id)))
+        return render_template("ctf_archive.html", ctf=ctf, ranking=ranking, challenge_count=len(event_challenges))
 
     @app.post("/admin/ctf/<int:ctf_id>/delete")
     def delete_ctf_archive(ctf_id):
@@ -1468,10 +1472,12 @@ def create_app(testing=False):
         if legacy_default_request:
             selected = CHALLENGES[:8]
         else:
+            # Sorteio dentro de cada nível, mas a ordem da edição é sempre
+            # fáceis → médios → difíceis (ex.: 5/2/1 = posições 1-5 fáceis,
+            # 6-7 médios e 8 difícil).
             selected = []
             for difficulty in ("Fácil", "Médio", "Difícil"):
                 selected.extend(random.sample(challenge_pool(list_id, difficulty), requested[difficulty]))
-            random.shuffle(selected)
         # A pontuação máxima de qualquer edição é sempre 1.000 pontos, não
         # importa quantos desafios fáceis/médios/difíceis o administrador
         # escolher: o peso de cada dificuldade é redistribuído proporcionalmente.

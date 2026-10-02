@@ -1,22 +1,16 @@
-# Challenge 26
+# Challenge 26 — L2-F08
 
-Nome: Pesquisa de acervo
-Dificuldade: Médio
-Pontos: 20
+Nome: Fonte da newsletter
+Lista: 2
+Dificuldade: Fácil
+Identificador: L2-F08
 
-Flag: JACITEC{catalog_26_search}
+Flag: JACITEC{catalog_26_source}
 
-Conceito: validação de entrada / busca
+Conceito: Código-fonte HTML / comentários
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Use a busca normal, capture a requisição e valide controladamente como a entrada altera a consulta.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): O código-fonte de uma newsletter tem uma observação interna.
 
-Ferramentas úteis:
-- DevTools → Network ou Burp Repeater
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: o código-fonte da página (botão direito → "Ver/Exibir código-fonte", ou Ctrl+U / Cmd+Option+U).
+Dica 2: Nem tudo que existe no HTML aparece renderizado na tela — procure por comentários e trechos ocultos.
+Dica 3: Percorra o documento inteiro, incluindo o que vem antes do <body> e depois do </body>.

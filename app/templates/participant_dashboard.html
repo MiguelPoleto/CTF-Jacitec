@@ -16,8 +16,9 @@
   {% for item in challenges %}
     <a class="course-step {% if item.challenge.id == active_challenge.id %}selected{% endif %} {% if item.record.status == 'solved' %}completed{% endif %}"
        href="{{ url_for('participant_dashboard', challenge=item.challenge.id) }}"
-       title="{{ item.challenge.name }}">
+       title="{{ item.challenge.name }} · {{ item.challenge.difficulty }} · {{ item.challenge.code }}">
       <span>{{ '%02d'|format(loop.index) }}</span>
+      <i class="level-badge level-{{ item.challenge.code[3] }}" aria-label="{{ item.challenge.difficulty }}">{{ item.challenge.code[3] }}</i>
       <small>{{ item.challenge.name }}</small>
     </a>
   {% endfor %}
@@ -32,6 +33,10 @@
     <div>
       <p class="panel-eyebrow">JACITEC CTF · {{ ctf.code }}</p>
       <h1 id="panel-challenge-title">{{ active_challenge.name }}</h1>
+      <div class="panel-challenge-tags">
+        <span class="level-tag level-{{ active_challenge.code[3] }}">{{ active_challenge.difficulty }}</span>
+        <span class="list-tag" title="Identificador do desafio">Lista {{ active_challenge.list_number }} · {{ active_challenge.code }}</span>
+      </div>
       <span class="panel-drag-instruction">⋮⋮ Arraste para mover</span>
     </div>
     <div class="panel-header-actions"><button class="panel-reset" id="panel-reset" type="button" aria-label="Redefinir posição do painel" title="Redefinir posição">⌖</button><button class="panel-minimize" id="panel-minimize" type="button" aria-label="Minimizar painel">—</button></div>

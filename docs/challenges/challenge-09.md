@@ -1,22 +1,16 @@
-# Challenge 09
+# Challenge 09 — L1-F06
 
-Nome: Rascunho esquecido
+Nome: Manifesto público
+Lista: 1
 Dificuldade: Fácil
-Pontos: 10
+Identificador: L1-F06
 
-Flag: JACITEC{catalog_9_source}
+Flag: JACITEC{catalog_9_manifest}
 
-Conceito: HTML / comentários
+Conceito: Manifesto da aplicação web
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Inspecione o código-fonte da página e localize a anotação interna que não aparece na interface.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): Um arquivo de configuração do navegador contém uma pista.
 
-Ferramentas úteis:
-- DevTools → Elements ou View Source
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: DevTools (abas Network ou Application) para localizar o arquivo app.webmanifest carregado pela página.
+Dica 2: O navegador busca esse arquivo automaticamente ao carregar a página — filtre por "manifest" na aba Network.
+Dica 3: Abra o conteúdo do manifesto diretamente pela URL para ler todos os campos.

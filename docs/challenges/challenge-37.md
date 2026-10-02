@@ -1,22 +1,16 @@
-# Challenge 37
+# Challenge 37 — L3-F01
 
-Nome: Perfil de fornecedor
-Dificuldade: Médio
-Pontos: 20
+Nome: Rascunho editorial
+Lista: 3
+Dificuldade: Fácil
+Identificador: L3-F01
 
-Flag: JACITEC{catalog_37_idor}
+Flag: JACITEC{catalog_37_source}
 
-Conceito: IDOR / autorização
+Conceito: Código-fonte HTML / comentários
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Consulte o recurso próprio, capture o cabeçalho de delegação e repita a requisição autorizada para o recurso de referência.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): Uma página de conteúdo manteve uma anotação fora da interface.
 
-Ferramentas úteis:
-- DevTools → Network, curl ou Burp Repeater
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: o código-fonte da página (botão direito → "Ver/Exibir código-fonte", ou Ctrl+U / Cmd+Option+U).
+Dica 2: Nem tudo que existe no HTML aparece renderizado na tela — procure por comentários e trechos ocultos.
+Dica 3: Percorra o documento inteiro, incluindo o que vem antes do <body> e depois do </body>.

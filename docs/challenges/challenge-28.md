@@ -1,22 +1,16 @@
-# Challenge 28
+# Challenge 28 — L2-F10
 
-Nome: Cookie de ambiente
-Dificuldade: Médio
-Pontos: 20
+Nome: Mensagem serializada
+Lista: 2
+Dificuldade: Fácil
+Identificador: L2-F10
 
-Flag: JACITEC{catalog_28_header}
+Flag: JACITEC{catalog_28_base64}
 
-Conceito: cabeçalhos HTTP
+Conceito: Codificação Base64
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Faça uma requisição ao laboratório e leia todos os cabeçalhos HTTP da resposta.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): Uma sequência codificada precisa ser decifrada.
 
-Ferramentas úteis:
-- DevTools → Network ou curl -I
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: um decodificador Base64 (ex.: CyberChef, ou o terminal com `base64 -d`).
+Dica 2: O texto codificado não é criptografia — qualquer decodificador Base64 revela o conteúdo original.
+Dica 3: Copie exatamente a string codificada, sem espaços extras, antes de decodificar.

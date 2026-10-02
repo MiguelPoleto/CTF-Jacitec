@@ -1,22 +1,16 @@
-# Challenge 29
+# Challenge 29 — L2-M01
 
-Nome: Relatório de incidente
-Dificuldade: Difícil
-Pontos: 30
+Nome: Pesquisa de acervo
+Lista: 2
+Dificuldade: Médio
+Identificador: L2-M01
 
-Flag: JACITEC{catalog_29_audit}
+Flag: JACITEC{catalog_29_search}
 
-Conceito: auditoria / headers
+Conceito: Validação de entrada em busca
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Use o botão de status, inspecione o cabeçalho que aponta a rota de auditoria e abra a rota indicada.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): A busca deve ser analisada com um interceptador ou DevTools.
 
-Ferramentas úteis:
-- DevTools → Network ou curl
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: DevTools (aba Network) ou Burp Suite para observar e reenviar a requisição feita pelo formulário de busca.
+Dica 2: Depois de ver como o parâmetro de busca é enviado, teste substituí-lo por uma expressão lógica.
+Dica 3: Uma condição sempre verdadeira na consulta pode revelar registros que não deveriam aparecer.

@@ -1,15 +1,15 @@
-# Challenge 14 — L1-M03
+# Challenge 48 — L3-M02
 
-Nome: Filtro de inventário
-Lista: 1
+Nome: Consulta composta
+Lista: 3
 Dificuldade: Médio
-Identificador: L1-M03
+Identificador: L3-M02
 
-Flag: JACITEC{catalog_14_search}
+Flag: JACITEC{catalog_48_search}
 
 Conceito: Validação de entrada em busca
 
-Descrição (só para a organização): A busca foi implementada sem tratar corretamente a entrada.
+Descrição (só para a organização): Use uma ferramenta de repetição de requisições para validar a hipótese.
 
 Dica 1: Ferramenta necessária: DevTools (aba Network) ou Burp Suite para observar e reenviar a requisição feita pelo formulário de busca.
 Dica 2: Depois de ver como o parâmetro de busca é enviado, teste substituí-lo por uma expressão lógica.

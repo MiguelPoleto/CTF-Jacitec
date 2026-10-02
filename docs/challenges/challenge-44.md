@@ -1,22 +1,16 @@
-# Challenge 44
+# Challenge 44 — L3-F08
 
-Nome: Protocolo de entrega
-Dificuldade: Difícil
-Pontos: 30
+Nome: Página institucional
+Lista: 3
+Dificuldade: Fácil
+Identificador: L3-F08
 
-Flag: JACITEC{catalog_44_redirect}
+Flag: JACITEC{catalog_44_source}
 
-Conceito: redirecionamentos HTTP
+Conceito: Código-fonte HTML / comentários
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Inicie o fluxo e acompanhe a cadeia de 302 até o recibo final; o dado está no tráfego HTTP.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): Uma página institucional guarda uma anotação no HTML.
 
-Ferramentas úteis:
-- DevTools → Network ou curl -I -L
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: o código-fonte da página (botão direito → "Ver/Exibir código-fonte", ou Ctrl+U / Cmd+Option+U).
+Dica 2: Nem tudo que existe no HTML aparece renderizado na tela — procure por comentários e trechos ocultos.
+Dica 3: Percorra o documento inteiro, incluindo o que vem antes do <body> e depois do </body>.

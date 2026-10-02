@@ -281,3 +281,26 @@ def test_admin_entry_is_discreet_but_linked_from_landing(monkeypatch, tmp_path):
     response = app.test_client().get('/inicio')
     assert b'class="admin-stealth-link"' in response.data
     assert b'Equipe' in response.data
+
+
+def test_catalog_has_10_5_3_per_list_and_event_is_ordered_by_difficulty(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    counts = {}
+    for challenge in app_module.CHALLENGES:
+        key = (challenge['list_id'], challenge['difficulty'])
+        counts[key] = counts.get(key, 0) + 1
+    assert len(app_module.CHALLENGES) == 54
+    for list_id in ('lista-1', 'lista-2', 'lista-3'):
+        assert counts[(list_id, 'Fácil')] == 10
+        assert counts[(list_id, 'Médio')] == 5
+        assert counts[(list_id, 'Difícil')] == 3
+
+    app = create_app(testing=True)
+    client = app.test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/generate', data={'challenge_list': 'lista-2', 'easy_count': '5', 'medium_count': '2', 'hard_count': '1'})
+    with sqlite3.connect(database_path) as conn:
+        ids = [row[0] for row in conn.execute('SELECT challenge_id FROM ctf_challenges ORDER BY position')]
+    difficulties = [app_module.CHALLENGE_BY_ID[challenge_id]['difficulty'] for challenge_id in ids]
+    assert difficulties == ['Fácil'] * 5 + ['Médio'] * 2 + ['Difícil']
+    assert all(app_module.CHALLENGE_BY_ID[challenge_id]['list_id'] == 'lista-2' for challenge_id in ids)

@@ -61,10 +61,17 @@ de desafios visíveis. Cada lista sempre tem:
 | Médio | 5 |
 | Difícil | 3 |
 
+São 54 desafios no total, e cada um pertence a uma única lista. Cada desafio tem um
+identificador no formato `L<lista>-<nível><nº>` — por exemplo, `L2-M03` é o terceiro
+desafio médio da lista 2. A lista, o nível e o identificador aparecem no painel do
+participante em cada desafio e no resumo dos CTFs encerrados.
+
 O administrador escolhe apenas a lista e quantos desafios de cada dificuldade quer
 sortear (entre 1 e 8 no total); os desafios individuais são sempre sorteados pela
-plataforma. Os mesmos desafios podem ser reaproveitados em eventos diferentes — a
-lista não se esgota.
+plataforma. A ordem da edição é sempre **fáceis → médios → difíceis**: com 5 fáceis,
+2 médios e 1 difícil, as posições 1 a 5 são fáceis, a 6 e a 7 são médias e a 8 é
+difícil. Os mesmos desafios podem ser reaproveitados em eventos diferentes — a lista
+não se esgota.
 
 Cada laboratório é um site fictício com tema visual próprio (loja, portal de
 viagens, painel de desenvolvedor, arcade, etc.) para que a investigação se pareça
@@ -72,9 +79,10 @@ com a de um site real, e não com uma lista de exercícios. A técnica necessár
 resolver cada um nunca é explicada na própria página — só nas dicas, reveladas uma
 a uma pelo participante.
 
-Os oito desafios "clássicos" (usados desde a primeira versão da plataforma) estão
-documentados individualmente em `docs/challenges/`, com nome, objetivo,
-dificuldade, pontos, flag, dica e solução.
+Todos os 54 desafios estão documentados em `docs/challenges/`: o índice
+[`catalogs.md`](docs/challenges/catalogs.md) lista cada desafio por lista, nível e
+identificador, e cada `challenge-NN.md` traz nome, flag, conceito e dicas. Os desafios
+01 a 08 são os laboratórios clássicos da primeira versão, com sites próprios.
 
 ## Requisitos
 
@@ -167,7 +175,7 @@ app/
   static/              # CSS, ícones e a logo institucional
   templates/           # páginas (landing, participação, painel do jogo, ranking, admin)
     partials/          # componentes reutilizáveis (ex.: modal de pontuação detalhada)
-docs/challenges/       # documentação individual dos desafios clássicos (1 a 8)
+docs/challenges/       # índice do catálogo (catalogs.md) e um arquivo por desafio (01 a 54)
 tests/test_app.py      # testes de integração (pytest + Flask test client)
 ```
 

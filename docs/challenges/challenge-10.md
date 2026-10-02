@@ -1,22 +1,16 @@
-# Challenge 10
+# Challenge 10 — L1-F07
 
-Nome: Manifesto público
+Nome: Metadados da galeria
+Lista: 1
 Dificuldade: Fácil
-Pontos: 10
+Identificador: L1-F07
 
-Flag: JACITEC{catalog_10_manifest}
+Flag: JACITEC{catalog_10_metadata}
 
-Conceito: manifesto web / configuração
+Conceito: Metadados de recursos
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Abra o manifesto carregado pela aplicação pelo Network e analise seus campos de configuração.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): A ficha de uma imagem tem mais dados que a tela mostra.
 
-Ferramentas úteis:
-- DevTools → Network
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: DevTools (aba Network) para inspecionar os cabeçalhos de resposta do recurso de imagem/prévia.
+Dica 2: O elemento pode estar oculto na página, mas a requisição dele ainda aparece na aba Network.
+Dica 3: Leia os cabeçalhos customizados da resposta, não apenas o corpo retornado.

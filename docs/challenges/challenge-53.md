@@ -1,15 +1,15 @@
-# Challenge 34 — L2-D01
+# Challenge 53 — L3-D02
 
-Nome: Consulta de pedidos
-Lista: 2
+Nome: Perfil de fornecedor
+Lista: 3
 Dificuldade: Difícil
-Identificador: L2-D01
+Identificador: L3-D02
 
-Flag: JACITEC{catalog_34_idor}
+Flag: JACITEC{catalog_53_idor}
 
 Conceito: Controle de acesso a recursos (IDOR)
 
-Descrição (só para a organização): Um recurso sequencial exige testar autorização, não adivinhação.
+Descrição (só para a organização): Teste a autorização do recurso, em vez de somente o endereço.
 
 Dica 1: Ferramenta necessária: DevTools (aba Network) ou um interceptador de requisições (ex.: Burp Suite) para repetir a chamada alterando parâmetros e cabeçalhos.
 Dica 2: Depois de ver a requisição original, tente trocar o identificador do recurso e observe a resposta.

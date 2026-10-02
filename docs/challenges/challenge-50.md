@@ -1,15 +1,15 @@
-# Challenge 42 — L3-F06
+# Challenge 50 — L3-M04
 
-Nome: Nota de navegador
+Nome: Arquivo de manutenção
 Lista: 3
-Dificuldade: Fácil
-Identificador: L3-F06
+Dificuldade: Médio
+Identificador: L3-M04
 
-Flag: JACITEC{catalog_42_manifest}
+Flag: JACITEC{catalog_50_manifest}
 
 Conceito: Manifesto da aplicação web
 
-Descrição (só para a organização): A configuração do navegador aponta para uma pista publicada.
+Descrição (só para a organização): Uma configuração exposta aponta para uma rota operacional.
 
 Dica 1: Ferramenta necessária: DevTools (abas Network ou Application) para localizar o arquivo app.webmanifest carregado pela página.
 Dica 2: O navegador busca esse arquivo automaticamente ao carregar a página — filtre por "manifest" na aba Network.

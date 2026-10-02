@@ -31,9 +31,11 @@
         head.append(number, status);
         const heading = document.createElement('h3');
         heading.textContent = result.name;
+        const level = document.createElement('p');
+        level.textContent = `${result.difficulty} · ${result.code}`;
         const meta = document.createElement('p');
         meta.textContent = `${result.score_earned} pts · ${result.hints_used} dica(s)`;
-        card.append(head, heading, meta);
+        card.append(head, heading, level, meta);
         if (result.solved_at) {
           const time = document.createElement('time');
           time.textContent = result.solved_at;

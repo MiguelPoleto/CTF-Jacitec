@@ -1,22 +1,16 @@
-# Challenge 32
+# Challenge 32 — L2-M04
 
-Nome: Entrega contínua
-Dificuldade: Difícil
-Pontos: 30
+Nome: Ficha técnica da foto
+Lista: 2
+Dificuldade: Médio
+Identificador: L2-M04
 
-Flag: JACITEC{catalog_32_redirect}
+Flag: JACITEC{catalog_32_metadata}
 
-Conceito: redirecionamentos HTTP
+Conceito: Metadados de recursos
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Inicie o fluxo e acompanhe a cadeia de 302 até o recibo final; o dado está no tráfego HTTP.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): Os metadados de uma prévia trazem mais do que a legenda.
 
-Ferramentas úteis:
-- DevTools → Network ou curl -I -L
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: DevTools (aba Network) para inspecionar os cabeçalhos de resposta do recurso de imagem/prévia.
+Dica 2: O elemento pode estar oculto na página, mas a requisição dele ainda aparece na aba Network.
+Dica 3: Leia os cabeçalhos customizados da resposta, não apenas o corpo retornado.

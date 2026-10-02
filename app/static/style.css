@@ -609,6 +609,18 @@ th {
   color: #14805f;
 }
 
+/* Nível do desafio: F = fácil, M = médio, D = difícil. */
+.level-badge { display: inline-grid; flex: none; place-items: center; width: 17px; height: 17px; border-radius: 5px; font-size: .58rem; font-style: normal; font-weight: 800; }
+.level-badge.level-F { color: #0f5a37; background: #c9f2d9; }
+.level-badge.level-M { color: #6b4b00; background: #ffe7a6; }
+.level-badge.level-D { color: #7a1f1f; background: #ffd0cc; }
+.panel-challenge-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.level-tag, .list-tag { padding: 3px 8px; border-radius: 999px; font-size: .62rem; font-weight: 800; letter-spacing: .03em; }
+.level-tag.level-F { color: #b9f5cf; background: rgba(124, 227, 139, .16); border: 1px solid rgba(124, 227, 139, .35); }
+.level-tag.level-M { color: #ffe1a1; background: rgba(255, 209, 102, .14); border: 1px solid rgba(255, 209, 102, .35); }
+.level-tag.level-D { color: #ffc0bb; background: rgba(255, 107, 107, .14); border: 1px solid rgba(255, 107, 107, .35); }
+.list-tag { color: #a9c6da; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .12); }
+
 .lab-frame-wrap {
   height: calc(100vh - 126px);
   min-height: 450px;

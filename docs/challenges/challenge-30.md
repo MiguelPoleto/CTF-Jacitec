@@ -1,22 +1,16 @@
-# Challenge 30
+# Challenge 30 — L2-M02
 
-Nome: Documento com acesso cruzado
-Dificuldade: Difícil
-Pontos: 30
+Nome: Cabeçalho de diagnóstico
+Lista: 2
+Dificuldade: Médio
+Identificador: L2-M02
 
-Flag: JACITEC{catalog_30_idor}
+Flag: JACITEC{catalog_30_header}
 
-Conceito: IDOR / autorização
+Conceito: Cabeçalhos de resposta HTTP
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Consulte o recurso próprio, capture o cabeçalho de delegação e repita a requisição autorizada para o recurso de referência.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): Use as ferramentas HTTP para enxergar a resposta inteira.
 
-Ferramentas úteis:
-- DevTools → Network, curl ou Burp Repeater
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: DevTools (aba Network) ou `curl -I` para inspecionar os cabeçalhos completos da resposta HTTP.
+Dica 2: A interface visual não mostra tudo — os metadados podem estar apenas no cabeçalho da resposta.
+Dica 3: Repita a requisição da página principal e leia cada cabeçalho de resposta, um por um.

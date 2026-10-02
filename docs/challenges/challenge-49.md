@@ -1,15 +1,15 @@
-# Challenge 15 — L1-M04
+# Challenge 49 — L3-M03
 
-Nome: Resposta temporária
-Lista: 1
+Nome: Dupla verificação
+Lista: 3
 Dificuldade: Médio
-Identificador: L1-M04
+Identificador: L3-M03
 
-Flag: JACITEC{catalog_15_header}
+Flag: JACITEC{catalog_49_header}
 
 Conceito: Cabeçalhos de resposta HTTP
 
-Descrição (só para a organização): Um serviço devolve uma pista apenas nos cabeçalhos HTTP.
+Descrição (só para a organização): A informação está em uma resposta que exige inspecionar HTTP.
 
 Dica 1: Ferramenta necessária: DevTools (aba Network) ou `curl -I` para inspecionar os cabeçalhos completos da resposta HTTP.
 Dica 2: A interface visual não mostra tudo — os metadados podem estar apenas no cabeçalho da resposta.

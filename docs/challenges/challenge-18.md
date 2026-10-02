@@ -1,22 +1,16 @@
-# Challenge 18
+# Challenge 18 — L1-D03
 
-Nome: Cadeia de redirecionamento
+Nome: Documento com acesso cruzado
+Lista: 1
 Dificuldade: Difícil
-Pontos: 30
+Identificador: L1-D03
 
-Flag: JACITEC{catalog_18_redirect}
+Flag: JACITEC{catalog_18_idor}
 
-Conceito: redirecionamentos HTTP
+Conceito: Controle de acesso a recursos (IDOR)
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Inicie o fluxo e acompanhe a cadeia de 302 até o recibo final; o dado está no tráfego HTTP.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): A validação de acesso depende de mais que trocar um número.
 
-Ferramentas úteis:
-- DevTools → Network ou curl -I -L
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: DevTools (aba Network) ou um interceptador de requisições (ex.: Burp Suite) para repetir a chamada alterando parâmetros e cabeçalhos.
+Dica 2: Depois de ver a requisição original, tente trocar o identificador do recurso e observe a resposta.
+Dica 3: A autorização pode depender de um cabeçalho que a primeira resposta já revelou — reenvie a requisição incluindo-o.

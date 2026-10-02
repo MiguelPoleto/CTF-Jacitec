@@ -1,22 +1,16 @@
-# Challenge 27
+# Challenge 27 — L2-F09
 
-Nome: Arquivo de manutenção
-Dificuldade: Médio
-Pontos: 20
+Nome: Backup previsível
+Lista: 2
+Dificuldade: Fácil
+Identificador: L2-F09
 
-Flag: JACITEC{catalog_27_manifest}
+Flag: JACITEC{catalog_27_robots}
 
-Conceito: manifesto web / configuração
+Conceito: Arquivos de descoberta (robots.txt)
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Abra o manifesto carregado pela aplicação pelo Network e analise seus campos de configuração.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): Um arquivo de descoberta aponta para material esquecido.
 
-Ferramentas úteis:
-- DevTools → Network
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: o arquivo robots.txt do site (acesse diretamente pela URL, ex.: /robots.txt).
+Dica 2: Esse arquivo lista caminhos que os buscadores não devem indexar — mas o navegador consegue acessá-los normalmente.
+Dica 3: Abra manualmente qualquer rota listada como "Disallow" para ver o que ela entrega.

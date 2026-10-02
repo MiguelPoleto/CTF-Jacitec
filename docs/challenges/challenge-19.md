@@ -1,22 +1,16 @@
-# Challenge 19
+# Challenge 19 — L2-F01
 
-Nome: Auditoria exposta
-Dificuldade: Difícil
-Pontos: 30
+Nome: Comentário de implantação
+Lista: 2
+Dificuldade: Fácil
+Identificador: L2-F01
 
-Flag: JACITEC{catalog_19_audit}
+Flag: JACITEC{catalog_19_source}
 
-Conceito: auditoria / headers
+Conceito: Código-fonte HTML / comentários
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Use o botão de status, inspecione o cabeçalho que aponta a rota de auditoria e abra a rota indicada.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): Uma página institucional publicou uma nota interna.
 
-Ferramentas úteis:
-- DevTools → Network ou curl
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: o código-fonte da página (botão direito → "Ver/Exibir código-fonte", ou Ctrl+U / Cmd+Option+U).
+Dica 2: Nem tudo que existe no HTML aparece renderizado na tela — procure por comentários e trechos ocultos.
+Dica 3: Percorra o documento inteiro, incluindo o que vem antes do <body> e depois do </body>.

@@ -1,22 +1,16 @@
-# Challenge 24
+# Challenge 24 — L2-F06
 
-Nome: Versão em cache
+Nome: Preferências públicas
+Lista: 2
 Dificuldade: Fácil
-Pontos: 10
+Identificador: L2-F06
 
-Flag: JACITEC{catalog_24_js}
+Flag: JACITEC{catalog_24_manifest}
 
-Conceito: JavaScript / configuração frontend
+Conceito: Manifesto da aplicação web
 
-Como resolver:
-1. Leia o enunciado e execute apenas o fluxo normal do laboratório.
-2. Abra Sources ou Console e examine a variável de configuração carregada pelo frontend.
-3. Registre a evidência encontrada e envie a flag no painel do CTF.
+Descrição (só para a organização): As preferências web expõem uma pista de configuração.
 
-Ferramentas úteis:
-- DevTools → Sources ou Console
-
-Dica 1: Comece pelo comportamento normal da página.
-Dica 2: A evidência está no tráfego, código ou recurso técnico indicado pelo laboratório.
-Dica 3: Não teste nada fora deste ambiente isolado.
-
+Dica 1: Ferramenta necessária: DevTools (abas Network ou Application) para localizar o arquivo app.webmanifest carregado pela página.
+Dica 2: O navegador busca esse arquivo automaticamente ao carregar a página — filtre por "manifest" na aba Network.
+Dica 3: Abra o conteúdo do manifesto diretamente pela URL para ler todos os campos.
