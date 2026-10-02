@@ -1144,6 +1144,7 @@ def create_app(testing=False):
             active_record=active_record,
             active_position=active_index + 1,
             next_challenge=event_challenges[active_index + 1] if active_index + 1 < len(event_challenges) else None,
+            remaining_seconds=ctf_remaining_seconds(dict(ctf)),
         )
 
     @app.get("/api/participant-state")

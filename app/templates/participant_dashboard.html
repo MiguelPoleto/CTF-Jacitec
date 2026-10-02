@@ -117,7 +117,7 @@
     const startedAt = new Date(`${participantStartedAt.replace(' ', 'T')}Z`);
     let hintsUsed = {{ active_record.hints_used }};
     let isSolved = {{ 'true' if active_record.status == 'solved' else 'false' }};
-    let eventRemainingSeconds = null;
+    let eventRemainingSeconds = {{ remaining_seconds|tojson }};
     let eventCountdownUpdatedAt = Date.now();
 
     function formatDuration(total) {
@@ -127,21 +127,30 @@
       return `${hours}:${minutes}:${seconds}`;
     }
 
+    function setText(element, value) {
+      if (element.textContent !== String(value)) element.textContent = value;
+    }
+
+    let hintRequestPending = false;
+    // Só acrescenta as dicas que ainda não estão na tela: recriar a lista
+    // inteira a cada atualização reiniciava a animação de entrada e fazia o
+    // painel "piscar" como se recarregasse.
     function renderHints() {
-      hintsList.innerHTML = '';
-      challengeHints.slice(0, hintsUsed).forEach((hint, index) => {
+      for (let index = hintsList.children.length; index < Math.min(hintsUsed, challengeHints.length); index += 1) {
         const item = document.createElement('div');
         item.className = 'revealed-hint';
         const heading = document.createElement('span');
         heading.textContent = `Dica ${index + 1}`;
         const text = document.createElement('p');
-        text.textContent = hint;
+        text.textContent = challengeHints[index];
         item.append(heading, text);
         hintsList.appendChild(item);
-      });
-      hintCount.textContent = `${hintsUsed}/${challengeHints.length}`;
-      document.getElementById('reveal-hint').disabled = isSolved || hintsUsed >= challengeHints.length;
-      document.getElementById('reveal-hint').textContent = hintsUsed >= challengeHints.length ? 'Todas as dicas reveladas' : 'Revelar próxima dica';
+      }
+      setText(hintCount, `${hintsUsed}/${challengeHints.length}`);
+      const revealButton = document.getElementById('reveal-hint');
+      const shouldDisable = hintRequestPending || isSolved || hintsUsed >= challengeHints.length;
+      if (revealButton.disabled !== shouldDisable) revealButton.disabled = shouldDisable;
+      setText(revealButton, hintsUsed >= challengeHints.length ? 'Todas as dicas reveladas' : 'Revelar próxima dica');
     }
 
     function updateTimer() {
@@ -153,8 +162,16 @@
       if (eventRemainingSeconds !== null) {
         const remaining = Math.max(0, eventRemainingSeconds - Math.floor((Date.now() - eventCountdownUpdatedAt) / 1000));
         document.getElementById('event-countdown').textContent = formatDuration(remaining);
+        if (remaining === 0 && !expiryCheckDone) {
+          // Tempo esgotado no relógio local: confirma com o servidor (e de
+          // novo alguns segundos depois, caso os relógios estejam defasados).
+          expiryCheckDone = true;
+          refreshParticipantState();
+          setTimeout(refreshParticipantState, 5000);
+        }
       }
     }
+    let expiryCheckDone = false;
 
     function showEventEnded(data) {
       document.getElementById('event-ranking-link').href = data.ranking_url || '/ranking';
@@ -294,19 +311,21 @@
     });
 
     document.getElementById('reveal-hint').addEventListener('click', async () => {
-      const button = document.getElementById('reveal-hint');
-      button.disabled = true;
+      if (hintRequestPending) return;
+      hintRequestPending = true;
+      renderHints();
       try {
         const response = await fetch(`/api/challenge/${challengeId}/hint`, { method: 'POST' });
         const data = await response.json();
         if (response.status === 409 && data.status === 'FINALIZADO') return showEventEnded(data);
         if (!response.ok) throw new Error(data.error || 'Não foi possível revelar a dica.');
         hintsUsed = data.hints_used;
-        renderHints();
       } catch (error) {
         feedback.textContent = error.message;
         feedback.className = 'feedback-error';
-        button.disabled = false;
+      } finally {
+        hintRequestPending = false;
+        renderHints();
       }
     });
 
@@ -339,39 +358,65 @@
         feedback.textContent = error.message;
         feedback.className = 'feedback-error';
       } finally {
-        button.disabled = false;
+        button.disabled = isSolved;
       }
     });
 
+    // Sincronização leve com o servidor: só serve para detectar o fim do CTF,
+    // ajustar o cronômetro do evento e refletir algo feito em outra aba. Só
+    // toca no DOM quando o valor realmente mudou, e pausa com a aba oculta.
+    let refreshInFlight = false;
     async function refreshParticipantState() {
+      if (refreshInFlight || document.hidden) return;
+      refreshInFlight = true;
       try {
-        const response = await fetch('/api/participant-state');
+        const response = await fetch('/api/participant-state', { cache: 'no-store' });
         const data = await response.json();
         if (response.status === 409 && data.status === 'FINALIZADO') return showEventEnded(data);
         if (!response.ok) return;
-        document.getElementById('panel-points').textContent = data.points;
+        setText(document.getElementById('panel-points'), data.points);
         eventRemainingSeconds = data.remaining_seconds;
         eventCountdownUpdatedAt = Date.now();
         const solved = data.challenges.filter((item) => item.status === 'solved').length;
-        document.getElementById('panel-progress-fill').style.width = `${solved / data.challenges.length * 100}%`;
+        const progressFill = document.getElementById('panel-progress-fill');
+        const progressWidth = `${solved / data.challenges.length * 100}%`;
+        if (progressFill.style.width !== progressWidth) progressFill.style.width = progressWidth;
         const active = data.challenges.find((item) => item.id === challengeId);
         if (active) {
           hintsUsed = Math.max(hintsUsed, active.hints_used);
           isSolved = isSolved || active.status === 'solved';
           const localizedStatus = { open: 'EM ABERTO', solved: 'RESOLVIDO', skipped: 'PULADO' };
-          document.getElementById('panel-status').textContent = localizedStatus[active.status] || active.status;
+          setText(document.getElementById('panel-status'), localizedStatus[active.status] || active.status);
           renderHints();
         }
       } catch (_) {
-        // Keep the challenge usable during a short network interruption.
+        // Mantém o desafio utilizável durante uma queda rápida de rede.
+      } finally {
+        refreshInFlight = false;
       }
     }
 
+    // Sem polling: a aba Network precisa ficar limpa para os desafios que são
+    // resolvidos inspecionando requisições. O servidor só é consultado quando
+    // há motivo — tempo do evento esgotado, retorno à aba depois de um tempo
+    // fora, ou o site do desafio ter sido redirecionado para fora do /lab/
+    // (o que acontece quando o CTF é encerrado). Revelar dica e enviar flag já
+    // avisam o fim do evento pela própria resposta.
+    let lastVisibilityCheck = Date.now();
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden || Date.now() - lastVisibilityCheck < 60000) return;
+      lastVisibilityCheck = Date.now();
+      refreshParticipantState();
+    });
+    document.getElementById('challenge-site').addEventListener('load', (event) => {
+      let path = '';
+      try { path = event.currentTarget.contentWindow.location.pathname; } catch (_) { return; }
+      if (!path.startsWith('/lab/')) refreshParticipantState();
+    });
+
     renderHints();
     updateTimer();
-    refreshParticipantState();
     setInterval(updateTimer, 1000);
-    setInterval(refreshParticipantState, 5000);
   })();
 </script>
 {% include 'partials/score_breakdown_modal.html' %}
