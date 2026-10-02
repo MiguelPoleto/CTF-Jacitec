@@ -106,7 +106,10 @@
 <script>
   (() => {
     const challengeId = {{ active_challenge.id }};
-    const challengeHints = {{ active_challenge.hints|tojson }};
+    // Só o total de dicas vai no HTML; os textos só chegam quando revelados,
+    // para não dar para lê-los no código-fonte sem gastar pontos.
+    const challengeHintTotal = {{ active_challenge.hints|length }};
+    const revealedHints = [];
     const participantStartedAt = {{ participant.entered_at|tojson }};
     const panel = document.getElementById('control-panel');
     const minimizeButton = document.getElementById('panel-minimize');
@@ -141,21 +144,22 @@
     // inteira a cada atualização reiniciava a animação de entrada e fazia o
     // painel "piscar" como se recarregasse.
     function renderHints() {
-      for (let index = hintsList.children.length; index < Math.min(hintsUsed, challengeHints.length); index += 1) {
+      // Só renderiza dicas cujo texto já chegou do servidor (revealedHints).
+      for (let index = hintsList.children.length; index < revealedHints.length; index += 1) {
         const item = document.createElement('div');
         item.className = 'revealed-hint';
         const heading = document.createElement('span');
         heading.textContent = `Dica ${index + 1}`;
         const text = document.createElement('p');
-        text.textContent = challengeHints[index];
+        text.textContent = revealedHints[index];
         item.append(heading, text);
         hintsList.appendChild(item);
       }
-      setText(hintCount, `${hintsUsed}/${challengeHints.length}`);
+      setText(hintCount, `${hintsUsed}/${challengeHintTotal}`);
       const revealButton = document.getElementById('reveal-hint');
-      const shouldDisable = hintRequestPending || isSolved || hintsUsed >= challengeHints.length;
+      const shouldDisable = hintRequestPending || isSolved || hintsUsed >= challengeHintTotal;
       if (revealButton.disabled !== shouldDisable) revealButton.disabled = shouldDisable;
-      setText(revealButton, hintsUsed >= challengeHints.length ? 'Todas as dicas reveladas' : 'Revelar próxima dica');
+      setText(revealButton, hintsUsed >= challengeHintTotal ? 'Todas as dicas reveladas' : 'Revelar próxima dica');
     }
 
     function updateTimer() {
@@ -353,6 +357,7 @@
         if (response.status === 409 && data.status === 'FINALIZADO') return showEventEnded(data);
         if (!response.ok) throw new Error(data.error || 'Não foi possível revelar a dica.');
         hintsUsed = data.hints_used;
+        if (data.hint && revealedHints.length < hintsUsed) revealedHints.push(data.hint);
       } catch (error) {
         feedback.textContent = error.message;
         feedback.className = 'feedback-error';
@@ -447,7 +452,23 @@
       if (!path.startsWith('/lab/')) refreshParticipantState();
     });
 
+    // Ao abrir o desafio, busca uma única vez as dicas já pagas (se houver),
+    // já que os textos não vêm mais no HTML. Sem dicas usadas, nada é buscado.
+    async function loadRevealedHints() {
+      if (hintsUsed <= 0) return;
+      try {
+        const response = await fetch(`/api/challenge/${challengeId}/revealed-hints`, { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = await response.json();
+        revealedHints.length = 0;
+        (data.hints || []).forEach((hint) => revealedHints.push(hint));
+        hintsUsed = Math.max(hintsUsed, data.hints_used || 0);
+        renderHints();
+      } catch (_) { /* ignora falha de rede */ }
+    }
+
     renderHints();
+    loadRevealedHints();
     updateTimer();
     setInterval(updateTimer, 1000);
   })();

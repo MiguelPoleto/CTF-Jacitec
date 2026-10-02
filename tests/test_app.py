@@ -333,3 +333,45 @@ def test_admin_challenge_library_is_protected_and_guides_to_flag(monkeypatch, tm
 
     missing = client.get('/admin/desafios/999', follow_redirects=False)
     assert missing.status_code == 302
+
+
+def _start_ctf_with_challenge(client, database_path, challenge):
+    import app as _m
+    with sqlite3.connect(database_path) as conn:
+        conn.execute("UPDATE ctfs SET status='FINALIZADO' WHERE status='ATIVO'")
+        code = _m.generate_ctf_code()
+        conn.execute(
+            "INSERT INTO ctfs (code,status,created_at,max_duration_minutes,challenge_list_id) VALUES (?,?,?,?,?)",
+            (code, 'ATIVO', _m.timestamp_now(), 600, challenge['list_id']),
+        )
+        ctf_id = conn.execute("SELECT id FROM ctfs WHERE code=?", (code,)).fetchone()[0]
+        conn.execute(
+            "INSERT INTO ctf_challenges (ctf_id,challenge_id,position,base_points,hint_penalty) VALUES (?,?,?,?,?)",
+            (ctf_id, challenge['id'], 1, challenge['points'], 1),
+        )
+    return code
+
+
+def test_robots_challenge_2_report_page_exposes_flag(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    app = create_app(testing=True)
+    client = app.test_client()
+    challenge = app_module.CHALLENGE_BY_ID[2]
+    code = _start_ctf_with_challenge(client, database_path, challenge)
+    client.post('/join', data={'name': 'Rev', 'code': code})
+    report = client.get('/lab/2/files/report')
+    assert report.status_code == 200
+    assert challenge['flags'][0].encode('utf-8') in report.data
+
+
+def test_manifest_challenge_endpoint_and_reference_present(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    app = create_app(testing=True)
+    client = app.test_client()
+    challenge = next(c for c in app_module.CHALLENGES if c['mechanism'] == 'manifest')
+    code = _start_ctf_with_challenge(client, database_path, challenge)
+    client.post('/join', data={'name': 'Rev', 'code': code})
+    home = client.get(f"/lab/{challenge['id']}")
+    assert f"/lab/{challenge['id']}/app.webmanifest".encode('utf-8') in home.data
+    manifest = client.get(f"/lab/{challenge['id']}/app.webmanifest")
+    assert manifest.get_json()['maintenance_note'] == challenge['flags'][0]

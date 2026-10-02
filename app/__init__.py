@@ -244,9 +244,9 @@ HINTS_BY_MECHANISM = {
         "Depois de descobrir a rota, acesse-a diretamente e leia o corpo da resposta com atenção.",
     ],
     "manifest": [
-        "Ferramenta necessária: DevTools (abas Network ou Application) para localizar o arquivo app.webmanifest carregado pela página.",
-        "O navegador busca esse arquivo automaticamente ao carregar a página — filtre por \"manifest\" na aba Network.",
-        "Abra o conteúdo do manifesto diretamente pela URL para ler todos os campos.",
+        "Ferramenta necessária: DevTools (aba Network) para ver os arquivos que a página carrega ao abrir.",
+        "Ao carregar, a página busca um arquivo de configuração próprio — procure por um pedido a app.webmanifest (aba Network, filtro Fetch/XHR).",
+        "Abra o conteúdo do app.webmanifest diretamente pela URL e leia todos os campos.",
     ],
     "metadata": [
         "Ferramenta necessária: DevTools (aba Network) para inspecionar os cabeçalhos de resposta do recurso de imagem/prévia.",
@@ -1272,6 +1272,26 @@ def create_app(testing=False):
             "hints_used": hints_used,
             "hint": challenge["hints"][hints_used - 1],
             "points_if_solved": challenge_points_for_hint(challenge, hints_used),
+        })
+
+    @app.get("/api/challenge/<int:challenge_id>/revealed-hints")
+    def revealed_challenge_hints(challenge_id):
+        # Devolve apenas as dicas que o participante já pagou. As dicas não
+        # reveladas nunca são enviadas ao cliente, então não dá para lê-las no
+        # HTML/JS sem gastar pontos.
+        participant_id = session.get("participant_id")
+        if not participant_id:
+            return jsonify({"error": "Sessão expirada"}), 401
+        ctf = current_ctf()
+        challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
+        if not challenge:
+            return jsonify({"error": "Desafio não encontrado"}), 404
+        record = challenge_record(participant_id, challenge_id)
+        hints_used = min(record["hints_used"], len(challenge["hints"]))
+        return jsonify({
+            "hints_used": hints_used,
+            "total": len(challenge["hints"]),
+            "hints": challenge["hints"][:hints_used],
         })
 
     @app.post("/api/challenge/<int:challenge_id>/submit")
