@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="admin-page">
+  <header class="admin-topbar">
+    <a href="{{ url_for('admin_dashboard') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/ifes-logo.png') }}" alt="IFES" class="brand-symbol" /><span>JACITEC <small>ADMIN CONSOLE</small></span></a>
+    <div class="admin-topbar-right"><span class="admin-secure"><i></i> SESSÃO ADMINISTRATIVA</span><a href="{{ url_for('admin_dashboard') }}">← Voltar ao painel</a></div>
+  </header>
+
+  <section class="admin-welcome">
+    <div><p class="section-kicker">BIBLIOTECA DE DESAFIOS</p><h1>Gabarito dos desafios</h1><p>Consulte qualquer um dos {{ total }} desafios com a solução guiada. Uso exclusivo da organização.</p></div>
+  </section>
+
+  <div class="notice warning admin-alert admin-restrict-note">
+    <strong>Área restrita.</strong> Estas páginas mostram as soluções e as flags. Não compartilhe com participantes nem as acesse durante um desafio — elas não fazem parte do CTF.
+  </div>
+
+  {% for list_id, data in lists.items() %}
+    <section class="admin-panel admin-challenge-list">
+      <div class="admin-panel-heading"><div><p class="section-kicker">{{ data.label }}</p><h2>{{ data.description }}</h2></div><span>18 desafios</span></div>
+      {% for difficulty, challenges in data.by_difficulty.items() %}
+        <div class="challenge-group">
+          <h3 class="challenge-group-title"><span class="level-tag level-{{ 'F' if difficulty == 'Fácil' else 'M' if difficulty == 'Médio' else 'D' }}">{{ difficulty }}</span> {{ challenges|length }} desafios</h3>
+          <div class="challenge-grid">
+            {% for challenge in challenges %}
+              <a class="challenge-tile" href="{{ url_for('admin_challenge_detail', challenge_id=challenge.id) }}">
+                <span class="challenge-tile-code">{{ challenge.code }}</span>
+                <strong>{{ challenge.name }}</strong>
+                <span class="challenge-tile-meta">{{ challenge.points }} pts-base · ver gabarito →</span>
+              </a>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </section>
+  {% endfor %}
+
+  <footer class="admin-footer"><span>JACITEC CTF · PAINEL ADMINISTRATIVO</span><a href="{{ url_for('admin_dashboard') }}">← Voltar ao painel</a></footer>
+</main>
+{% endblock %}

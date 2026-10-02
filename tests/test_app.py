@@ -304,3 +304,32 @@ def test_catalog_has_10_5_3_per_list_and_event_is_ordered_by_difficulty(monkeypa
     difficulties = [app_module.CHALLENGE_BY_ID[challenge_id]['difficulty'] for challenge_id in ids]
     assert difficulties == ['Fácil'] * 5 + ['Médio'] * 2 + ['Difícil']
     assert all(app_module.CHALLENGE_BY_ID[challenge_id]['list_id'] == 'lista-2' for challenge_id in ids)
+
+
+def test_admin_challenge_library_is_protected_and_guides_to_flag(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    app = create_app(testing=True)
+    client = app.test_client()
+
+    # Sem login de admin, as rotas de gabarito redirecionam para o login.
+    index_anon = client.get('/admin/desafios', follow_redirects=False)
+    assert index_anon.status_code == 302
+    assert index_anon.headers['Location'].endswith('/admin/login')
+    detail_anon = client.get('/admin/desafios/1', follow_redirects=False)
+    assert detail_anon.status_code == 302
+    assert detail_anon.headers['Location'].endswith('/admin/login')
+
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    index = client.get('/admin/desafios')
+    assert index.status_code == 200
+    assert 'Gabarito dos desafios'.encode('utf-8') in index.data
+    assert b'L1-F01' in index.data
+
+    detail = client.get('/admin/desafios/3')
+    assert detail.status_code == 200
+    assert b'JACITEC{base64_is_not_a_secret}' in detail.data
+    assert 'Como chegar à flag'.encode('utf-8') in detail.data
+    assert 'participantes'.encode('utf-8') in detail.data
+
+    missing = client.get('/admin/desafios/999', follow_redirects=False)
+    assert missing.status_code == 302

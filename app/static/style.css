@@ -1481,6 +1481,38 @@ img.brand-symbol {
 .admin-side-note { padding: 0 5px; }
 .admin-side-note span { color: #88958b; font-size: 0.53rem; font-weight: 850; letter-spacing: .13em; }
 .admin-side-note p { color: #7c8a83; font-size: 0.67rem; line-height: 1.55; }
+
+/* Biblioteca de desafios (admin): atalho no painel + páginas de gabarito. */
+.admin-library-link { display: grid; gap: 5px; padding: 16px; margin-bottom: 14px; border: 1px solid #cfe0d2; border-radius: 12px; background: #f3f8f3; text-decoration: none; transition: border-color .15s, background .15s, transform .15s; }
+.admin-library-link:hover { border-color: #8cc79a; background: #ecf5ec; transform: translateY(-1px); }
+.admin-library-link .section-kicker { color: #5f9168; }
+.admin-library-link strong { color: #184a2b; font-size: .9rem; }
+.admin-library-link small { color: #6f7f74; font-size: .64rem; line-height: 1.45; }
+.admin-restrict-note { display: block; }
+.admin-challenge-list { margin-bottom: 18px; }
+.challenge-group { margin-top: 16px; }
+.challenge-group-title { display: flex; align-items: center; gap: 9px; margin: 0 0 10px; color: #5c6a62; font-size: .72rem; font-weight: 700; }
+.challenge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.challenge-tile { display: grid; gap: 4px; padding: 13px 14px; border: 1px solid #d9e2db; border-radius: 10px; background: #fff; text-decoration: none; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.challenge-tile:hover { border-color: #8cc79a; box-shadow: 0 4px 14px rgba(24, 74, 43, .08); transform: translateY(-1px); }
+.challenge-tile-code { color: #789; font-size: .58rem; font-weight: 850; letter-spacing: .08em; }
+.challenge-tile strong { color: #1c3326; font-size: .82rem; }
+.challenge-tile-meta { color: #7a877f; font-size: .62rem; }
+.walkthrough-context { margin: 0 0 14px; color: #5c6a62; font-size: .8rem; line-height: 1.6; }
+.walkthrough-steps { margin: 0; padding-left: 20px; display: grid; gap: 10px; }
+.walkthrough-steps li { color: #2b3c32; font-size: .82rem; line-height: 1.55; }
+.walkthrough-steps code, .walkthrough-aside code, .walkthrough-flag code, .walkthrough-facts code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.walkthrough-aside { margin-top: 16px; padding: 12px 14px; background: #10202d; border-radius: 9px; }
+.walkthrough-aside span { display: block; margin-bottom: 6px; color: #9bb1c7; font-size: .62rem; letter-spacing: .05em; }
+.walkthrough-aside code { display: block; overflow-wrap: anywhere; color: #a8efbd; font-size: .78rem; }
+.walkthrough-flag { padding: 14px; margin-bottom: 14px; background: #10202d; border: 1px solid rgba(179,245,108,.25); border-radius: 10px; }
+.walkthrough-flag code { display: block; overflow-wrap: anywhere; color: #b3f56c; font-size: .9rem; font-weight: 700; }
+.walkthrough-facts { display: grid; gap: 3px 0; margin: 0; }
+.walkthrough-facts dt { color: #8a968f; font-size: .58rem; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.walkthrough-facts dd { margin: 0 0 11px; color: #33443a; font-size: .76rem; line-height: 1.45; }
+.walkthrough-facts code { color: #1c3326; }
+.walkthrough-hints { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.walkthrough-hints li { color: #44524a; font-size: .73rem; line-height: 1.5; }
 .admin-footer { display: flex; justify-content: space-between; margin-top: 22px; padding: 14px 0 19px; border-top: 1px solid #dce3dd; color: #89958f; font-size: 0.53rem; letter-spacing: .11em; }
 .admin-footer a { color: #71836e; text-decoration: none; letter-spacing: 0; }
 .admin-alert { color: #735c25 !important; background: #fff6dc !important; border-color: #eadba7 !important; }

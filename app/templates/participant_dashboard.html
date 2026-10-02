@@ -184,59 +184,88 @@
       if (!eventEndedDialog.open) eventEndedDialog.showModal();
     }
 
-    // The panel and the minimized pill are two differently-sized elements
-    // that can each be dragged anywhere on screen, including corners. Each
-    // gets its own clamp (based on its own size) and its own remembered
-    // position, so the pill can reach a corner the full panel never could.
-    // Maximizing re-lands the full panel near the pill's spot, clamped by the
-    // panel's real size, so it always reappears fully on-screen.
-    function readStoredPosition(key) {
+    // O painel e a pílula minimizada guardam a posição DESEJADA pelo usuário (a
+    // última onde ele soltou) separada da posição EXIBIDA. A exibida é sempre a
+    // desejada re-encaixada na viewport atual. Assim, abrir o DevTools (que
+    // dispara resize e encolhe a área) reencaixa o painel temporariamente, e ao
+    // fechar o DevTools ele volta sozinho para onde estava — a posição desejada
+    // nunca é sobrescrita por um resize, só por um arrasto do usuário. O estado
+    // minimizado e as posições são lembrados entre desafios (localStorage).
+    const PANEL_KEY = 'jacitec-panel-position';
+    const MINI_KEY = 'jacitec-panel-mini-position';
+    const MINIMIZED_KEY = 'jacitec-panel-minimized';
+    function readStored(key) {
       try { return JSON.parse(localStorage.getItem(key)); }
       catch (_) { return null; }
     }
-    function writeStoredPosition(key, position) {
-      try { localStorage.setItem(key, JSON.stringify(position)); }
+    function writeStored(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); }
       catch (_) { /* Storage may be unavailable in private browsing. */ }
     }
-    function positionElement(el, left, top, save, storageKey) {
+    function isPosition(value) {
+      return value && Number.isFinite(value.left) && Number.isFinite(value.top);
+    }
+    let desiredPanel = readStored(PANEL_KEY);
+    let desiredMini = readStored(MINI_KEY);
+
+    function clampToViewport(el, position) {
       const maxLeft = Math.max(8, window.innerWidth - el.offsetWidth - 8);
       const maxTop = Math.max(8, window.innerHeight - Math.min(el.offsetHeight, window.innerHeight - 16) - 8);
-      const position = {
-        left: Math.max(8, Math.min(left, maxLeft)),
-        top: Math.max(8, Math.min(top, maxTop)),
+      return {
+        left: Math.max(8, Math.min(position.left, maxLeft)),
+        top: Math.max(8, Math.min(position.top, maxTop)),
       };
+    }
+    function paint(el, position) {
       el.style.left = `${position.left}px`;
       el.style.top = `${position.top}px`;
       el.style.right = 'auto';
       el.style.bottom = 'auto';
-      if (save && storageKey) writeStoredPosition(storageKey, position);
-      return position;
     }
-    const PANEL_KEY = 'jacitec-panel-position';
-    const MINI_KEY = 'jacitec-panel-mini-position';
-    function setPanelPosition(left, top, save = false) { return positionElement(panel, left, top, save, PANEL_KEY); }
-    function setMiniPosition(left, top, save = false) { return positionElement(expandButton, left, top, save, MINI_KEY); }
+    // Reaplica a posição desejada (re-encaixada). Não altera o valor desejado.
+    function renderPanelPosition() { if (isPosition(desiredPanel)) paint(panel, clampToViewport(panel, desiredPanel)); }
+    function renderMiniPosition() { if (isPosition(desiredMini)) paint(expandButton, clampToViewport(expandButton, desiredMini)); }
+    // Define a posição desejada (arrasto/reset) e já a exibe; grava se save.
+    function setPanelPosition(left, top, save = false) {
+      desiredPanel = clampToViewport(panel, { left, top });
+      paint(panel, desiredPanel);
+      if (save) writeStored(PANEL_KEY, desiredPanel);
+      return desiredPanel;
+    }
+    function setMiniPosition(left, top, save = false) {
+      desiredMini = clampToViewport(expandButton, { left, top });
+      paint(expandButton, desiredMini);
+      if (save) writeStored(MINI_KEY, desiredMini);
+      return desiredMini;
+    }
 
-    const savedPanelPosition = readStoredPosition(PANEL_KEY);
-    if (savedPanelPosition && Number.isFinite(savedPanelPosition.left) && Number.isFinite(savedPanelPosition.top)) {
-      setPanelPosition(savedPanelPosition.left, savedPanelPosition.top);
+    // Restaura o estado salvo (posição + minimizado) ao abrir/trocar de desafio.
+    renderPanelPosition();
+    if (readStored(MINIMIZED_KEY) === true) {
+      panel.classList.add('minimized');
+      expandButton.hidden = false;
+      if (!isPosition(desiredMini)) desiredMini = { left: panel.getBoundingClientRect().left, top: panel.getBoundingClientRect().top };
+      renderMiniPosition();
     }
 
     minimizeButton.addEventListener('click', () => {
       panel.classList.add('minimized');
       expandButton.hidden = false;
-      const savedMiniPosition = readStoredPosition(MINI_KEY);
-      if (savedMiniPosition && Number.isFinite(savedMiniPosition.left) && Number.isFinite(savedMiniPosition.top)) {
-        setMiniPosition(savedMiniPosition.left, savedMiniPosition.top);
-      } else {
+      writeStored(MINIMIZED_KEY, true);
+      if (!isPosition(desiredMini)) {
         const rect = panel.getBoundingClientRect();
-        setMiniPosition(rect.left, rect.top);
+        setMiniPosition(rect.left, rect.top, true);
+      } else {
+        renderMiniPosition();
       }
     });
     document.getElementById('panel-reset').addEventListener('click', () => {
-      try { localStorage.removeItem(PANEL_KEY); localStorage.removeItem(MINI_KEY); } catch (_) { /* ignore */ }
+      try { localStorage.removeItem(PANEL_KEY); localStorage.removeItem(MINI_KEY); localStorage.removeItem(MINIMIZED_KEY); } catch (_) { /* ignore */ }
+      desiredPanel = null;
+      desiredMini = null;
+      panel.classList.remove('minimized');
+      expandButton.hidden = true;
       setPanelPosition(Math.max(12, window.innerWidth - panel.offsetWidth - 22), 100, true);
-      if (!expandButton.hidden) setMiniPosition(Math.max(12, window.innerWidth - expandButton.offsetWidth - 22), 100, true);
     });
     let suppressExpandClick = false;
     expandButton.addEventListener('click', (event) => {
@@ -248,6 +277,7 @@
       const miniRect = expandButton.getBoundingClientRect();
       panel.classList.remove('minimized');
       expandButton.hidden = true;
+      writeStored(MINIMIZED_KEY, false);
       setPanelPosition(miniRect.left, miniRect.top, true);
     });
 
@@ -305,14 +335,12 @@
     expandButton.addEventListener('pointermove', moveDrag);
     expandButton.addEventListener('pointerup', stopDragging);
     expandButton.addEventListener('pointercancel', stopDragging);
+    // No resize (inclui abrir/fechar DevTools) só reencaixamos a posição
+    // desejada na nova viewport, sem gravá-la. Com mais espaço de novo, o
+    // painel volta sozinho para onde o usuário tinha deixado.
     window.addEventListener('resize', () => {
-      if (!panel.classList.contains('minimized')) {
-        const rect = panel.getBoundingClientRect();
-        setPanelPosition(rect.left, rect.top, true);
-      } else if (!expandButton.hidden) {
-        const rect = expandButton.getBoundingClientRect();
-        setMiniPosition(rect.left, rect.top, true);
-      }
+      renderPanelPosition();
+      renderMiniPosition();
     });
 
     document.getElementById('reveal-hint').addEventListener('click', async () => {

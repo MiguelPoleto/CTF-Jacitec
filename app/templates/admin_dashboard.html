@@ -83,6 +83,11 @@
           <button type="button" class="danger-btn finalize-open" id="finalize-open">ENCERRAR EVENTO</button>
         {% endif %}
       </section>
+      <a class="admin-library-link" href="{{ url_for('admin_challenges_index') }}">
+        <span class="section-kicker">BIBLIOTECA DE DESAFIOS</span>
+        <strong>Ver gabarito dos desafios →</strong>
+        <small>Solução guiada de todos os desafios. Área restrita da organização.</small>
+      </a>
       <div class="admin-side-note"><span>LEMBRETE</span><p>Ao gerar um novo evento, o CTF ativo será encerrado e salvo automaticamente no arquivo.</p></div>
     </aside>
   </div>

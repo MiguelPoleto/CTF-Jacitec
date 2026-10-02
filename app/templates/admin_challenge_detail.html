@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="admin-page">
+  <header class="admin-topbar">
+    <a href="{{ url_for('admin_dashboard') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/ifes-logo.png') }}" alt="IFES" class="brand-symbol" /><span>JACITEC <small>ADMIN CONSOLE</small></span></a>
+    <div class="admin-topbar-right"><span class="admin-secure"><i></i> SESSÃO ADMINISTRATIVA</span><a href="{{ url_for('admin_challenges_index') }}">← Todos os desafios</a></div>
+  </header>
+
+  <div class="notice warning admin-alert admin-restrict-note">
+    <strong>Área restrita — gabarito.</strong> Esta página revela a solução e a flag. Não é parte do desafio e não deve ser acessada por participantes do CTF.
+  </div>
+
+  <section class="admin-welcome">
+    <div>
+      <p class="section-kicker">{{ challenge.code }} · LISTA {{ challenge.list_number }}</p>
+      <h1>{{ challenge.name }}</h1>
+      <div class="panel-challenge-tags">
+        <span class="level-tag level-{{ 'F' if challenge.difficulty == 'Fácil' else 'M' if challenge.difficulty == 'Médio' else 'D' }}">{{ challenge.difficulty }}</span>
+        <span class="list-tag">{{ challenge.points }} pontos-base</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="admin-content-grid">
+    <div class="admin-main-column">
+      <section class="admin-panel">
+        <div class="admin-panel-heading"><div><p class="section-kicker">PASSO A PASSO</p><h2>Como chegar à flag</h2></div></div>
+        <p class="walkthrough-context">{{ challenge.description }}</p>
+        <ol class="walkthrough-steps">
+          {% for step in walkthrough.steps %}<li>{{ step }}</li>{% endfor %}
+        </ol>
+        {% if encoded_token %}
+          <div class="walkthrough-aside"><span>Token Base64 exibido na página</span><code>{{ encoded_token }}</code></div>
+        {% endif %}
+      </section>
+    </div>
+
+    <aside class="admin-side-column">
+      <section class="admin-panel">
+        <p class="section-kicker">RESPOSTA</p><h2>Flag</h2>
+        <div class="walkthrough-flag"><code>{{ challenge.flags[0] }}</code></div>
+        <dl class="walkthrough-facts">
+          <dt>Ferramenta</dt><dd>{{ walkthrough.tool }}</dd>
+          <dt>Onde está</dt><dd>{{ walkthrough.where }}</dd>
+          <dt>Caminho base</dt><dd><code>{{ walkthrough.root }}</code></dd>
+        </dl>
+      </section>
+      <section class="admin-panel">
+        <p class="section-kicker">DICAS MOSTRADAS AO PARTICIPANTE</p><h2>Dicas</h2>
+        <ol class="walkthrough-hints">
+          {% for hint in challenge.hints %}<li>{{ hint }}</li>{% endfor %}
+        </ol>
+      </section>
+    </aside>
+  </div>
+
+  <footer class="admin-footer"><a href="{{ url_for('admin_challenges_index') }}">← Todos os desafios</a><span>JACITEC CTF · {{ challenge.code }}</span></footer>
+</main>
+{% endblock %}

@@ -831,6 +831,60 @@ def score_breakdown(participant_id):
     }
 
 
+# Solução guiada de cada mecanismo, só para a tela de administração. Cada passo
+# usa {root} = /lab/<id>. Para os 8 laboratórios originais (endpoints próprios)
+# há sobrescritas por id em _WALKTHROUGH_OVERRIDES.
+_WALKTHROUGH_BY_MECHANISM = {
+    "source": {"tool": "Código-fonte da página (Ctrl+U / clique direito → Ver código-fonte)", "where": "Comentário HTML oculto na página inicial do laboratório.",
+        "steps": ["Abra {root}.", "Veja o código-fonte da página (Ctrl+U).", "Procure por um comentário HTML (<!-- ... -->): a flag está escrita nele."]},
+    "robots": {"tool": "Navegador (acesso direto por URL)", "where": "Rota em Disallow no robots.txt → endpoint de auditoria.",
+        "steps": ["Acesse {root}/robots.txt.", "Leia o caminho em 'Disallow:' — {root}/operations/audit.", "Abra {root}/operations/audit; a flag vem no campo 'reference'."]},
+    "base64": {"tool": "Decodificador Base64 (CyberChef ou `base64 -d`)", "where": "Token codificado exibido na própria página.",
+        "steps": ["Abra {root} e localize o token codificado em destaque.", "Decodifique de Base64 (ex.: `echo '<token>' | base64 -d`).", "O texto decodificado é a flag."]},
+    "js": {"tool": "DevTools → Console/Sources", "where": "Variável global no JavaScript da página.",
+        "steps": ["Abra {root} e o DevTools (F12).", "No Console, digite: window.__labRelease", "O valor retornado é a flag."]},
+    "header": {"tool": "DevTools → Network ou `curl -I`", "where": "Cabeçalho de resposta X-Campus-Notice.",
+        "steps": ["Faça uma requisição a {root} (ex.: `curl -I http://<host>{root}`).", "Leia os cabeçalhos da resposta.", "A flag está no cabeçalho 'X-Campus-Notice'."]},
+    "manifest": {"tool": "DevTools → Network/Application ou acesso direto", "where": "Campo maintenance_note do app.webmanifest.",
+        "steps": ["Abra {root}/app.webmanifest.", "Leia o JSON retornado.", "A flag está no campo 'maintenance_note'."]},
+    "metadata": {"tool": "DevTools → Network ou `curl -I`", "where": "Cabeçalho X-Image-Description do recurso de prévia.",
+        "steps": ["Requisite {root}/asset-preview (ex.: `curl -I http://<host>{root}/asset-preview`).", "Leia os cabeçalhos da resposta.", "A flag está no cabeçalho 'X-Image-Description'."]},
+    "idor": {"tool": "DevTools → Network ou Burp Suite (repetir requisição com cabeçalho)", "where": "Registro 701 autorizado pelo cabeçalho vindo do 700.",
+        "steps": ["Requisite {root}/api/record/700 e anote o cabeçalho 'X-Lab-Delegation' da resposta.", "Requisite {root}/api/record/701 incluindo esse cabeçalho (ex.: `curl -H 'X-Lab-Delegation: <valor>' http://<host>{root}/api/record/701`).", "A flag vem no campo 'reference'."]},
+    "search": {"tool": "DevTools → Network ou Burp Suite (manipular o parâmetro de busca)", "where": "Resposta da busca com condição sempre verdadeira.",
+        "steps": ["Use a busca de {root} e observe a requisição a {root}/api/search?q=...", "Reenvie com um payload de injeção, ex.: {root}/api/search?q=' OR 1=1 --", "A flag vem no campo 'reference' do resultado."]},
+    "audit": {"tool": "DevTools → Network ou `curl -I`", "where": "Cabeçalho X-Audit-Path → endpoint de auditoria.",
+        "steps": ["Requisite {root}/operations/ping e leia o cabeçalho 'X-Audit-Path'.", "Abra o caminho indicado ({root}/operations/audit).", "A flag vem no campo 'reference'."]},
+    "redirect": {"tool": "DevTools → Network (Preserve log) ou `curl -IL`", "where": "Cabeçalho X-Delivery-Receipt no fim da cadeia 302.",
+        "steps": ["Inicie em {root}/delivery/start e acompanhe o redirecionamento 302 (ex.: `curl -IL http://<host>{root}/delivery/start`).", "Siga até {root}/delivery/receipt.", "A flag está no cabeçalho 'X-Delivery-Receipt'."]},
+}
+_WALKTHROUGH_OVERRIDES = {
+    2: {"tool": "Navegador (acesso direto por URL)", "where": "Rota em Disallow no robots.txt → página de relatório.",
+        "steps": ["Acesse /lab/2/robots.txt.", "Leia o caminho em 'Disallow:' — /lab/2/files/report.", "Abra /lab/2/files/report; a flag está no conteúdo da página."]},
+    6: {"tool": "DevTools → Network ou Burp Suite (repetir requisição com cabeçalho)", "where": "Perfil 102 autorizado pelo cabeçalho vindo do perfil 101.",
+        "steps": ["Requisite /lab/6/profile/101 e anote o cabeçalho 'X-Workspace-Access'.", "Requisite /lab/6/profile/102 incluindo esse cabeçalho.", "A flag vem no campo 'note'."]},
+    7: {"tool": "DevTools → Network ou Burp Suite (manipular o parâmetro de busca)", "where": "Resposta da busca com condição sempre verdadeira.",
+        "steps": ["Use a busca de /lab/7 e observe /lab/7/search?q=...", "Reenvie com um payload, ex.: /lab/7/search?q=' OR 1=1 --", "A flag vem no campo 'note' do resultado."]},
+    8: {"tool": "DevTools → Network ou acesso direto", "where": "Exportação de auditoria referenciada pela agenda.",
+        "steps": ["Na agenda de /lab/8, observe a requisição a /lab/8/audit-log.", "Abra /lab/8/audit-log.", "A flag está no campo 'reference' da entrada de migração."]},
+}
+
+
+def challenge_walkthrough(challenge):
+    """Solução passo a passo de um desafio, para a tela de administração."""
+    guide = _WALKTHROUGH_OVERRIDES.get(challenge["id"]) or _WALKTHROUGH_BY_MECHANISM.get(
+        challenge["mechanism"],
+        {"tool": "DevTools", "where": "Investigue o comportamento técnico do laboratório.", "steps": ["Abra {root}.", "Analise requisições, código e cabeçalhos.", "A flag aparece no recurso técnico do laboratório."]},
+    )
+    root = f"/lab/{challenge['id']}"
+    return {
+        "tool": guide["tool"],
+        "where": guide["where"],
+        "steps": [step.format(root=root) for step in guide["steps"]],
+        "root": root,
+    }
+
+
 # Discreet line-art eye icon (matches the site's plain, monochrome icon
 # glyphs like the panel's ⌖ reset button) used everywhere a "ver detalhes"
 # action needs an icon, instead of a colorful emoji.
@@ -1514,6 +1568,35 @@ def create_app(testing=False):
         conn.close()
         log_event(ctf["id"], None, "ctf_finished", ctf["code"])
         return redirect(url_for("admin_dashboard"))
+
+    @app.get("/admin/desafios")
+    def admin_challenges_index():
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        lists = {}
+        for list_id, meta in CHALLENGE_LISTS.items():
+            by_difficulty = {
+                difficulty: sorted(challenge_pool(list_id, difficulty), key=lambda item: item["code"])
+                for difficulty in DIFFICULTY_ORDER
+            }
+            lists[list_id] = {"label": meta["label"], "description": meta["description"], "by_difficulty": by_difficulty}
+        return render_template("admin_challenges.html", lists=lists, total=len(CHALLENGES))
+
+    @app.get("/admin/desafios/<int:challenge_id>")
+    def admin_challenge_detail(challenge_id):
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        challenge = CHALLENGE_BY_ID.get(challenge_id)
+        if not challenge:
+            session["admin_notice"] = "Desafio não encontrado."
+            return redirect(url_for("admin_challenges_index"))
+        encoded_token = base64.b64encode(challenge["flags"][0].encode("utf-8")).decode("ascii") if challenge["mechanism"] == "base64" else None
+        return render_template(
+            "admin_challenge_detail.html",
+            challenge=challenge,
+            walkthrough=challenge_walkthrough(challenge),
+            encoded_token=encoded_token,
+        )
 
     @app.get("/admin/logout")
     def admin_logout():
