@@ -1223,7 +1223,7 @@ body:has(.admin-page) {
 }
 img.brand-symbol {
   background: #fff;
-  padding: 5px;
+  padding: 4px;
   object-fit: contain;
 }
 
@@ -1364,7 +1364,7 @@ img.brand-symbol {
 .join-hint strong { color: #d2e4c6; }
 .landing-footer { display: flex; justify-content: space-between; padding: 14px 0 17px; border-top: 1px solid var(--landing-line); color: #68778a; font-size: 0.52rem; letter-spacing: 0.15em; }
 .landing-footer-brand { display: inline-flex; align-items: center; gap: 8px; }
-.ifes-badge { width: 20px; height: 20px; border-radius: 5px; background: #fff; padding: 2px; object-fit: contain; }
+.jacitec-badge { width: 20px; height: 20px; border-radius: 5px; background: #fff; padding: 2px; object-fit: contain; }
 .landing-credit-link { color: inherit; text-decoration: underline; text-decoration-color: rgba(146, 240, 199, 0.4); text-underline-offset: 2px; transition: color .15s; }
 .landing-credit-link:hover, .landing-credit-link:focus-visible { color: var(--accent); }
 .admin-stealth-link { position: fixed; z-index: 5; right: 13px; bottom: 10px; padding: 7px 10px; color: #8291a2; text-decoration: none; font-size: 0.58rem; letter-spacing: .035em; opacity: .7; border: 1px solid rgba(143, 161, 176, .17); border-radius: 7px; background: rgba(12, 24, 38, .78); transition: opacity 0.2s, color 0.2s, border-color 0.2s; }
