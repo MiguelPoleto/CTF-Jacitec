@@ -151,7 +151,7 @@ _EXTRA_CHALLENGES = [
     (9, "lista-1", "Fácil", "manifest", "Manifesto público", "Um arquivo de configuração do navegador contém uma pista."),
     (10, "lista-1", "Fácil", "metadata", "Metadados da galeria", "A ficha de uma imagem tem mais dados que a tela mostra."),
     (11, "lista-1", "Fácil", "source", "Rascunho esquecido", "O portal editorial deixou um rascunho no HTML."),
-    (12, "lista-1", "Fácil", "robots", "Arquivo de rotas", "Rotas públicas nem sempre aparecem na navegação."),
+    (12, "lista-1", "Fácil", "receipt", "Recibo de atendimento", "O recibo da solicitação contém uma nota técnica nos cabeçalhos HTTP."),
     (13, "lista-1", "Fácil", "base64", "Texto transportado", "Uma mensagem foi codificada, mas não protegida."),
     (14, "lista-1", "Médio", "search", "Filtro de inventário", "A busca foi implementada sem tratar corretamente a entrada."),
     (15, "lista-1", "Médio", "header", "Resposta temporária", "Um serviço devolve uma pista apenas nos cabeçalhos HTTP."),
@@ -227,6 +227,11 @@ HINTS_BY_MECHANISM = {
         "Ferramenta necessária: DevTools (aba Network) ou `curl -I` para inspecionar os cabeçalhos completos da resposta HTTP.",
         "A interface visual não mostra tudo — os metadados podem estar apenas no cabeçalho da resposta.",
         "Repita a requisição da página principal e leia cada cabeçalho de resposta, um por um.",
+    ],
+    "receipt": [
+        "Ferramenta necessária: DevTools do navegador (aba Network/Rede) para inspecionar a resposta de uma requisição.",
+        "Clique no botão 'Baixar recibo' que aparece na página e selecione essa requisição na lista.",
+        "Na seção Response Headers/Cabeçalhos de resposta, procure por X-Receipt-Note.",
     ],
     "idor": [
         "Ferramenta necessária: DevTools (aba Network) ou um interceptador de requisições (ex.: Burp Suite) para repetir a chamada alterando parâmetros e cabeçalhos.",
@@ -845,6 +850,8 @@ _WALKTHROUGH_BY_MECHANISM = {
         "steps": ["Abra {root} e o DevTools (F12).", "No Console, digite: window.__labRelease", "O valor retornado é a flag."]},
     "header": {"tool": "DevTools → Network ou `curl -I`", "where": "Cabeçalho de resposta X-Campus-Notice.",
         "steps": ["Faça uma requisição a {root} (ex.: `curl -I http://<host>{root}`).", "Leia os cabeçalhos da resposta.", "A flag está no cabeçalho 'X-Campus-Notice'."]},
+    "receipt": {"tool": "DevTools → Network", "where": "Cabeçalho X-Receipt-Note da resposta do recibo.",
+        "steps": ["Abra {root} e clique em 'Baixar recibo'.", "No Network, selecione a requisição /receipt.", "Leia o cabeçalho de resposta 'X-Receipt-Note'."]},
     "manifest": {"tool": "DevTools → Network/Application ou acesso direto", "where": "Campo maintenance_note do app.webmanifest.",
         "steps": ["Abra {root}/app.webmanifest.", "Leia o JSON retornado.", "A flag está no campo 'maintenance_note'."]},
     "metadata": {"tool": "DevTools → Network ou `curl -I`", "where": "Cabeçalho X-Image-Description do recurso de prévia.",
@@ -987,6 +994,16 @@ def create_app(testing=False):
         if not challenge:
             return "", 404
         return "preview", 200, {"X-Image-Description": challenge["flags"][0], "Content-Type": "text/plain"}
+
+    @app.get("/lab/<int:challenge_id>/receipt")
+    def catalog_receipt(challenge_id):
+        challenge = selected_catalog_challenge(challenge_id, "receipt")
+        if not challenge:
+            return "", 404
+        return "Recibo de atendimento disponível.", 200, {
+            "Content-Type": "text/plain; charset=utf-8",
+            "X-Receipt-Note": challenge["flags"][0],
+        }
 
     @app.get("/lab/<int:challenge_id>/api/record/<int:record_id>")
     def catalog_record(challenge_id, record_id):

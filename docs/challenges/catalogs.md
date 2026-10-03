@@ -30,7 +30,7 @@ Os desafios 01 a 08 são os laboratórios clássicos da primeira versão, com si
 | L1-F06 | Manifesto público | Fácil | Manifesto da aplicação web | [challenge-09](challenge-09.md) |
 | L1-F07 | Metadados da galeria | Fácil | Metadados de recursos | [challenge-10](challenge-10.md) |
 | L1-F08 | Rascunho esquecido | Fácil | Código-fonte HTML / comentários | [challenge-11](challenge-11.md) |
-| L1-F09 | Arquivo de rotas | Fácil | Arquivos de descoberta (robots.txt) | [challenge-12](challenge-12.md) |
+| L1-F09 | Recibo de atendimento | Fácil | Inspeção de cabeçalhos HTTP | [challenge-12](challenge-12.md) |
 | L1-F10 | Texto transportado | Fácil | Codificação Base64 | [challenge-13](challenge-13.md) |
 | L1-M01 | IDOR no perfil | Médio | Controle de acesso a recursos (IDOR) | [challenge-06](challenge-06.md) |
 | L1-M02 | Busca indiscreta | Médio | Validação de entrada em busca | [challenge-07](challenge-07.md) |

@@ -143,6 +143,12 @@
             <p>Comece o processo por aqui e acompanhe a confirmação.</p>
             <a class="{{ site.button }}" href="{{ root }}/delivery/start">Iniciar agora</a>
           </section>
+        {% elif challenge.mechanism == 'receipt' %}
+          <section class="scenario-card">
+            <h2>Recibo de atendimento</h2>
+            <p>Consulte o recibo da sua solicitação recente.</p>
+            <a class="{{ site.button }}" href="{{ root }}/receipt">Baixar recibo</a>
+          </section>
         {% elif challenge.mechanism == 'base64' %}
           <section class="scenario-card">
             <h2>Acesso para integrações</h2>

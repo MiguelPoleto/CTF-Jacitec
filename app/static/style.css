@@ -636,34 +636,6 @@ th {
   border: 0;
 }
 
-.lab-addressbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: none;
-  padding: 7px 10px;
-  background: #0e1a2b;
-  border-bottom: 1px solid rgba(155, 196, 221, 0.18);
-}
-.lab-addr-btn {
-  flex: none;
-  padding: 7px 11px;
-  color: #dceafa;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(155, 196, 221, 0.22);
-  border-radius: 7px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-.lab-addr-btn:hover { background: rgba(89, 208, 255, 0.18); }
-.lab-addr-form { display: flex; align-items: center; gap: 0; flex: 1; min-width: 0; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(155, 196, 221, 0.22); border-radius: 7px; overflow: hidden; }
-.lab-addr-prefix { flex: none; padding: 0 2px 0 10px; color: #7fa7c4; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.72rem; white-space: nowrap; }
-.lab-addr-input { flex: 1; min-width: 0; padding: 8px 6px; color: #eaf3ff; background: transparent; border: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.72rem; }
-.lab-addr-input:focus { outline: none; }
-.lab-addr-form .lab-addr-btn { border: 0; border-left: 1px solid rgba(155, 196, 221, 0.22); border-radius: 0; background: transparent; }
-.lab-addr-form .lab-addr-btn:hover { background: rgba(89, 208, 255, 0.18); }
-
 .control-panel {
   position: fixed;
   z-index: 20;

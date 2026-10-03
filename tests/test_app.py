@@ -95,6 +95,9 @@ def test_single_workspace_and_local_challenge_sites_work(monkeypatch, tmp_path):
     assert workspace.status_code == 200
     assert b'id="challenge-site"' in workspace.data
     assert b'id="control-panel"' in workspace.data
+    assert b'class="lab-addressbar"' not in workspace.data
+    assert b'id="lab-addr-input"' not in workspace.data
+    assert b'Digite um caminho do laborat\xc3\xb3rio' not in workspace.data
     assert b'Ver ranking' not in workspace.data
     assert client.get('/desafios').status_code == 404
     assert client.get('/challenge/1').status_code == 404
@@ -105,6 +108,40 @@ def test_single_workspace_and_local_challenge_sites_work(monkeypatch, tmp_path):
         assert response.status_code == 200
     assert client.get('/lab/5').headers['X-Campus-Notice'] == 'JACITEC{cookies_and_headers_tell_all}'
     assert client.get('/lab/2/robots.txt').status_code == 200
+
+
+def test_challenge_12_receipt_is_discoverable_and_has_no_robots_dependency(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        app_module.random,
+        'sample',
+        lambda population, count: (
+            [next(challenge for challenge in population if challenge['id'] == 12)]
+            if count
+            else []
+        ),
+    )
+    app = create_app(testing=True)
+    client = app.test_client()
+
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/generate', data={
+        'challenge_list': 'lista-1',
+        'easy_count': '1',
+        'medium_count': '0',
+        'hard_count': '0',
+    })
+    ctf_code = client.get('/api/ctf-status').get_json()['code']
+    client.post('/join', data={'name': 'Riley', 'code': ctf_code})
+
+    lab_response = client.get('/lab/12')
+    assert lab_response.status_code == 200
+    assert b'href="/lab/12/receipt">Baixar recibo</a>' in lab_response.data
+    assert client.get('/lab/12/robots.txt').status_code == 404
+
+    receipt_response = client.get('/lab/12/receipt')
+    assert receipt_response.status_code == 200
+    assert receipt_response.headers['X-Receipt-Note'] == 'JACITEC{catalog_12_receipt}'
 
 
 def test_live_hint_and_flag_endpoints_update_participant_state(monkeypatch, tmp_path):

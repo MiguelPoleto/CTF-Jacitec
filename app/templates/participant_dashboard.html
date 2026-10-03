@@ -25,14 +25,6 @@
 </nav>
 
 <main class="lab-frame-wrap">
-  <div class="lab-addressbar" role="group" aria-label="Navegação do laboratório">
-    <button type="button" id="lab-home" class="lab-addr-btn" title="Voltar ao início do laboratório">⌂ Início</button>
-    <form id="lab-addr-form" class="lab-addr-form">
-      <span class="lab-addr-prefix">/lab/{{ active_challenge.id }}/</span>
-      <input id="lab-addr-input" class="lab-addr-input" autocomplete="off" spellcheck="false" placeholder="ex.: robots.txt" aria-label="Caminho dentro do laboratório" />
-      <button type="submit" class="lab-addr-btn" title="Abrir caminho no laboratório">Ir →</button>
-    </form>
-  </div>
   <iframe id="challenge-site" title="Site do desafio {{ active_challenge.id }}" src="{{ url_for('lab_page', challenge_id=active_challenge.id) }}"></iframe>
 </main>
 
@@ -454,31 +446,11 @@
       lastVisibilityCheck = Date.now();
       refreshParticipantState();
     });
-    // Barra de endereço do laboratório: mantém a navegação do desafio dentro do
-    // próprio painel (o URL do navegador continua /dashboard?challenge=N) e o
-    // botão Início volta ao laboratório. Assim dá para acessar robots.txt,
-    // operations/audit etc. sem sair da tela nem perder o lugar.
-    const labRoot = `/lab/${challengeId}`;
     const challengeSite = document.getElementById('challenge-site');
-    const labAddrInput = document.getElementById('lab-addr-input');
-    function openLabPath(rawPath) {
-      const clean = String(rawPath || '').trim().replace(/^\/+/, '');
-      challengeSite.src = clean ? `${labRoot}/${clean}` : labRoot;
-    }
-    document.getElementById('lab-home').addEventListener('click', () => { labAddrInput.value = ''; openLabPath(''); });
-    document.getElementById('lab-addr-form').addEventListener('submit', (event) => {
-      event.preventDefault();
-      openLabPath(labAddrInput.value);
-    });
     challengeSite.addEventListener('load', (event) => {
       let path = '';
       try { path = event.currentTarget.contentWindow.location.pathname; } catch (_) { return; }
-      if (!path.startsWith('/lab/')) { refreshParticipantState(); return; }
-      // Sincroniza a barra com o caminho atual do laboratório (sem o prefixo).
-      if (document.activeElement !== labAddrInput) {
-        const rest = path.slice(labRoot.length).replace(/^\/+/, '');
-        labAddrInput.value = rest;
-      }
+      if (!path.startsWith('/lab/')) refreshParticipantState();
     });
 
     // Ao abrir o desafio, busca uma única vez as dicas já pagas (se houver),
