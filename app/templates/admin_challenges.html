@@ -11,13 +11,31 @@
     <div><p class="section-kicker">BIBLIOTECA DE DESAFIOS</p><h1>Gabarito dos desafios</h1><p>Consulte qualquer um dos {{ total }} desafios com a solução guiada. Uso exclusivo da organização.</p></div>
   </section>
 
+  {% if admin_notice %}<div class="notice warning admin-alert">{{ admin_notice }}</div>{% endif %}
+
   <div class="notice warning admin-alert admin-restrict-note">
     <strong>Área restrita.</strong> Estas páginas mostram as soluções e as flags. Não compartilhe com participantes nem as acesse durante um desafio — elas não fazem parte do CTF.
   </div>
 
+  {% if ctf_active %}
+    <div class="notice admin-alert sandbox-blocked-note">
+      <strong>Há um CTF em andamento.</strong> O ambiente de teste fica desabilitado até o evento ser encerrado, para evitar conflitos.
+    </div>
+  {% endif %}
+
   {% for list_id, data in lists.items() %}
     <section class="admin-panel admin-challenge-list">
-      <div class="admin-panel-heading"><div><p class="section-kicker">{{ data.label }}</p><h2>{{ data.description }}</h2></div><span>18 desafios</span></div>
+      <div class="admin-panel-heading">
+        <div><p class="section-kicker">{{ data.label }}</p><h2>{{ data.description }}</h2></div>
+        {% if ctf_active %}
+          <button type="button" class="sandbox-run-btn" disabled title="Encerre o CTF ativo para testar">▶ Executar</button>
+        {% else %}
+          <form method="post" action="{{ url_for('admin_sandbox_start') }}" class="sandbox-run-form">
+            <input type="hidden" name="list_id" value="{{ list_id }}" />
+            <button type="submit" class="sandbox-run-btn" title="Abrir todos os desafios desta lista como um CTF de teste">▶ Executar</button>
+          </form>
+        {% endif %}
+      </div>
       {% for difficulty, challenges in data.by_difficulty.items() %}
         <div class="challenge-group">
           <h3 class="challenge-group-title"><span class="level-tag level-{{ 'F' if difficulty == 'Fácil' else 'M' if difficulty == 'Médio' else 'D' }}">{{ difficulty }}</span> {{ challenges|length }} desafios</h3>

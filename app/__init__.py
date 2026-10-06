@@ -903,6 +903,50 @@ EYE_ICON_SVG = (
 )
 
 
+# --- Ambiente de teste do administrador (sandbox do gabarito) ---------------
+# O administrador pode "jogar" todos os desafios de uma lista exatamente como um
+# participante, usando a mesma tela e os mesmos laboratórios. O progresso fica
+# só na sessão do admin (não cria CTF, não entra em ranking). Sandbox e CTF real
+# são mutuamente exclusivos: não se abre a sandbox com um CTF ativo, e não se
+# inicia um CTF enquanto a sandbox está aberta nesta sessão.
+def admin_sandbox():
+    if not session.get("admin_logged_in"):
+        return None
+    return session.get("admin_sandbox")
+
+
+def sandbox_record(sandbox, challenge_id):
+    key = str(challenge_id)
+    record = sandbox["progress"].get(key)
+    if record is None:
+        record = {"hints_used": 0, "status": "open", "score": 0}
+        sandbox["progress"][key] = record
+        session.modified = True
+    return record
+
+
+def sandbox_challenge(challenge_id, mechanism=None):
+    sandbox = admin_sandbox()
+    if not sandbox or challenge_id not in sandbox.get("challenge_ids", []):
+        return None
+    challenge = CHALLENGE_BY_ID.get(challenge_id)
+    if not challenge or (mechanism and challenge.get("mechanism") != mechanism):
+        return None
+    return challenge
+
+
+def playable_challenge(challenge_id, mechanism=None):
+    """Desafio jogável no contexto atual: sandbox do admin ou CTF ativo."""
+    challenge = sandbox_challenge(challenge_id, mechanism)
+    if challenge:
+        return challenge
+    ctf = current_ctf()
+    challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
+    if not challenge or (mechanism and challenge.get("mechanism") != mechanism):
+        return None
+    return challenge
+
+
 def make_app_config():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "jacitec-secret")
@@ -921,6 +965,10 @@ def create_app(testing=False):
     @app.before_request
     def guard_lab_routes_after_ctf_end():
         if not request.path.startswith("/lab/"):
+            return None
+        # O admin no ambiente de teste acessa os laboratórios; cada rota /lab
+        # valida o acesso via playable_challenge.
+        if admin_sandbox():
             return None
         participant_id = session.get("participant_id")
         if not participant_id:
@@ -960,26 +1008,20 @@ def create_app(testing=False):
 
     @app.get("/lab/<int:challenge_id>/robots.txt")
     def catalog_robots(challenge_id):
-        ctf = current_ctf()
-        challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
-        if not challenge or challenge.get("mechanism") != "robots":
+        challenge = playable_challenge(challenge_id, "robots")
+        if not challenge:
             return "", 404
         return f"User-agent: *\nDisallow: /lab/{challenge_id}/operations/audit\n", 200, {"Content-Type": "text/plain; charset=utf-8"}
 
     @app.get("/lab/<int:challenge_id>/operations/audit")
     def catalog_audit(challenge_id):
-        ctf = current_ctf()
-        challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
+        challenge = playable_challenge(challenge_id)
         if not challenge:
             return jsonify({"error": "Atividade indisponível"}), 404
         return jsonify({"audit": "laboratório", "reference": challenge["flags"][0]})
 
     def selected_catalog_challenge(challenge_id, mechanism=None):
-        ctf = current_ctf()
-        challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
-        if not challenge or (mechanism and challenge.get("mechanism") != mechanism):
-            return None
-        return challenge
+        return playable_challenge(challenge_id, mechanism)
 
     @app.get("/lab/<int:challenge_id>/app.webmanifest")
     def catalog_manifest(challenge_id):
@@ -1047,18 +1089,22 @@ def create_app(testing=False):
             return "", 404
         return "Entrega concluída.", 200, {"X-Delivery-Receipt": challenge["flags"][0]}
 
+    def lab_redirect_target():
+        # Para onde mandar quando um laboratório não está acessível no contexto.
+        if admin_sandbox():
+            return url_for("admin_sandbox_dashboard")
+        if not session.get("participant_id"):
+            return url_for("index")
+        if not current_ctf():
+            return url_for("public_ranking_page")
+        return url_for("participant_dashboard")
+
     @app.get("/lab/<int:challenge_id>")
     def lab_page(challenge_id):
-        participant_id = session.get("participant_id")
-        if not participant_id:
-            return redirect(url_for("index"))
-        ctf = current_ctf()
-        if not ctf:
-            return redirect(url_for("public_ranking_page"))
-        challenge = challenge_for_ctf(ctf["id"], challenge_id)
+        challenge = playable_challenge(challenge_id)
         if not challenge:
-            return redirect(url_for("participant_dashboard"))
-        response = make_response(render_template("lab_site.html", challenge=challenge, ctf=ctf, page="home"))
+            return redirect(lab_redirect_target())
+        response = make_response(render_template("lab_site.html", challenge=challenge, ctf=current_ctf(), page="home"))
         if challenge.get("mechanism") == "header":
             response.headers["X-Campus-Notice"] = challenge["flags"][0]
         return response
@@ -1066,9 +1112,13 @@ def create_app(testing=False):
     @app.get("/lab/<int:challenge_id>/<path:page>")
     def lab_subpage(challenge_id, page):
         if challenge_id == 2 and page == "files/report":
-            challenge = CHALLENGES[1]
-            return render_template("lab_site.html", challenge=challenge, ctf=current_ctf(), page=page)
+            challenge = playable_challenge(2)
+            if not challenge:
+                return redirect(lab_redirect_target())
+            return render_template("lab_site.html", challenge=CHALLENGES[1], ctf=current_ctf(), page=page)
         if challenge_id == 8 and page == "audit-log":
+            if not playable_challenge(8):
+                return redirect(lab_redirect_target())
             return jsonify({
                 "system": "ReservaFácil / exportação de auditoria",
                 "entries": [
@@ -1076,10 +1126,9 @@ def create_app(testing=False):
                     {"event": "nota_migracao_legada", "reference": CHALLENGES[7]["flags"][0]},
                 ],
             })
-        ctf = current_ctf()
-        challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
+        challenge = playable_challenge(challenge_id)
         if not challenge:
-            return redirect(url_for("participant_dashboard"))
+            return redirect(lab_redirect_target())
         response = make_response(render_template("lab_site.html", challenge=challenge, ctf=current_ctf(), page=page))
         if challenge.get("mechanism") == "header":
             response.headers["X-Campus-Notice"] = challenge["flags"][0]
@@ -1087,8 +1136,7 @@ def create_app(testing=False):
 
     @app.get("/lab/6/profile/<int:profile_id>")
     def lab_profile(profile_id):
-        ctf = current_ctf()
-        if not ctf or not challenge_for_ctf(ctf["id"], 6):
+        if not playable_challenge(6):
             return jsonify({"error": "Atividade indisponível"}), 404
         profiles = {
             101: {"id": 101, "name": "Ana Souza", "course": "Sistemas de Informação", "public": True},
@@ -1112,8 +1160,7 @@ def create_app(testing=False):
 
     @app.get("/lab/7/search")
     def lab_search():
-        ctf = current_ctf()
-        if not ctf or not challenge_for_ctf(ctf["id"], 7):
+        if not playable_challenge(7):
             return jsonify({"error": "Atividade indisponível"}), 404
         query = request.args.get("q", "")
         if "'" in query and ("or" in query.lower() or "1=1" in query.replace(" ", "")):
@@ -1220,6 +1267,31 @@ def create_app(testing=False):
 
     @app.get("/api/participant-state")
     def participant_state_api():
+        sandbox = admin_sandbox()
+        if sandbox:
+            challenge_states = []
+            total = 0
+            solved = 0
+            for cid in sandbox["challenge_ids"]:
+                record = sandbox_record(sandbox, cid)
+                if record["status"] == "solved":
+                    total += record["score"]
+                    solved += 1
+                challenge_states.append({
+                    "id": cid,
+                    "status": record["status"],
+                    "hints_used": record["hints_used"],
+                    "score_earned": record["score"],
+                })
+            return jsonify({
+                "status": "ATIVO",
+                "points": total,
+                "solved": solved,
+                "remaining_seconds": None,
+                "participant": "Administrador (teste)",
+                "entered_at": sandbox["started_at"],
+                "challenges": challenge_states,
+            })
         participant_id = session.get("participant_id")
         ctf = current_ctf()
         if not participant_id:
@@ -1261,6 +1333,22 @@ def create_app(testing=False):
 
     @app.post("/api/challenge/<int:challenge_id>/hint")
     def reveal_challenge_hint(challenge_id):
+        sandbox = admin_sandbox()
+        if sandbox:
+            challenge = sandbox_challenge(challenge_id)
+            if not challenge:
+                return jsonify({"error": "Desafio não encontrado"}), 404
+            record = sandbox_record(sandbox, challenge_id)
+            if record["status"] == "solved":
+                return jsonify({"error": "Desafio já resolvido"}), 409
+            hints_used = min(record["hints_used"] + 1, len(challenge["hints"]))
+            record["hints_used"] = hints_used
+            session.modified = True
+            return jsonify({
+                "hints_used": hints_used,
+                "hint": challenge["hints"][hints_used - 1],
+                "points_if_solved": challenge_points_for_hint(challenge, hints_used),
+            })
         participant_id = session.get("participant_id")
         if not participant_id:
             return jsonify({"error": "Sessão expirada"}), 401
@@ -1296,6 +1384,18 @@ def create_app(testing=False):
         # Devolve apenas as dicas que o participante já pagou. As dicas não
         # reveladas nunca são enviadas ao cliente, então não dá para lê-las no
         # HTML/JS sem gastar pontos.
+        sandbox = admin_sandbox()
+        if sandbox:
+            challenge = sandbox_challenge(challenge_id)
+            if not challenge:
+                return jsonify({"error": "Desafio não encontrado"}), 404
+            record = sandbox_record(sandbox, challenge_id)
+            hints_used = min(record["hints_used"], len(challenge["hints"]))
+            return jsonify({
+                "hints_used": hints_used,
+                "total": len(challenge["hints"]),
+                "hints": challenge["hints"][:hints_used],
+            })
         participant_id = session.get("participant_id")
         if not participant_id:
             return jsonify({"error": "Sessão expirada"}), 401
@@ -1313,6 +1413,22 @@ def create_app(testing=False):
 
     @app.post("/api/challenge/<int:challenge_id>/submit")
     def submit_challenge_flag_api(challenge_id):
+        sandbox = admin_sandbox()
+        if sandbox:
+            challenge = sandbox_challenge(challenge_id)
+            if not challenge:
+                return jsonify({"error": "Desafio não encontrado"}), 404
+            record = sandbox_record(sandbox, challenge_id)
+            if record["status"] == "solved":
+                return jsonify({"solved": True, "points": record["score"]})
+            submitted = (request.get_json(silent=True) or {}).get("flag", "").strip()
+            if submitted.upper() not in [flag.upper() for flag in challenge["flags"]]:
+                return jsonify({"solved": False, "message": "Flag incorreta. Continue investigando o site."}), 400
+            score = challenge_points_for_hint(challenge, record["hints_used"])
+            record["status"] = "solved"
+            record["score"] = score
+            session.modified = True
+            return jsonify({"solved": True, "points": score, "message": f"Correto! +{score} pontos."})
         participant_id = session.get("participant_id")
         if not participant_id:
             return jsonify({"error": "Sessão expirada"}), 401
@@ -1496,6 +1612,8 @@ def create_app(testing=False):
     def admin_dashboard():
         if not session.get("admin_logged_in"):
             return redirect(url_for("admin_login_page"))
+        # Sair para o painel encerra qualquer ambiente de teste aberto.
+        session.pop("admin_sandbox", None)
         ctf = current_ctf()
         admin_notice = session.pop("admin_notice", None)
         conn = get_db()
@@ -1529,6 +1647,9 @@ def create_app(testing=False):
     def generate_ctf():
         if not session.get("admin_logged_in"):
             return redirect(url_for("admin_login_page"))
+        if session.get("admin_sandbox"):
+            session["admin_notice"] = "Encerre o ambiente de teste do gabarito antes de iniciar um CTF."
+            return redirect(url_for("admin_challenges_index"))
         raw_duration = (request.form.get("max_duration_minutes") or "").strip()
         try:
             max_duration_minutes = int(raw_duration) if raw_duration else None
@@ -1610,6 +1731,9 @@ def create_app(testing=False):
     def admin_challenges_index():
         if not session.get("admin_logged_in"):
             return redirect(url_for("admin_login_page"))
+        # Voltar à biblioteca encerra qualquer ambiente de teste aberto.
+        session.pop("admin_sandbox", None)
+        admin_notice = session.pop("admin_notice", None)
         lists = {}
         for list_id, meta in CHALLENGE_LISTS.items():
             by_difficulty = {
@@ -1617,7 +1741,98 @@ def create_app(testing=False):
                 for difficulty in DIFFICULTY_ORDER
             }
             lists[list_id] = {"label": meta["label"], "description": meta["description"], "by_difficulty": by_difficulty}
-        return render_template("admin_challenges.html", lists=lists, total=len(CHALLENGES))
+        return render_template(
+            "admin_challenges.html",
+            lists=lists,
+            total=len(CHALLENGES),
+            ctf_active=bool(current_ctf()),
+            admin_notice=admin_notice,
+        )
+
+    @app.post("/admin/desafios/executar")
+    def admin_sandbox_start():
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        if current_ctf():
+            session["admin_notice"] = "Não é possível abrir o ambiente de teste enquanto um CTF está ativo."
+            return redirect(url_for("admin_challenges_index"))
+        list_id = request.form.get("list_id")
+        if list_id not in CHALLENGE_LISTS:
+            session["admin_notice"] = "Escolha uma lista de desafios válida."
+            return redirect(url_for("admin_challenges_index"))
+        # Todos os desafios da lista, em ordem fácil → médio → difícil.
+        challenge_ids = []
+        for difficulty in DIFFICULTY_ORDER:
+            pool = sorted(challenge_pool(list_id, difficulty), key=lambda item: item["code"])
+            challenge_ids.extend(item["id"] for item in pool)
+        session["admin_sandbox"] = {
+            "list_id": list_id,
+            "challenge_ids": challenge_ids,
+            "started_at": timestamp_now(),
+            "progress": {},
+        }
+        return redirect(url_for("admin_sandbox_dashboard"))
+
+    @app.get("/admin/sandbox")
+    def admin_sandbox_dashboard():
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        sandbox = session.get("admin_sandbox")
+        if not sandbox:
+            session["admin_notice"] = "Abra o ambiente de teste a partir de uma lista de desafios."
+            return redirect(url_for("admin_challenges_index"))
+        if current_ctf():
+            # Guarda defensiva: se um CTF ficou ativo, encerra o teste.
+            session.pop("admin_sandbox", None)
+            session["admin_notice"] = "O ambiente de teste foi encerrado porque um CTF está ativo."
+            return redirect(url_for("admin_challenges_index"))
+        challenge_ids = sandbox["challenge_ids"]
+        rows = []
+        for cid in challenge_ids:
+            challenge = CHALLENGE_BY_ID[cid]
+            record = sandbox_record(sandbox, cid)
+            rows.append({
+                "challenge": challenge,
+                "record": {
+                    "status": record["status"],
+                    "hints_used": record["hints_used"],
+                    "score_earned": record["score"],
+                },
+                "value_after_hints": challenge_points_for_hint(challenge, record["hints_used"]),
+            })
+        total = sum(row["record"]["score_earned"] for row in rows if row["record"]["status"] == "solved")
+        solved = sum(1 for row in rows if row["record"]["status"] == "solved")
+        stats = {"total": total, "solved": solved, "skipped": 0}
+        active_challenge_id = request.args.get("challenge", default=challenge_ids[0], type=int)
+        if active_challenge_id not in challenge_ids:
+            active_challenge_id = challenge_ids[0]
+        active_challenge = CHALLENGE_BY_ID[active_challenge_id]
+        active_index = challenge_ids.index(active_challenge_id)
+        active_record = next(row["record"] for row in rows if row["challenge"]["id"] == active_challenge_id)
+        list_meta = CHALLENGE_LISTS.get(sandbox["list_id"], {"label": "Teste"})
+        return render_template(
+            "participant_dashboard.html",
+            participant={"id": 0, "name": "Administrador (teste)", "entered_at": sandbox["started_at"]},
+            ctf={"code": list_meta["label"].upper() + " · TESTE", "max_duration_minutes": None},
+            challenges=rows,
+            stats=stats,
+            active_challenge=active_challenge,
+            active_record=active_record,
+            active_position=active_index + 1,
+            next_challenge=CHALLENGE_BY_ID[challenge_ids[active_index + 1]] if active_index + 1 < len(challenge_ids) else None,
+            remaining_seconds=None,
+            sandbox=True,
+            dashboard_endpoint="admin_sandbox_dashboard",
+            finish_action=url_for("admin_sandbox_finish"),
+            home_url=url_for("admin_challenges_index"),
+        )
+
+    @app.post("/admin/sandbox/finish")
+    def admin_sandbox_finish():
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        session.pop("admin_sandbox", None)
+        return redirect(url_for("admin_challenges_index"))
 
     @app.get("/admin/desafios/<int:challenge_id>")
     def admin_challenge_detail(challenge_id):
