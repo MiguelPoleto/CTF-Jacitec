@@ -34,7 +34,7 @@ CHALLENGES = [
         "name": "Mapa do site",
         "points": 10,
         "difficulty": "Fácil",
-        "flags": ["JACITEC{robots_are_not_for_kids}"],
+        "flags": ["JACITEC{map_the_hidden_routes}"],
         "description": "Uma rota importante não aparece na interface.",
         "hints": [
             "Procure por arquivos de descoberta do site.",
@@ -140,7 +140,7 @@ CHALLENGES = [
 # e tem dificuldade fixa — nada é reatribuído depois por faixa de id.
 # Os oito laboratórios originais (id 1-8) ficam na lista 1.
 for _challenge_id, _mechanism, _difficulty in (
-    (1, "source", "Fácil"), (2, "robots", "Fácil"), (3, "base64", "Fácil"), (4, "js", "Fácil"),
+    (1, "source", "Fácil"), (2, "sitemap", "Fácil"), (3, "base64", "Fácil"), (4, "js", "Fácil"),
     (5, "header", "Fácil"), (6, "idor", "Médio"), (7, "search", "Médio"), (8, "audit", "Difícil"),
 ):
     CHALLENGES[_challenge_id - 1].update({"list_id": "lista-1", "mechanism": _mechanism, "difficulty": _difficulty})
@@ -213,6 +213,11 @@ HINTS_BY_MECHANISM = {
         "Esse arquivo lista caminhos que os buscadores não devem indexar — mas o navegador consegue acessá-los normalmente.",
         "Abra manualmente qualquer rota listada como \"Disallow\" para ver o que ela entrega.",
     ],
+    "sitemap": [
+        "Procure no site um mapa com a lista de páginas e rotas disponíveis.",
+        "Um mapa do site pode mostrar páginas que não aparecem na navegação principal.",
+        "Acesse uma das rotas auxiliares listadas no mapa.",
+    ],
     "base64": [
         "Ferramenta necessária: um decodificador Base64 (ex.: CyberChef, ou o terminal com `base64 -d`).",
         "O texto codificado não é criptografia — qualquer decodificador Base64 revela o conteúdo original.",
@@ -276,6 +281,37 @@ def _hints_for(mechanism):
 
 for _challenge in CHALLENGES:
     _challenge["hints"] = _hints_for(_challenge["mechanism"])
+
+CHALLENGE_HINTS = {
+    1: [
+        "Como o laboratório abre dentro de um iframe, use F12 e o seletor de elementos; clique dentro do site para inspecionar o documento dele na aba Elements.",
+        "Na árvore de elementos do laboratório, examine os comentários HTML, não o código-fonte da página externa do CTF.",
+        "O comentário que contém a flag está logo no início do documento do laboratório.",
+    ],
+    2: [
+        "Abra \"Guias de viagem\" no menu do Wayfarer e procure o link para o mapa do portal.",
+        "O mapa do site lista páginas auxiliares que não aparecem na navegação principal.",
+        "O mapa revela a rota /lab/2/files/report. Abra-a: a referência no relatório é JACITEC{map_the_hidden_routes}.",
+    ],
+    3: [
+        "Abra a documentação pelo botão \"Ler documentação da API\" na página inicial do Devdesk.",
+        "Na seção \"Campo de token legado\", o bloco de código contém uma sequência em Base64. Converta-a em texto legível com um decodificador; não é uma senha para testar no site.",
+        "A decodificação revela diretamente a flag: JACITEC{base64_is_not_a_secret}.",
+    ],
+    4: [
+        "Use F12 e inspecione o documento do laboratório Pixel Arcade dentro do iframe.",
+        "Na aba Sources, localize o script inline no fim do documento da página inicial.",
+        "Leia o valor atribuído à constante arcadeReleaseNote; não é necessário clicar em \"Verificar atualização\".",
+    ],
+    5: [
+        "Abra o DevTools na aba Network e selecione a requisição GET da página inicial do laboratório Second Story.",
+        "Consulte os cabeçalhos de resposta (Response Headers) dessa requisição.",
+        "O valor do cabeçalho X-Campus-Notice é a flag; não é um cookie.",
+    ],
+}
+for _challenge in CHALLENGES:
+    if _challenge["id"] in CHALLENGE_HINTS:
+        _challenge["hints"] = CHALLENGE_HINTS[_challenge["id"]]
 
 for _id, _list_id, _difficulty, _mechanism, _name, _description in _EXTRA_CHALLENGES:
     CHALLENGES.append({
@@ -876,8 +912,8 @@ _WALKTHROUGH_BY_MECHANISM = {
         "steps": ["Inicie em {root}/delivery/start e acompanhe o redirecionamento 302 (ex.: `curl -IL http://<host>{root}/delivery/start`).", "Siga até {root}/delivery/receipt.", "A flag está no cabeçalho 'X-Delivery-Receipt'."]},
 }
 _WALKTHROUGH_OVERRIDES = {
-    2: {"tool": "Navegador (acesso direto por URL)", "where": "Rota em Disallow no robots.txt → página de relatório.",
-        "steps": ["Acesse /lab/2/robots.txt.", "Leia o caminho em 'Disallow:' — /lab/2/files/report.", "Abra /lab/2/files/report; a flag está no conteúdo da página."]},
+    2: {"tool": "Navegador (sitemap XML)", "where": "Mapa do site do portal → página auxiliar de relatório.",
+        "steps": ["Abra Guias de viagem no site Wayfarer e clique em Mapa do site do portal.", "No sitemap XML, localize a URL da página auxiliar.", "Acesse /lab/2/files/report; a flag está no conteúdo da página."]},
     6: {"tool": "DevTools → Network ou Burp Suite (repetir requisição com cabeçalho)", "where": "Perfil 102 autorizado pelo cabeçalho vindo do perfil 101.",
         "steps": ["Requisite /lab/6/profile/101 e anote o cabeçalho 'X-Workspace-Access'.", "Requisite /lab/6/profile/102 incluindo esse cabeçalho.", "A flag vem no campo 'note'."]},
     7: {"tool": "DevTools → Network ou Burp Suite (manipular o parâmetro de busca)", "where": "Resposta da busca com condição sempre verdadeira.",
@@ -1016,9 +1052,20 @@ def create_app(testing=False):
     def rules_page():
         return render_template("rules.html")
 
-    @app.get("/lab/2/robots.txt")
-    def lab_robots():
-        return "User-agent: *\nDisallow: /lab/2/files/report\n", 200, {"Content-Type": "text/plain; charset=utf-8"}
+    @app.get("/lab/2/sitemap.xml")
+    def lab_sitemap():
+        if not playable_challenge(2, "sitemap"):
+            return redirect(lab_redirect_target())
+        report_url = request.url_root.rstrip("/") + url_for(
+            "lab_subpage", challenge_id=2, page="files/report"
+        )
+        sitemap = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            f"<url><loc>{report_url}</loc></url>"
+            "</urlset>"
+        )
+        return sitemap, 200, {"Content-Type": "application/xml; charset=utf-8"}
 
     @app.get("/lab/<int:challenge_id>/robots.txt")
     def catalog_robots(challenge_id):

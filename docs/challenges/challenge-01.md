@@ -2,28 +2,26 @@
 
 Nome: Olhe melhor
 Dificuldade: Fácil
-Pontos: 10
+Peso base: 5 pontos
 
-Flag: JACITEC{source_hidden_01}
+Flag: `JACITEC{source_hidden_01}`
 
-Conceito: HTML / código-fonte / comentários
+Conceito: HTML / comentários
 
-Como resolver:
-1. Acesse a página inicial e abra o navegador com as ferramentas de desenvolvedor.
-2. Use a aba "Elements" ou "View Source" para inspecionar o HTML bruto da página.
-3. Procure por comentários, atributos escondidos, texto fora da área visível e blocos HTML inativos.
-4. O valor oculto geralmente aparece como comentário ou como uma string que não está sendo exibida no frontend.
-5. Copie a flag exatamente como está no código e envie na resposta.
+## Como resolver
+
+1. Abra o laboratório e use F12 para abrir as ferramentas de desenvolvedor.
+2. Na aba **Elements**, use o seletor de elementos e clique dentro do site do desafio. O laboratório está dentro de um iframe; confirme que a árvore exibida corresponde ao documento do laboratório, não à página externa do CTF.
+3. Examine os comentários HTML no início desse documento. A flag está em um comentário e não aparece no conteúdo visual.
+4. Copie a flag exatamente como está.
+
+**Atenção:** Ctrl+U pode exibir o código-fonte da página externa que contém o iframe, não o documento carregado dentro dele. Use o DevTools para inspecionar o conteúdo do laboratório.
 
 Ferramentas úteis:
-- Navegador com DevTools
-- Inspeção de página
-- Busca por "JACITEC" no source da página
+- DevTools do navegador, aba **Elements**
+- Seletor de elementos
 
-Dica 1: Observe tudo o que existe por trás da página.
-Dica 2: Use o código-fonte da página.
-Dica 3: Procure comentários ocultos no HTML.
-
-Dica 1: Observe tudo o que existe por trás da página.
-Dica 2: Use o código-fonte da página.
-Dica 3: Procure comentários ocultos no HTML.
+Dicas:
+1. O laboratório está incorporado em um iframe; inspecione o documento carregado nele.
+2. Examine a árvore de elementos, inclusive o conteúdo não visível.
+3. Procure o comentário HTML no início do documento do laboratório.

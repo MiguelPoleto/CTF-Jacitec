@@ -1,3 +1,4 @@
+import base64
 import sqlite3
 
 import app as app_module
@@ -29,7 +30,7 @@ def test_finished_ctf_redirect_and_history_are_exposed(monkeypatch, tmp_path):
     lab_redirect = client.get('/lab/1', follow_redirects=False)
     assert lab_redirect.status_code == 302
     assert lab_redirect.headers['Location'].endswith('/ranking')
-    hidden_resource_redirect = client.get('/lab/2/robots.txt', follow_redirects=False)
+    hidden_resource_redirect = client.get('/lab/2/sitemap.xml', follow_redirects=False)
     assert hidden_resource_redirect.status_code == 302
     assert hidden_resource_redirect.headers['Location'].endswith('/ranking')
     ended_state = client.get('/api/participant-state')
@@ -107,7 +108,7 @@ def test_single_workspace_and_local_challenge_sites_work(monkeypatch, tmp_path):
         response = client.get(f'/lab/{challenge_id}')
         assert response.status_code == 200
     assert client.get('/lab/5').headers['X-Campus-Notice'] == 'JACITEC{cookies_and_headers_tell_all}'
-    assert client.get('/lab/2/robots.txt').status_code == 200
+    assert client.get('/lab/2/sitemap.xml').status_code == 200
 
 
 def test_challenge_12_receipt_is_discoverable_and_has_no_robots_dependency(monkeypatch, tmp_path):
@@ -385,6 +386,68 @@ def test_ctf_1_preset_uses_the_fixed_eight_challenges(monkeypatch, tmp_path):
     )
 
 
+def test_ctf_1_lab_sites_are_richer_without_breaking_challenge_flows(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/desafios/executar', data={'list_id': 'ctf-1'})
+
+    home_pages = {
+        1: (b'editorial-hero', b'studio-journal-strip'),
+        2: (b'destination-grid', b'travel-editorial'),
+        3: (b'dev-hero-visual', b'dev-customer-story'),
+        4: (b'arcade-cabinet', b'arcade-community'),
+        5: (b'product-grid', b'repair-story'),
+        6: (b'cloud-dashboard', b'cloud-security-note'),
+        7: (b'event-list', b'nightlife-guide'),
+        17: (b'service-details', b'service-faq'),
+    }
+    for challenge_id, expected_content in home_pages.items():
+        response = client.get(f'/lab/{challenge_id}')
+        assert response.status_code == 200, response.headers.get('Location')
+        for content_marker in expected_content:
+            assert content_marker in response.data
+
+    subpages = {
+        1: '/journal',
+        2: '/destinations',
+        3: '/docs',
+        4: '/games',
+        5: '/shop',
+        6: '/files',
+        7: '/events',
+        17: '/guide',
+    }
+    for challenge_id, subpage in subpages.items():
+        assert client.get(f'/lab/{challenge_id}{subpage}').status_code == 200
+
+    assert b'<!-- JACITEC{source_hidden_01} -->' in client.get('/lab/1').data
+    guides = client.get('/lab/2/guides')
+    assert b'Mapa do site do portal' in guides.data
+    assert b'robots.txt' not in guides.data
+    sitemap = client.get('/lab/2/sitemap.xml')
+    assert sitemap.status_code == 200
+    assert b'/lab/2/files/report' in sitemap.data
+    assert client.get('/lab/2/robots.txt').status_code == 404
+    assert b'JACITEC{map_the_hidden_routes}' in client.get('/lab/2/files/report').data
+    encoded_flag = base64.b64encode(b'JACITEC{base64_is_not_a_secret}')
+    assert encoded_flag in client.get('/lab/3/docs').data
+    assert b'const arcadeReleaseNote = "JACITEC{js_holds_the_truth}"' in client.get('/lab/4').data
+    assert client.get('/lab/5').headers['X-Campus-Notice'] == 'JACITEC{cookies_and_headers_tell_all}'
+    for challenge_id in range(1, 6):
+        assert len(app_module.CHALLENGE_BY_ID[challenge_id]['hints']) == 3
+        assert app_module.CHALLENGE_BY_ID[challenge_id]['hints'] == app_module.CHALLENGE_HINTS[challenge_id]
+    assert 'Base64' in app_module.CHALLENGE_HINTS[3][1]
+    assert 'JACITEC{base64_is_not_a_secret}' not in app_module.CHALLENGE_HINTS[3][1]
+    assert 'JACITEC{base64_is_not_a_secret}' in app_module.CHALLENGE_HINTS[3][2]
+    assert b'id="cloud-profile-load"' in client.get('/lab/6/files/101').data
+    assert b'id="ticket-search"' in client.get('/lab/7').data
+    start = client.get('/lab/17/delivery/start', follow_redirects=False)
+    assert start.status_code == 302
+    receipt = client.get(start.headers['Location'])
+    assert receipt.headers['X-Delivery-Receipt'] == 'JACITEC{catalog_17_redirect}'
+
+
 def test_admin_challenge_library_is_protected_and_guides_to_flag(monkeypatch, tmp_path):
     isolate_database(monkeypatch, tmp_path)
     app = create_app(testing=True)
@@ -431,7 +494,7 @@ def _start_ctf_with_challenge(client, database_path, challenge):
     return code
 
 
-def test_robots_challenge_2_report_page_exposes_flag(monkeypatch, tmp_path):
+def test_sitemap_challenge_2_report_page_exposes_flag(monkeypatch, tmp_path):
     database_path = isolate_database(monkeypatch, tmp_path)
     app = create_app(testing=True)
     client = app.test_client()

@@ -2,27 +2,24 @@
 
 Nome: Cabeçalhos curiosos
 Dificuldade: Fácil
-Pontos: 15
+Peso base: 5 pontos
 
-Flag: JACITEC{cookies_and_headers_tell_all}
+Flag: `JACITEC{cookies_and_headers_tell_all}`
 
-Conceito: HTTP / parâmetros / cookies / headers
+Conceito: HTTP / cabeçalhos de resposta
 
-Como resolver:
-1. Abra a aba "Network" do navegador e observe cada requisição do CTF.
-2. Verifique cookies, headers e parâmetros que parecem estranhos ou não fazem parte do fluxo normal da página.
-3. Muitas vezes a informação útil é entregue de forma discreta em um cabeçalho de resposta, em um cookie ou em um token de sessão.
-4. A resposta esperada pode ser um identificador, um valor secreto ou uma string com a flag no formato correto.
+## Como resolver
+
+1. Abra o DevTools na aba **Network** e recarregue a página inicial do laboratório Second Story.
+2. Selecione a requisição GET da página do laboratório.
+3. Nos **Response Headers** (cabeçalhos de resposta), localize `X-Campus-Notice`.
+4. O valor desse cabeçalho é a flag. Este desafio não usa cookie nem variável de sessão.
 
 Ferramentas úteis:
-- DevTools -> Network
-- observação de cookies e headers
-- testes simples em curl com `-I` e `-v`
+- DevTools do navegador, aba **Network**
+- Inspeção dos cabeçalhos da resposta HTTP
 
-Dica 1: Observe os dados enviados em requisições e cookies.
-Dica 2: O navegador guarda metadados importantes em headers.
-Dica 3: A pista pode estar em uma variável de sessão discreta.
-
-Dica 1: Observe os dados enviados em requisições e cookies.
-Dica 2: O navegador guarda metadados importantes em headers.
-Dica 3: A pista pode estar em uma variável de sessão discreta.
+Dicas:
+1. Selecione a requisição GET da página inicial do laboratório.
+2. Inspecione os cabeçalhos de resposta, não os cabeçalhos enviados pelo navegador.
+3. O valor de `X-Campus-Notice` é a flag.

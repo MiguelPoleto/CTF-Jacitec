@@ -977,6 +977,272 @@ th {
 .scenario-inline input { flex: 1; min-width: 0; color: #26384b; background: white; border: 1px solid #cdd7df; }
 .scenario-footer { padding: 18px; text-align: center; font-size: 0.78rem; color: #718398; border-top: 1px solid rgba(30, 50, 70, 0.12); }
 .scenario-footer a { color: inherit; }
+.content-meta { display: block; margin-bottom: 8px; color: #738078; font: 800 .63rem/1.4 Arial, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+.section-heading { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin: 38px 0 16px; }
+.section-heading h2 { margin: 5px 0 0; font-size: clamp(1.35rem, 3vw, 2rem); }
+.section-heading > a, .scenario-card a, .editorial-feature a, .cloud-link { color: #345f51; font-size: .8rem; font-weight: 700; }
+.hero-caption { display: block; margin-top: 24px; color: rgba(255,255,255,.72); font: 800 .62rem/1.5 Arial, sans-serif; letter-spacing: .12em; }
+.article-byline { margin: 0 0 26px; color: #788078; font: .78rem Arial, sans-serif; }
+.article-body { max-width: 690px; font-family: Georgia, serif; font-size: 1.05rem; }
+.article-body blockquote { margin: 30px 0; padding: 8px 0 8px 20px; border-left: 3px solid #c66b4e; color: #587063; font-size: 1.35rem; line-height: 1.5; }
+.editorial-hero { display: grid; grid-template-columns: 1.2fr .8fr; align-items: center; gap: 35px; }
+.editorial-hero-art, .editorial-art { display: grid; place-items: center; overflow: hidden; color: #f6e8d5; background: radial-gradient(circle at 70% 26%, #d9a47c 0 9%, transparent 9.5%), radial-gradient(ellipse at 47% 82%, #68796a 0 22%, transparent 22.5%), linear-gradient(145deg, #59716b, #243c39 64%, #bd7559); }
+.editorial-hero-art { min-height: 310px; border-radius: 48% 48% 6px 6px; transform: rotate(2deg); }
+.editorial-hero-art span { padding: 14px; color: #fff4df; font: 800 clamp(1.4rem, 4vw, 2.4rem)/1.1 Georgia,serif; letter-spacing: .12em; text-align: center; }
+.editorial-feature { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: center; margin-top: 36px; padding: 18px; background: rgba(233,228,216,.72); }
+.editorial-art { min-height: 215px; }
+.editorial-art span { font: 800 1.2rem/1.3 Georgia,serif; letter-spacing: .15em; text-align: center; }
+.editorial-feature h2 { margin: 0 0 9px; font: 500 1.65rem Georgia,serif; }
+.editorial-feature p { color: #616b61; }
+.studio-note, .travel-trust, .dev-stats, .shop-benefits, .event-filter-strip, .service-assurances { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 24px 0; padding: 15px 18px; border-top: 1px solid rgba(70,80,70,.14); border-bottom: 1px solid rgba(70,80,70,.14); }
+.studio-note span, .shop-benefits span, .event-filter-strip span, .service-assurances span { color: #66756a; font: 800 .6rem/1.5 Arial,sans-serif; letter-spacing: .07em; }
+.contact-layout { display: grid; grid-template-columns: 1.2fr .8fr; gap: 28px; align-items: start; }
+.contact-layout .scenario-card { margin-top: 14px; }
+.contact-layout input, .contact-layout textarea { padding: 12px; border-radius: 8px; font: inherit; }
+.trail-hero { position: relative; overflow: hidden; }
+.trail-hero::after { position: absolute; right: 4%; bottom: -28%; width: 34%; height: 75%; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; content: ""; transform: rotate(-24deg); box-shadow: 0 0 0 24px rgba(255,255,255,.04), 0 0 0 48px rgba(255,255,255,.035); }
+.travel-trust { border-color: rgba(26,51,75,.12); }
+.travel-trust div { display: grid; gap: 4px; }
+.travel-trust b { color: #244c48; font-size: 1.15rem; }
+.travel-trust span { color: #718078; font-size: .65rem; }
+.destination-grid, .product-grid, .arcade-game-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 15px; margin: 22px 0; }
+.destination-card { display: flex; min-height: 275px; flex-direction: column; justify-content: end; padding: 20px; overflow: hidden; color: white; border-radius: 13px; background-size: cover; box-shadow: inset 0 -150px 90px -60px rgba(11,26,29,.88); }
+.destination-card.lisbon { background-image: linear-gradient(145deg,transparent,#244b4c),linear-gradient(28deg,#d28b62,#7aa69a 52%,#e7c67d); }
+.destination-card.kyoto { background-image: linear-gradient(145deg,transparent,#243a47),linear-gradient(135deg,#78948a,#d08e79 48%,#526d62); }
+.destination-card.patagonia { background-image: linear-gradient(145deg,transparent,#1b3942),linear-gradient(135deg,#94b1a3,#4d777d 45%,#d7ae7b); }
+.destination-card > span, .product-grid article > span, .arcade-game-grid article > span { color: currentColor; font: 800 .56rem/1.5 Arial,sans-serif; letter-spacing: .1em; opacity: .8; }
+.destination-card h2 { margin: 6px 0; font: 500 1.7rem Georgia,serif; }
+.destination-card p { margin: 0 0 12px; font-size: .75rem; }
+.destination-card b { font-size: .72rem; }
+.dev-hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 30px; align-items: center; padding: clamp(24px,5vw,54px); background: linear-gradient(120deg,#192938,#17251f); border: 1px solid #314050; border-radius: 16px; }
+.dev-hero h1 { color: white; }
+.dev-hero-visual { display: grid; gap: 10px; padding: 20px; color: #cbd8e2; background: #0b1118; border: 1px solid #314050; border-radius: 10px; font: .72rem/1.5 ui-monospace,monospace; }
+.dev-hero-visual span { margin-bottom: 8px; color: #77d0a9; font-size: .6rem; letter-spacing: .1em; }
+.dev-hero-visual div { padding: 9px; background: #182330; border-radius: 5px; }
+.dev-stats { border-color: #314050; }
+.dev-stats div { display: grid; gap: 5px; }
+.dev-stats b { color: #8fe3c0; font: 700 1.15rem ui-monospace,monospace; }
+.dev-stats span { color: #b2c1d0; font-size: .65rem; }
+.docs-layout { display: grid; grid-template-columns: 190px 1fr; gap: 18px; align-items: start; }
+.docs-sidebar { display: grid; gap: 10px; padding: 16px; color: #b5c3d2; background: #182330; border: 1px solid #314050; border-radius: 9px; font-size: .72rem; }
+.docs-sidebar b, .docs-sidebar span { color: #77d0a9; font-size: .58rem; letter-spacing: .1em; }
+.docs-sidebar span { margin-top: 8px; }
+.docs-sidebar a { color: #c7d3dc; text-decoration: none; }
+.dev-content .section-heading > a, .dev-content .scenario-card a { color: #8fe3c0; }
+.release-row { display: flex; justify-content: space-between; gap: 18px; padding: 12px 0; border-bottom: 1px solid rgba(130,150,160,.18); font-size: .73rem; }
+.release-row:last-child { border-bottom: 0; }
+.release-row span { text-align: right; opacity: .78; }
+.arcade-hero { display: grid; grid-template-columns: 1.2fr .8fr; align-items: center; gap: 20px; overflow: hidden; }
+.arcade-cabinet { display: grid; min-height: 230px; place-items: center; border: 8px solid #362b63; border-radius: 38px 38px 14px 14px; background: linear-gradient(145deg,#ec65bd,#6447a6 45%,#17152e); box-shadow: inset 0 -35px #18152d,0 18px 34px rgba(0,0,0,.24); transform: perspective(500px) rotateY(-8deg); }
+.arcade-cabinet span { color: white; font: 900 1.65rem/1.2 ui-monospace,monospace; text-align: center; text-shadow: 0 0 18px #ff6dbb; }
+.arcade-cabinet i { margin-top: -46px; color: #ffe579; font: 900 .65rem ui-monospace,monospace; }
+.arcade-live { display: flex; align-items: center; gap: 9px; margin: 22px 0; padding: 12px 15px; color: #d5cceb; background: #211c3d; border: 1px solid #3f3568; border-radius: 8px; font-size: .68rem; }
+.arcade-live a { margin-left: auto; color: #ff8cc7; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: #7fe0b4; box-shadow: 0 0 10px #7fe0b4; }
+.arcade-game-grid article { padding: 14px; background: #211c3d; border: 1px solid #3f3568; border-radius: 11px; }
+.arcade-game-grid h2 { margin: 8px 0 5px; color: #fff; font-size: 1rem; }
+.arcade-game-grid p, .arcade-game-grid b { color: #c9c0dd; font-size: .68rem; }
+.arcade-game-grid b { color: #ffcf74; }
+.game-art { display: grid; min-height: 125px; place-items: center; margin-bottom: 13px; border-radius: 7px; color: white; font: 900 2rem ui-monospace,monospace; text-shadow: 0 0 17px currentColor; }
+.neon-art { background: radial-gradient(circle at 70% 30%,#ec65bd,#433072 40%,#121528); }
+.star-art { background: radial-gradient(circle at 36% 45%,#f9dc78,#d86665 8%,#282855 42%,#121528); }
+.dungeon-art { background: repeating-linear-gradient(135deg,#5c3b8c 0 15px,#28204b 15px 30px); }
+.arcade-ranking > div { display: grid; grid-template-columns: 1.4fr 1fr .8fr; gap: 14px; padding: 15px; border-bottom: 1px solid #3f3568; background: #211c3d; font-size: .74rem; }
+.arcade-ranking > div strong { color: #ffcf74; text-align: right; }
+.arcade-rank-head { color: #a9a0bd; font-size: .58rem !important; letter-spacing: .1em; }
+.player-profile { display: flex; align-items: center; gap: 14px; padding: 20px; background: #211c3d; border: 1px solid #3f3568; border-radius: 12px; }
+.player-profile h2, .player-profile p { margin: 0 0 5px; }
+.player-profile span { margin-left: auto; color: #ff8cc7; font-size: .58rem; font-weight: 800; }
+.arcade-feature { display: grid; grid-template-columns: .75fr 1.25fr; gap: 20px; align-items: center; }
+.arcade-feature .game-art { min-height: 210px; margin: 0; }
+.arcade-feature > div > span { color: #ffbd6c; font-size: .58rem; letter-spacing: .08em; }
+.market-hero { position: relative; overflow: hidden; }
+.market-hero::after { position: absolute; top: -20%; right: -3%; width: 32%; height: 140%; border: 1px solid rgba(69,93,74,.18); border-radius: 50%; content: ""; transform: rotate(25deg); box-shadow: 0 0 0 20px rgba(69,93,74,.06),0 0 0 40px rgba(69,93,74,.05); }
+.shop-benefits { border-color: #d7d8cf; }
+.product-grid article { overflow: hidden; padding-bottom: 15px; background: #fffefa; border: 1px solid #dfded5; }
+.product-grid article > span, .product-grid article > h2, .product-grid article > p, .product-grid article > b { display: block; margin-right: 15px; margin-left: 15px; }
+.product-grid article > span { color: #7b877e; }
+.product-grid article > h2 { margin-top: 7px; margin-bottom: 5px; color: #34453a; font: 500 1.08rem Georgia,serif; }
+.product-grid article > p { color: #657368; font-size: .7rem; }
+.product-grid article > b { color: #536c59; font-size: .82rem; }
+.product-art { display: grid; min-height: 190px; place-items: center; margin-bottom: 15px; color: rgba(255,255,255,.85); font: 800 2.5rem Georgia,serif; }
+.jacket-art { background: radial-gradient(ellipse at 50% 53%,#506c5b 0 22%,transparent 23%),linear-gradient(135deg,#e6d8bf,#a7b19f); }
+.camera-art { background: radial-gradient(ellipse at center,#292d2c 0 22%,transparent 23%),linear-gradient(135deg,#d9c9ae,#9e8465); }
+.bag-art { background: radial-gradient(ellipse at center,#7e5538 0 25%,transparent 26%),linear-gradient(135deg,#d5c9b7,#8c9c88); }
+.cloud-dashboard { display: grid; grid-template-columns: .9fr 1.1fr; gap: 16px; align-items: start; margin-top: 26px; }
+.cloud-dashboard .cloud-file-list, .cloud-dashboard .scenario-card { max-width: none; margin: 0; }
+.cloud-dashboard .scenario-card { color: #344253; }
+.cloud-dashboard .scenario-card h2 { margin: 6px 0; }
+.cloud-dashboard .scenario-card a, .cloud-link { color: #6478d2; }
+.storage-meter { height: 7px; margin-top: 14px; background: #e8edf6; border-radius: 10px; }
+.storage-meter i { display: block; width: 18%; height: 100%; background: #6478d2; border-radius: inherit; }
+.cloud-file-list small { display: block; margin-top: 7px; color: #7e8999; }
+.cloud-file-row { display: flex; align-items: center; gap: 13px; margin: 10px 0; padding: 15px; background: white; border: 1px solid #e1e6f0; border-radius: 9px; }
+.cloud-file-row > div { display: grid; flex: 1; gap: 5px; }
+.cloud-file-row b { color: #2b3b50; font-size: .78rem; }
+.cloud-file-row small, .cloud-file-row time, .cloud-file-row > span:last-child { color: #7b8797; font-size: .65rem; }
+.file-icon { display: grid; width: 39px; height: 43px; place-items: center; color: #6478d2; background: #eef1fa; border-radius: 6px; font-size: .58rem; font-weight: 800; }
+.archive-icon { color: #9a6c45; background: #f4eee7; }
+.cloud-link { display: inline-block; margin: 12px 0; text-decoration: none; }
+.ticket-hero { display: grid; grid-template-columns: 1.2fr .8fr; align-items: center; gap: 16px; overflow: hidden; }
+.ticket-hero-art { display: grid; min-height: 225px; place-items: center; border: 1px solid rgba(255,255,255,.13); border-radius: 50% 50% 8px 8px; background: radial-gradient(circle at 50% 30%,#ffbd6c,#9c4f6e 20%,#282644 65%); }
+.ticket-hero-art span { color: white; font: 900 1.45rem/1.2 ui-monospace,monospace; letter-spacing: .2em; text-align: center; }
+.event-filter-strip { justify-content: start; flex-wrap: wrap; border-color: #303d50; }
+.event-filter-strip span { color: #c3cbd7; }
+.event-list { display: grid; gap: 10px; margin: 18px 0; }
+.event-list article { display: grid; grid-template-columns: 70px 1fr auto; align-items: center; gap: 16px; padding: 17px; background: #1b2432; border: 1px solid #303d50; border-radius: 10px; }
+.event-list article > div > span { color: #ffbd6c; font-size: .55rem; font-weight: 800; letter-spacing: .1em; }
+.event-list h2 { margin: 5px 0; font-size: .93rem; }
+.event-list p { margin: 0; color: #abb7c7; font-size: .68rem; }
+.event-date { display: grid; gap: 5px; justify-items: center; padding: 9px 4px; color: #20202b; background: #ffbd6c; border-radius: 7px; }
+.event-date b { font-size: .52rem; }
+.event-date strong { font-size: .85rem; }
+.event-availability { color: #c5d4c7; font-size: .6rem; }
+.search-suggestions { display: flex; gap: 10px; align-items: center; margin-top: 12px; color: #abb7c7; font-size: .65rem; }
+.search-suggestions a { color: #ffbd6c; }
+.ticket-content .section-heading > a, .ticket-content .scenario-card a { color: #ffbd6c; }
+.request-summary { display: flex; align-items: center; gap: 20px; padding-top: 15px; border-top: 1px solid rgba(125,145,135,.25); }
+.request-summary > span { display: grid; gap: 4px; }
+.request-summary small { color: #84968c; font-size: .53rem; letter-spacing: .1em; }
+.request-summary b { font-size: .68rem; }
+.request-summary .scenario-button { margin-left: auto; }
+.service-details { display: grid; grid-template-columns: .8fr 1.2fr; gap: 24px; margin: 28px 0; padding: 24px; color: #33483f; background: rgba(255,255,255,.8); border: 1px solid rgba(100,120,110,.15); border-radius: 12px; }
+.service-details h2 { margin: 4px 0 8px; font: 500 1.35rem Georgia,serif; }
+.service-details p { color: #68766e; font-size: .75rem; }
+.service-details ol { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.service-details li { display: flex; align-items: center; gap: 12px; }
+.service-details li > span { display: grid; width: 28px; height: 28px; flex: none; place-items: center; color: #345f51; border: 1px solid #b8c6ba; border-radius: 50%; font-size: .58rem; font-weight: 800; }
+.service-details li div { display: grid; gap: 4px; }
+.service-details li b { font-size: .72rem; }
+.service-details li small { color: #748078; font-size: .63rem; }
+.service-assurances { justify-content: start; flex-wrap: wrap; border-color: rgba(125,145,135,.2); }
+.rich-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 23px clamp(18px,6vw,90px); text-align: left; }
+.rich-footer > span { max-width: 420px; }
+.rich-footer nav { display: flex; flex-wrap: wrap; gap: 16px; }
+.rich-footer nav a { color: inherit; font-size: .68rem; text-decoration: none; }
+.rich-footer nav a:hover { text-decoration: underline; }
+.studio-journal-strip, .dev-customer-story, .arcade-community, .repair-story, .cloud-security-note, .nightlife-guide, .travel-editorial, .traveler-review, .market-review, .editorial-quote, .service-faq { margin: 26px 0; padding: clamp(20px,4vw,34px); border-radius: 12px; }
+.studio-journal-strip { background: #e9e4d8; }
+.studio-journal-strip h2, .dev-customer-story h2, .arcade-community h2, .repair-story h2, .cloud-security-note h2, .nightlife-guide h2, .travel-editorial h2, .service-faq h2 { margin: 5px 0 9px; font-size: clamp(1.2rem,3vw,1.7rem); }
+.studio-journal-strip > p, .dev-customer-story > p, .arcade-community p, .repair-story p, .cloud-security-note p, .nightlife-guide p, .travel-editorial p { max-width: 650px; color: #637168; font-size: .8rem; }
+.studio-people { display: flex; flex-wrap: wrap; gap: 12px 22px; margin-top: 20px; }
+.studio-people > span { display: flex; align-items: center; gap: 8px; color: #56655b; font-size: .68rem; }
+.studio-people b, .community-avatars b { display: grid; width: 32px; height: 32px; place-items: center; color: #fff7ea; background: #567166; border-radius: 50%; font: 700 .58rem Arial,sans-serif; }
+.editorial-quote { display: grid; justify-items: center; padding: 34px; text-align: center; }
+.editorial-quote > span { color: #c66b4e; font: 4rem Georgia,serif; line-height: .7; }
+.editorial-quote blockquote { max-width: 600px; margin: 12px auto; color: #52675c; font: 500 clamp(1.2rem,3vw,1.8rem)/1.4 Georgia,serif; }
+.editorial-quote small { color: #8a7665; font: 800 .56rem Arial,sans-serif; letter-spacing: .12em; }
+.travel-editorial { display: grid; grid-template-columns: 1.2fr .8fr; align-items: center; gap: 25px; background: #e8eee6; }
+.travel-editorial a, .nightlife-guide a { color: #315f54; font-size: .78rem; font-weight: 750; }
+.travel-stamp { display: grid; min-height: 205px; place-content: center; justify-items: center; color: #f7f0df; border: 1px solid rgba(255,255,255,.45); border-radius: 50%; background: radial-gradient(circle,#8b9e82,#315b5a); box-shadow: inset 0 0 0 9px rgba(255,255,255,.09); transform: rotate(-7deg); }
+.travel-stamp span, .travel-stamp small { font: 800 .52rem Arial,sans-serif; letter-spacing: .18em; }
+.travel-stamp b { margin: 8px; font: 800 1.35rem/1 Georgia,serif; text-align: center; }
+.traveler-review, .market-review { background: #fff; border: 1px solid rgba(26,51,75,.1); }
+.traveler-review > span, .market-review > span { color: #c48138; letter-spacing: .14em; }
+.traveler-review blockquote, .market-review p { max-width: 720px; margin: 9px 0; color: #39534b; font: 500 1rem/1.6 Georgia,serif; }
+.traveler-review small, .market-review small { color: #738078; font-size: .65rem; }
+.dev-customer-story { background: linear-gradient(115deg,#1c2f3b,#19332d); border: 1px solid #314b4b; }
+.dev-customer-story .content-meta { color: #8fe3c0; }
+.dev-customer-story h2 { max-width: 620px; color: #f4f8f5; }
+.dev-customer-story > p { color: #b2c1d0; }
+.dev-customer-story a, .dev-integrations { color: #8fe3c0 !important; }
+.dev-customer-story a { font-size: .75rem; font-weight: 700; }
+.dev-integrations { margin: 25px 0; padding: 18px; border-top: 1px solid #314050; border-bottom: 1px solid #314050; }
+.dev-integrations > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px; color: #cbd8e2; font: 700 .8rem ui-monospace,monospace; }
+.arcade-community { display: grid; grid-template-columns: 1fr auto; gap: 25px; align-items: center; background: linear-gradient(110deg,#28204d,#211c3d); border: 1px solid #44396c; }
+.arcade-community .content-meta { color: #ff8cc7; }
+.arcade-community h2 { color: white; }
+.arcade-community p { color: #c9c0dd; }
+.arcade-community a { color: #ff8cc7; font-size: .75rem; font-weight: 700; }
+.community-avatars { display: flex; align-items: center; flex-wrap: wrap; max-width: 220px; }
+.community-avatars b { margin-left: -5px; border: 2px solid #28204d; background: #795bb6; }
+.community-avatars b:first-child { margin-left: 0; }
+.community-avatars b:nth-child(2) { background: #ca4b9a; }
+.community-avatars b:nth-child(3) { background: #468a82; }
+.community-avatars b:nth-child(4) { background: #423b62; }
+.community-avatars small { width: 100%; margin-top: 10px; color: #c9c0dd; font-size: .61rem; }
+.arcade-release, .ticket-news { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin: 18px 0; padding: 13px 15px; color: #d5cceb; background: #211c3d; border: 1px solid #3f3568; border-radius: 8px; font-size: .65rem; }
+.arcade-release > b, .ticket-news > b { color: #ff8cc7; font-size: .57rem; letter-spacing: .1em; }
+.arcade-release > span:last-of-type, .ticket-news > span:not(.live-dot) { color: #bdb3d3; }
+.arcade-release a, .ticket-news a { margin-left: auto; color: #ff8cc7; }
+.repair-story { display: grid; grid-template-columns: .7fr 1.3fr; align-items: center; gap: 24px; background: #e7e5da; }
+.repair-art { display: grid; min-height: 190px; place-items: center; color: #f9f3e8; background: linear-gradient(140deg,transparent 49%,rgba(255,255,255,.65) 50% 51%,transparent 52%),linear-gradient(135deg,#b27a55,#d5c5a8 48%,#617563); border-radius: 4px; }
+.repair-art span { padding: 12px; border: 1px solid rgba(255,255,255,.6); font: 800 .8rem/1.3 Georgia,serif; letter-spacing: .15em; text-align: center; }
+.repair-story a { color: #536c59; font-size: .75rem; font-weight: 700; }
+.cloud-security-note { display: flex; align-items: flex-start; gap: 16px; background: #fff; border: 1px solid #e1e6f0; }
+.cloud-security-note .content-meta { color: #6478d2; }
+.cloud-security-note h2 { color: #2b3b50; }
+.cloud-security-note p { color: #65738a; }
+.cloud-security-note a { color: #6478d2; font-size: .74rem; font-weight: 700; }
+.cloud-team-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin: 22px 0; padding: 17px; background: #fff; border: 1px solid #e1e6f0; border-radius: 10px; }
+.cloud-team-row .content-meta { grid-column: 1/-1; color: #6d7fd2; }
+.cloud-team-row > div { display: grid; gap: 5px; padding: 8px; }
+.cloud-team-row b { color: #2b3b50; font-size: .73rem; }
+.cloud-team-row small { color: #7b8797; font-size: .62rem; }
+.nightlife-guide { display: grid; grid-template-columns: 1fr .7fr; gap: 25px; align-items: center; background: #1b2432; border: 1px solid #303d50; }
+.nightlife-guide .content-meta { color: #ffbd6c; }
+.nightlife-guide h2 { color: #f7f0e4; }
+.nightlife-guide p { color: #abb7c7; }
+.neighborhood-map { display: grid; min-height: 185px; place-content: center; justify-items: center; gap: 9px; color: #d8d3c4; background: repeating-linear-gradient(0deg,transparent 0 26px,rgba(255,255,255,.08) 27px 28px),repeating-linear-gradient(90deg,#263649 0 44px,#354253 45px 47px); border: 1px solid #475366; border-radius: 8px; text-align: center; }
+.neighborhood-map i { color: #ffbd6c; font-size: 1.4rem; }
+.neighborhood-map b { color: #fff; font-size: .72rem; letter-spacing: .1em; }
+.neighborhood-map span, .neighborhood-map small { font-size: .5rem; letter-spacing: .13em; }
+.ticket-news { background: #1b2432; border-color: #303d50; }
+.ticket-news > b { color: #ffbd6c; }
+.ticket-news a { color: #ffbd6c; }
+.service-faq { background: rgba(255,255,255,.82); border: 1px solid rgba(100,120,110,.15); }
+.service-faq .content-meta { color: #71836e; }
+.service-faq h2 { color: #33483f; }
+.service-faq details { padding: 13px 0; border-top: 1px solid rgba(100,120,110,.16); }
+.service-faq summary { color: #33483f; cursor: pointer; font-size: .75rem; font-weight: 700; }
+.service-faq details p { margin-bottom: 0; color: #68766e; font-size: .7rem; }
+.scenario-3 .section-heading > a, .scenario-3 .scenario-card a { color: #8fe3c0; }
+.scenario-4 .section-heading > a, .scenario-4 .scenario-card a { color: #ff8cc7; }
+.scenario-5 .section-heading > a, .scenario-5 .scenario-card a { color: #536c59; }
+.scenario-6 .section-heading > a, .scenario-6 .scenario-card a { color: #6478d2; }
+.scenario-7 .section-heading > a, .scenario-7 .scenario-card a { color: #ffbd6c; }
+@media (max-width: 760px) {
+  .destination-grid, .product-grid, .arcade-game-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .editorial-hero, .dev-hero, .arcade-hero, .ticket-hero { grid-template-columns: 1fr; }
+  .editorial-hero-art, .arcade-cabinet, .ticket-hero-art { min-height: 180px; }
+  .docs-layout { grid-template-columns: 1fr; }
+  .docs-sidebar { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .docs-sidebar b, .docs-sidebar span { grid-column: 1/-1; }
+  .travel-trust, .dev-stats { align-items: flex-start; flex-wrap: wrap; }
+  .travel-trust div, .dev-stats div { min-width: 28%; }
+  .cloud-dashboard { grid-template-columns: 1fr; }
+  .service-details { grid-template-columns: 1fr; }
+  .rich-footer, .rich-footer nav { justify-content: center; text-align: center; }
+  .rich-footer { flex-wrap: wrap; }
+  .travel-editorial, .repair-story, .nightlife-guide { grid-template-columns: 1fr; }
+  .travel-stamp { min-height: 165px; width: 165px; justify-self: center; }
+}
+@media (max-width: 520px) {
+  .destination-grid, .product-grid, .arcade-game-grid { grid-template-columns: 1fr; }
+  .destination-card { min-height: 230px; }
+  .editorial-feature, .arcade-feature { grid-template-columns: 1fr; }
+  .editorial-art { min-height: 160px; }
+  .studio-note, .shop-benefits, .event-filter-strip, .service-assurances { align-items: flex-start; flex-direction: column; }
+  .contact-layout { grid-template-columns: 1fr; gap: 8px; }
+  .section-heading { align-items: flex-start; flex-direction: column; }
+  .event-list article { grid-template-columns: 54px 1fr; gap: 10px; }
+  .event-availability { grid-column: 2; }
+  .request-summary { align-items: flex-start; flex-direction: column; }
+  .arcade-ranking > div { grid-template-columns: 1fr auto; }
+  .arcade-ranking > div span { display: none; }
+  .player-profile { flex-wrap: wrap; }
+  .player-profile span { width: 100%; margin-left: 0; }
+  .cloud-file-row { align-items: flex-start; }
+  .cloud-file-row time { display: none; }
+  .arcade-community { grid-template-columns: 1fr; }
+  .community-avatars { max-width: none; }
+  .dev-integrations > div { justify-content: flex-start; }
+  .cloud-team-row { grid-template-columns: 1fr; }
+  .cloud-team-row .content-meta { grid-column: auto; }
+  .studio-people { flex-direction: column; }
+  .arcade-release > span:last-of-type, .ticket-news > span:not(.live-dot) { width: 100%; }
+  .arcade-release a, .ticket-news a { margin-left: 0; }
+}
 
 /* Output/result panel used by the 46 extra catalog labs (id > 8), on top of
    whichever scenario-N palette their theme reuses. Kept theme-neutral (own

@@ -23,7 +23,7 @@ Além das três listas sorteadas, o painel administrativo oferece a seleção fi
 | Nível | Identificador | Desafio | Conceito |
 |---|---|---|---|
 | Fácil | L1-F01 | Olhe melhor | Código-fonte HTML / comentários |
-| Fácil | L1-F02 | Mapa do site | Arquivos de descoberta (`robots.txt`) |
+| Fácil | L1-F02 | Mapa do site | Sitemap XML / descoberta de conteúdo |
 | Fácil | L1-F03 | Base64 em branco | Codificação Base64 |
 | Fácil | L1-F04 | Arquivo de frontend | JavaScript publicado no frontend |
 | Fácil | L1-F05 | Cabeçalhos curiosos | Cabeçalhos HTTP e cookies |
@@ -40,7 +40,7 @@ Os desafios 01 a 08 são os laboratórios clássicos da primeira versão, com si
 | Identificador | Desafio | Nível | Conceito | Doc |
 |---|---|---|---|---|
 | L1-F01 | Olhe melhor | Fácil | Código-fonte HTML / comentários | [challenge-01](challenge-01.md) |
-| L1-F02 | Mapa do site | Fácil | Arquivos de descoberta (robots.txt) | [challenge-02](challenge-02.md) |
+| L1-F02 | Mapa do site | Fácil | Sitemap XML / descoberta de conteúdo | [challenge-02](challenge-02.md) |
 | L1-F03 | Base64 em branco | Fácil | Codificação Base64 | [challenge-03](challenge-03.md) |
 | L1-F04 | Arquivo de frontend | Fácil | JavaScript publicado no frontend | [challenge-04](challenge-04.md) |
 | L1-F05 | Cabeçalhos curiosos | Fácil | Cabeçalhos de resposta HTTP | [challenge-05](challenge-05.md) |
