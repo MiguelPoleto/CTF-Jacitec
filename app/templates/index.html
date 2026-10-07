@@ -6,6 +6,7 @@
     <a href="{{ url_for('ctf_home') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
     <nav aria-label="Navegação principal">
       <a href="#como-funciona">Como funciona</a>
+      <a href="{{ url_for('rules_page') }}">Regras</a>
       <a href="{{ url_for('public_ranking_page') }}">Classificação</a>
     </nav>
     <div class="event-indicator {% if ctf %}is-live{% endif %}"><span></span>{{ 'CTF AO VIVO' if ctf else 'AGUARDANDO PRÓXIMO CTF' }}</div>
@@ -53,6 +54,7 @@
       <li><span class="rule-badge">03</span><p>Não use IA generativa para resolver desafios ou elaborar payloads.</p></li>
       <li><span class="rule-badge">04</span><p>Não ataque a infraestrutura, participantes ou serviços externos.</p></li>
     </ol>
+    <a class="rules-full-link" href="{{ url_for('rules_page') }}">Ler todas as regras de participação <span>↗</span></a>
   </section>
 
   <section class="landing-info-grid" aria-label="Pontuação">

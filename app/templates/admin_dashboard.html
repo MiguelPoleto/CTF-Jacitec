@@ -60,11 +60,11 @@
     <aside class="admin-side-column">
       <section class="admin-panel create-event-panel">
         <p class="section-kicker">NOVA DISPUTA</p><h2>Preparar CTF</h2>
-        <p>Escolha a coleção e a composição. Os desafios específicos são sorteados e só ficam registrados nesta edição.</p>
+        <p>Escolha uma coleção para sortear desafios ou use uma seleção fixa já preparada.</p>
         <form method="post" action="{{ url_for('generate_ctf') }}">
           <label for="challenge-list">Lista de desafios</label>
           <select id="challenge-list" name="challenge_list">
-            {% for key, item in challenge_lists.items() %}<option value="{{ key }}">{{ item.label }} · {{ item.description }}</option>{% endfor %}
+            {% for key, item in challenge_lists.items() %}<option value="{{ key }}" {% if key in fixed_challenge_lists %}selected{% endif %}>{{ item.label }} · {{ item.description }}</option>{% endfor %}
           </select>
           <div class="challenge-counts">
             <label>Fáceis<input name="easy_count" type="number" min="0" max="8" value="5" /></label>
@@ -128,6 +128,7 @@
       const totalNote = document.getElementById('challenge-total-note');
       const listSelect = document.getElementById('challenge-list');
       const availability = {{ challenge_availability|tojson }};
+      const fixedLists = {{ fixed_challenge_lists|tojson }};
       const availabilityNote = document.getElementById('challenge-availability');
       const updateTotal = () => {
         const total = counts.reduce((sum, input) => sum + (Number(input.value) || 0), 0);
@@ -137,11 +138,15 @@
       const updateAvailability = () => {
         const current = availability[listSelect.value];
         const labels = ['Fácil', 'Médio', 'Difícil'];
+        const isFixed = Object.hasOwn(fixedLists, listSelect.value);
         counts.forEach((input, index) => {
           input.max = current[labels[index]];
-          if (Number(input.value) > Number(input.max)) input.value = input.max;
+          input.disabled = isFixed;
+          if (isFixed || Number(input.value) > Number(input.max)) input.value = current[labels[index]];
         });
-        availabilityNote.textContent = `Catálogo desta lista: ${current['Fácil']} fáceis · ${current['Médio']} médios · ${current['Difícil']} difíceis (os desafios sorteados podem se repetir entre edições).`;
+        availabilityNote.textContent = isFixed
+          ? 'Seleção fixa desta edição; estes desafios serão usados sem sorteio.'
+          : `Catálogo desta lista: ${current['Fácil']} fáceis · ${current['Médio']} médios · ${current['Difícil']} difíceis (os desafios sorteados podem se repetir entre edições).`;
         updateTotal();
       };
       counts.forEach((input) => input.addEventListener('input', updateTotal));

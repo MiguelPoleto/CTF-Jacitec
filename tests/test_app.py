@@ -312,6 +312,24 @@ def test_landing_participation_cta_opens_technology_and_token_page(monkeypatch, 
     assert b'curl' in participation.data
 
 
+def test_participants_can_open_full_rules_from_homepage(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+
+    landing = client.get('/inicio')
+    assert landing.status_code == 200
+    assert b'href="/regras"' in landing.data
+    assert b'Ler todas as regras de participa' in landing.data
+
+    rules = client.get('/regras')
+    assert rules.status_code == 200
+    assert b'Regras de' in rules.data
+    assert b'ESCOPO AUTORIZADO' in rules.data
+    assert b'IA generativa' in rules.data
+    assert b'1.000 pontos' in rules.data
+    assert b'hor\xc3\xa1rios de abertura e encerramento' in rules.data
+
+
 def test_admin_entry_is_discreet_but_linked_from_landing(monkeypatch, tmp_path):
     isolate_database(monkeypatch, tmp_path)
     app = create_app(testing=True)
@@ -341,6 +359,30 @@ def test_catalog_has_10_5_3_per_list_and_event_is_ordered_by_difficulty(monkeypa
     difficulties = [app_module.CHALLENGE_BY_ID[challenge_id]['difficulty'] for challenge_id in ids]
     assert difficulties == ['Fácil'] * 5 + ['Médio'] * 2 + ['Difícil']
     assert all(app_module.CHALLENGE_BY_ID[challenge_id]['list_id'] == 'lista-2' for challenge_id in ids)
+
+
+def test_ctf_1_preset_uses_the_fixed_eight_challenges(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    app = create_app(testing=True)
+    client = app.test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+
+    response = client.get('/admin')
+    assert b'CTF 1' in response.data
+    assert b'Sele\xc3\xa7\xc3\xa3o fixa' in response.data
+
+    client.post('/admin/generate', data={
+        'challenge_list': 'ctf-1',
+        'easy_count': '0',
+        'medium_count': '0',
+        'hard_count': '0',
+    })
+    with sqlite3.connect(database_path) as conn:
+        ids = [row[0] for row in conn.execute('SELECT challenge_id FROM ctf_challenges ORDER BY position')]
+    assert ids == [1, 2, 3, 4, 5, 6, 7, 17]
+    assert [app_module.CHALLENGE_BY_ID[challenge_id]['difficulty'] for challenge_id in ids] == (
+        ['Fácil'] * 5 + ['Médio'] * 2 + ['Difícil']
+    )
 
 
 def test_admin_challenge_library_is_protected_and_guides_to_flag(monkeypatch, tmp_path):

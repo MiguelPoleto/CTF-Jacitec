@@ -16,6 +16,23 @@ Exemplo: `L2-M03` é o terceiro desafio médio da lista 2. O identificador, a li
 
 O administrador escolhe a lista e quantos desafios de cada nível quer (de 1 a 8 no total). Os desafios são sorteados dentro de cada nível, mas a ordem da edição é sempre **fáceis → médios → difíceis**: com 5 fáceis, 2 médios e 1 difícil, as posições 1 a 5 são fáceis, a 6 e a 7 são médias e a 8 é difícil. Os mesmos desafios podem voltar a ser sorteados em edições futuras.
 
+## Seleção fixa: CTF 1
+
+Além das três listas sorteadas, o painel administrativo oferece a seleção fixa **CTF 1**, com estes oito desafios em ordem de dificuldade:
+
+| Nível | Identificador | Desafio | Conceito |
+|---|---|---|---|
+| Fácil | L1-F01 | Olhe melhor | Código-fonte HTML / comentários |
+| Fácil | L1-F02 | Mapa do site | Arquivos de descoberta (`robots.txt`) |
+| Fácil | L1-F03 | Base64 em branco | Codificação Base64 |
+| Fácil | L1-F04 | Arquivo de frontend | JavaScript publicado no frontend |
+| Fácil | L1-F05 | Cabeçalhos curiosos | Cabeçalhos HTTP e cookies |
+| Médio | L1-M01 | IDOR no perfil | Controle de acesso a recursos (IDOR) |
+| Médio | L1-M02 | Busca indiscreta | SQL injection |
+| Difícil | L1-D02 | Cadeia de redirecionamento | Cadeia de redirecionamentos HTTP |
+
+Esta seleção usa os desafios existentes da Lista 1; não cria cópias deles nem altera as três listas do catálogo. Ao escolher **CTF 1** no painel, a composição fica fixa em 5 fáceis, 2 médios e 1 difícil, sem sorteio.
+
 Os desafios 01 a 08 são os laboratórios clássicos da primeira versão, com sites próprios; os demais usam os temas visuais compartilhados.
 
 ## Lista 1

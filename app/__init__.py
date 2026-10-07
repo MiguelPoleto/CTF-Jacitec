@@ -386,6 +386,10 @@ CHALLENGE_LISTS = {
     "lista-1": {"label": "Lista de desafios 1", "description": "Fundamentos de segurança web e laboratórios clássicos."},
     "lista-2": {"label": "Lista de desafios 2", "description": "Uma edição alternativa com novos cenários e técnicas."},
     "lista-3": {"label": "Lista de desafios 3", "description": "Terceira coleção para evitar repetição entre edições."},
+    "ctf-1": {"label": "CTF 1", "description": "Seleção fixa: 5 fáceis, 2 médios e 1 difícil."},
+}
+FIXED_CHALLENGE_LISTS = {
+    "ctf-1": (1, 2, 3, 4, 5, 6, 7, 17),
 }
 
 
@@ -521,6 +525,12 @@ def challenge_pool(list_id, difficulty):
     """The full catalog for one list/difficulty: always 10 fáceis, 5 médios e
     3 difíceis per list. Editions freely reuse challenges across events — the
     catalog is meant to be drawn from repeatedly, not exhausted."""
+    if list_id in FIXED_CHALLENGE_LISTS:
+        challenge_ids = FIXED_CHALLENGE_LISTS[list_id]
+        return [
+            item for item in CHALLENGES
+            if item["id"] in challenge_ids and item["difficulty"] == difficulty
+        ]
     return [item for item in CHALLENGES if item["list_id"] == list_id and item["difficulty"] == difficulty]
 
 
@@ -1001,6 +1011,10 @@ def create_app(testing=False):
     @app.get("/participar")
     def participation_page():
         return render_template("participate.html", ctf=current_ctf())
+
+    @app.get("/regras")
+    def rules_page():
+        return render_template("rules.html")
 
     @app.get("/lab/2/robots.txt")
     def lab_robots():
@@ -1641,6 +1655,7 @@ def create_app(testing=False):
             admin_notice=admin_notice,
             challenge_lists=CHALLENGE_LISTS,
             challenge_availability={key: {difficulty: len(challenge_pool(key, difficulty)) for difficulty in ("Fácil", "Médio", "Difícil")} for key in CHALLENGE_LISTS},
+            fixed_challenge_lists=FIXED_CHALLENGE_LISTS,
         )
 
     @app.post("/admin/generate")
@@ -1662,34 +1677,40 @@ def create_app(testing=False):
         if list_id not in CHALLENGE_LISTS:
             session["admin_notice"] = "Escolha uma lista de desafios válida."
             return redirect(url_for("admin_dashboard"))
-        # Keep bare POSTs from pre-selection integrations compatible with the
-        # original eight-lab event. The admin form always submits these fields
-        # and therefore always uses the randomized workflow below.
-        legacy_default_request = not any(request.form.get(field) is not None for field in ("challenge_list", "easy_count", "medium_count", "hard_count"))
-        requested = {}
-        for difficulty, field, default in (("Fácil", "easy_count", 4), ("Médio", "medium_count", 3), ("Difícil", "hard_count", 1)):
-            raw_count = (request.form.get(field) or str(default)).strip()
-            try:
-                requested[difficulty] = int(raw_count)
-            except ValueError:
-                requested[difficulty] = -1
-            available = challenge_pool(list_id, difficulty)
-            if requested[difficulty] < 0 or requested[difficulty] > len(available):
-                session["admin_notice"] = f"Não há desafios {difficulty.lower()} inéditos suficientes nessa lista. Escolha outra composição ou lista."
-                return redirect(url_for("admin_dashboard"))
-        total_challenges = sum(requested.values())
-        if not 1 <= total_challenges <= 8:
-            session["admin_notice"] = "Escolha entre 1 e 8 desafios no total."
-            return redirect(url_for("admin_dashboard"))
-        if legacy_default_request:
-            selected = CHALLENGES[:8]
+        if list_id in FIXED_CHALLENGE_LISTS:
+            selected = sorted(
+                (CHALLENGE_BY_ID[challenge_id] for challenge_id in FIXED_CHALLENGE_LISTS[list_id]),
+                key=lambda challenge: (DIFFICULTY_ORDER.index(challenge["difficulty"]), challenge["id"]),
+            )
         else:
-            # Sorteio dentro de cada nível, mas a ordem da edição é sempre
-            # fáceis → médios → difíceis (ex.: 5/2/1 = posições 1-5 fáceis,
-            # 6-7 médios e 8 difícil).
-            selected = []
-            for difficulty in ("Fácil", "Médio", "Difícil"):
-                selected.extend(random.sample(challenge_pool(list_id, difficulty), requested[difficulty]))
+            # Keep bare POSTs from pre-selection integrations compatible with
+            # the original eight-lab event. The admin form always submits these
+            # fields and therefore always uses the randomized workflow below.
+            legacy_default_request = not any(request.form.get(field) is not None for field in ("challenge_list", "easy_count", "medium_count", "hard_count"))
+            requested = {}
+            for difficulty, field, default in (("Fácil", "easy_count", 4), ("Médio", "medium_count", 3), ("Difícil", "hard_count", 1)):
+                raw_count = (request.form.get(field) or str(default)).strip()
+                try:
+                    requested[difficulty] = int(raw_count)
+                except ValueError:
+                    requested[difficulty] = -1
+                available = challenge_pool(list_id, difficulty)
+                if requested[difficulty] < 0 or requested[difficulty] > len(available):
+                    session["admin_notice"] = f"Não há desafios {difficulty.lower()} inéditos suficientes nessa lista. Escolha outra composição ou lista."
+                    return redirect(url_for("admin_dashboard"))
+            total_challenges = sum(requested.values())
+            if not 1 <= total_challenges <= 8:
+                session["admin_notice"] = "Escolha entre 1 e 8 desafios no total."
+                return redirect(url_for("admin_dashboard"))
+            if legacy_default_request:
+                selected = CHALLENGES[:8]
+            else:
+                # Sorteio dentro de cada nível, mas a ordem da edição é sempre
+                # fáceis → médios → difíceis (ex.: 5/2/1 = posições 1-5 fáceis,
+                # 6-7 médios e 8 difícil).
+                selected = []
+                for difficulty in ("Fácil", "Médio", "Difícil"):
+                    selected.extend(random.sample(challenge_pool(list_id, difficulty), requested[difficulty]))
         # A pontuação máxima de qualquer edição é sempre 1.000 pontos, não
         # importa quantos desafios fáceis/médios/difíceis o administrador
         # escolher: o peso de cada dificuldade é redistribuído proporcionalmente.

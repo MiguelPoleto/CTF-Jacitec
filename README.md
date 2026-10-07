@@ -167,6 +167,10 @@ docker compose down -v
 - Não use IA generativa para resolver desafios ou elaborar payloads.
 - Não ataque a infraestrutura, participantes ou serviços externos.
 
+Consulte a versão detalhada em [Regras do JACITEC CTF](docs/regras-ctf.md).
+Os participantes também podem acessar as regras completas pela página inicial da
+plataforma ou diretamente em `/regras`.
+
 ## Estrutura do projeto
 
 ```text

@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Regras do CTF · JACITEC{% endblock %}
+
+{% block content %}
+<main class="rules-page">
+  <header class="landing-nav">
+    <a href="{{ url_for('ctf_home') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
+    <nav aria-label="Navegação principal">
+      <a href="{{ url_for('ctf_home') }}">Início</a>
+      <a href="{{ url_for('public_ranking_page') }}">Classificação</a>
+    </nav>
+    <a class="rules-nav-link" href="{{ url_for('participation_page') }}">Participar <span>↗</span></a>
+  </header>
+
+  <section class="rules-hero">
+    <p class="eyebrow-line"><span>ANTES DE COMEÇAR</span> JACITEC CTF</p>
+    <h1>Regras de <em>participação.</em></h1>
+    <p>Leia estas orientações antes de iniciar. Elas ajudam a manter a competição justa e os testes dentro do escopo autorizado.</p>
+  </section>
+
+  <div class="rules-content">
+    <section class="rules-card">
+      <span class="note-index">01 / OBJETIVO</span>
+      <h2>Investigue os laboratórios</h2>
+      <p>Investigue os laboratórios disponibilizados na plataforma e encontre as flags associadas aos desafios. Envie cada flag pelo painel do participante para registrar a solução e somar pontos.</p>
+    </section>
+
+    <section class="rules-card">
+      <span class="note-index">02 / ESCOPO AUTORIZADO</span>
+      <h2>Teste somente o que faz parte do CTF</h2>
+      <ul>
+        <li>Teste exclusivamente os laboratórios disponibilizados dentro desta plataforma.</li>
+        <li>Interaja apenas com os recursos necessários para resolver os desafios.</li>
+        <li>Não faça varreduras ou testes contra a infraestrutura que hospeda o CTF, serviços externos, outros participantes ou contas que não sejam parte do laboratório.</li>
+        <li>Se encontrar uma falha fora do escopo de um desafio, interrompa o teste e comunique a organização; não tente explorá-la.</li>
+      </ul>
+    </section>
+
+    <section class="rules-card">
+      <span class="note-index">03 / CONDUTA E COLABORAÇÃO</span>
+      <h2>Respeite os demais participantes</h2>
+      <ul>
+        <li>Não compartilhe flags, soluções, dicas obtidas ou credenciais com outros participantes durante a edição.</li>
+        <li>Não use IA generativa para resolver desafios ou elaborar payloads.</li>
+        <li>Não prejudique a disponibilidade da plataforma, altere dados de outras pessoas ou tente acessar informações alheias aos laboratórios.</li>
+        <li>Siga as orientações da organização. Em caso de dúvida sobre o escopo, pare e peça esclarecimento antes de prosseguir.</li>
+      </ul>
+    </section>
+
+    <section class="rules-card">
+      <span class="note-index">04 / FLAGS E SUBMISSÕES</span>
+      <h2>Envie cada resposta pelo desafio correspondente</h2>
+      <ul>
+        <li>Envie as flags pelo campo de resposta do desafio correspondente.</li>
+        <li>Copie o valor encontrado exatamente, incluindo o formato e as chaves, quando presentes.</li>
+        <li>Cada desafio resolvido é registrado pela plataforma e contabilizado no placar.</li>
+        <li>Não publique flags ou instruções de resolução enquanto a edição estiver em andamento.</li>
+      </ul>
+    </section>
+
+    <section class="rules-card">
+      <span class="note-index">05 / DICAS E PONTUAÇÃO</span>
+      <h2>Use as dicas com atenção</h2>
+      <ul>
+        <li>Cada desafio pode oferecer até três dicas progressivas. Revelar uma dica reduz a pontuação daquele desafio.</li>
+        <li>Mesmo após revelar todas as dicas, uma solução correta vale pelo menos um ponto.</li>
+        <li>A pontuação máxima total da edição é normalizada para 1.000 pontos. O peso dos desafios depende da dificuldade e da composição escolhida pela organização.</li>
+        <li>O tempo não reduz pontos; em caso de empate, vence quem tiver menor tempo de participação.</li>
+      </ul>
+    </section>
+
+    <section class="rules-card">
+      <span class="note-index">06 / DURAÇÃO E ENCERRAMENTO</span>
+      <h2>Fique atento ao período do evento</h2>
+      <ul>
+        <li>Respeite o período e o limite de tempo informados pela organização para a edição.</li>
+        <li>Quando o CTF for encerrado, as submissões deixam de contar para aquela edição. A classificação final e o histórico podem permanecer disponíveis na plataforma.</li>
+      </ul>
+    </section>
+
+    <section class="rules-card">
+      <span class="note-index">07 / DÚVIDAS E PROBLEMAS</span>
+      <h2>Avise a organização</h2>
+      <p>Se uma página, pista ou submissão parecer incorreta, registre o nome ou identificador do desafio e descreva o comportamento observado à organização. Não tente contornar o problema atacando a infraestrutura ou recursos fora do escopo.</p>
+    </section>
+
+    <aside class="rules-edition-note">
+      <strong>Informações específicas desta edição</strong>
+      <p>Confira com a organização os horários de abertura e encerramento, a duração, o canal de suporte e eventuais regras adicionais de colaboração ou uso de ferramentas.</p>
+    </aside>
+  </div>
+
+  <footer class="rules-footer">
+    <a href="{{ url_for('ctf_home') }}">← Voltar à página inicial</a>
+    <a href="{{ url_for('participation_page') }}">Participar do CTF ↗</a>
+  </footer>
+</main>
+{% endblock %}
