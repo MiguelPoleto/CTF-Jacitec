@@ -715,6 +715,8 @@ th {
   font-size: 1.22rem;
 }
 .panel-drag-instruction { display: block; margin-top: 5px; color: #81a8bf; font-size: .66rem; letter-spacing: .04em; }
+.panel-extra-route { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; padding: 0; color: var(--primary, #ff5f9e); background: none; border: 0; font: inherit; font-size: .66rem; font-weight: 700; text-align: left; text-decoration: none; cursor: pointer; }
+.panel-extra-route:hover { text-decoration: underline; }
 
 .panel-header-actions { display: flex; align-items: center; gap: 6px; }
 .panel-reset { width: 34px; height: 34px; padding: 0; color: #a9dff5; background: rgba(255, 95, 158,.1); border: 1px solid rgba(255, 95, 158,.25); font-size: 1rem; }

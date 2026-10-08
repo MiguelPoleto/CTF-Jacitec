@@ -41,6 +41,7 @@
         <span class="level-tag level-{{ active_challenge.code[3] }}">{{ active_challenge.difficulty }}</span>
         <span class="list-tag" title="Identificador do desafio">Lista {{ active_challenge.list_number }} · {{ active_challenge.code }}</span>
       </div>
+      <button type="button" id="panel-open-new-tab" class="panel-extra-route" title="Abre em outra aba exatamente a página que está aberta agora no site do desafio">↗ Precisa explorar outras rotas? Abrir esta página em outra aba</button>
       <span class="panel-drag-instruction">⋮⋮ Arraste para mover</span>
     </div>
     <div class="panel-header-actions"><button class="panel-reset" id="panel-reset" type="button" aria-label="Redefinir posição do painel" title="Redefinir posição">⌖</button><button class="panel-minimize" id="panel-minimize" type="button" aria-label="Minimizar painel">—</button></div>
@@ -301,7 +302,7 @@
     let dragState = null;
     function beginDrag(event, handle, target) {
       if (event.button !== 0) return;
-      if (target === panel && event.target.closest('button')) return;
+      if (target === panel && event.target.closest('button, a')) return;
       const rect = target.getBoundingClientRect();
       dragState = {
         pointerId: event.pointerId,
@@ -460,6 +461,16 @@
       let path = '';
       try { path = event.currentTarget.contentWindow.location.pathname; } catch (_) { return; }
       if (!path.startsWith('/lab/')) refreshParticipantState();
+    });
+
+    // Abre em outra aba exatamente a página que está carregada agora dentro do
+    // iframe (a home do laboratório ou qualquer rota para onde a pessoa tenha
+    // navegado clicando dentro do próprio site do desafio) — útil para usar
+    // DevTools/curl na rota sem perder o cronômetro e o painel.
+    document.getElementById('panel-open-new-tab').addEventListener('click', () => {
+      let currentUrl = challengeSite.src;
+      try { currentUrl = challengeSite.contentWindow.location.href; } catch (_) { /* mantém o src como alternativa */ }
+      window.open(currentUrl, '_blank', 'noopener');
     });
 
     // Ao abrir o desafio, busca uma única vez as dicas já pagas (se houver),
