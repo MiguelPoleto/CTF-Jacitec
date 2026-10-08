@@ -380,7 +380,13 @@ def test_ctf_1_preset_uses_the_fixed_eight_challenges(monkeypatch, tmp_path):
     })
     with sqlite3.connect(database_path) as conn:
         ids = [row[0] for row in conn.execute('SELECT challenge_id FROM ctf_challenges ORDER BY position')]
-    assert ids == [1, 2, 3, 4, 5, 6, 7, 17]
+    # A ordem de uma edição é sempre fáceis → médios → difíceis. O desafio de
+    # IDOR (6) é o Difícil desta seleção, e o de redirecionamento (17) é um
+    # dos Médios — refletindo o rebalanceamento feito após o desafio de
+    # redirecionamento (cadeia simples de 1 salto) se mostrar fácil demais
+    # para "Difícil", e o de IDOR (indireção de autorização entre dois
+    # recursos) se mostrar difícil demais para "Médio".
+    assert ids == [1, 2, 3, 4, 5, 7, 17, 6]
     assert [app_module.CHALLENGE_BY_ID[challenge_id]['difficulty'] for challenge_id in ids] == (
         ['Fácil'] * 5 + ['Médio'] * 2 + ['Difícil']
     )
@@ -442,10 +448,68 @@ def test_ctf_1_lab_sites_are_richer_without_breaking_challenge_flows(monkeypatch
     assert 'JACITEC{base64_is_not_a_secret}' in app_module.CHALLENGE_HINTS[3][2]
     assert b'id="cloud-profile-load"' in client.get('/lab/6/files/101').data
     assert b'id="ticket-search"' in client.get('/lab/7').data
+    # Cadeia de 3 saltos: start (devolve um token) -> processing (só traz a
+    # flag se a requisição for refeita manualmente com esse token) -> receipt
+    # (200 final, sem flag). Um clique normal (ou seguir os redirects
+    # automaticamente, como o navegador faz sozinho) NUNCA deve expor a flag,
+    # mesmo acompanhando toda a cadeia pelo Network.
     start = client.get('/lab/17/delivery/start', follow_redirects=False)
     assert start.status_code == 302
-    receipt = client.get(start.headers['Location'])
-    assert receipt.headers['X-Delivery-Receipt'] == 'JACITEC{catalog_17_redirect}'
+    assert 'X-Delivery-Receipt' not in start.headers
+    token = start.headers['X-Delivery-Token']
+    processing_without_token = client.get(start.headers['Location'], follow_redirects=False)
+    assert processing_without_token.status_code == 302
+    assert 'X-Delivery-Receipt' not in processing_without_token.headers
+    processing_with_token = client.get(start.headers['Location'], follow_redirects=False, headers={'X-Delivery-Token': token})
+    assert processing_with_token.status_code == 302
+    assert processing_with_token.headers['X-Delivery-Receipt'] == 'JACITEC{catalog_17_redirect}'
+    receipt = client.get(processing_with_token.headers['Location'], follow_redirects=False)
+    assert receipt.status_code == 200
+    assert 'X-Delivery-Receipt' not in receipt.headers
+    followed_fully = client.get('/lab/17/delivery/start', follow_redirects=True)
+    assert 'X-Delivery-Receipt' not in followed_fully.headers
+
+
+def test_search_challenge_requires_a_real_tautology_not_just_the_word_or(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/desafios/executar', data={'list_id': 'ctf-1'})
+    flag = app_module.CHALLENGE_BY_ID[7]['flags'][0]
+
+    empty = client.get('/lab/7/search', query_string={'q': ''}).get_json()
+    assert empty['results'] == []
+
+    public_hit = client.get('/lab/7/search', query_string={'q': 'jazz'}).get_json()
+    assert len(public_hit['results']) == 1
+    assert 'nota' not in public_hit['results'][0]
+
+    not_actually_sqli = client.get('/lab/7/search', query_string={'q': 'jazz or blues'}).get_json()
+    assert not_actually_sqli['results'] == []
+
+    bypass = client.get('/lab/7/search', query_string={'q': "' OR '1'='1"}).get_json()
+    titles = [result['title'] for result in bypass['results']]
+    notes = [result.get('nota', '') for result in bypass['results']]
+    assert len(bypass['results']) == len(app_module.NIGHT_OWL_ARCHIVE)
+    assert any(flag in note for note in notes)
+    assert all(flag not in title for title in titles)
+
+
+def test_generic_catalog_search_mechanism_matches_challenge_7_behaviour(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/desafios/executar', data={'list_id': 'lista-1'})
+    challenge = app_module.CHALLENGE_BY_ID[14]
+    flag = challenge['flags'][0]
+
+    no_match = client.get('/lab/14/api/search', query_string={'q': 'xyz'}).get_json()
+    assert no_match['results'] == []
+    assert 'message' in no_match
+
+    bypass = client.get('/lab/14/api/search', query_string={'q': "' OR 1=1 --"}).get_json()
+    notes = [result.get('nota', '') for result in bypass['results']]
+    assert any(flag in note for note in notes)
 
 
 def test_admin_challenge_library_is_protected_and_guides_to_flag(monkeypatch, tmp_path):

@@ -93,7 +93,7 @@ CHALLENGES = [
         "title": "Desafio 6",
         "name": "IDOR no perfil",
         "points": 15,
-        "difficulty": "Médio",
+        "difficulty": "Difícil",
         "flags": ["JACITEC{idor_is_a_risk_06}"],
         "description": "Um identificador do usuário pode ser alterado para abusar do acesso.",
         "hints": [
@@ -141,7 +141,7 @@ CHALLENGES = [
 # Os oito laboratórios originais (id 1-8) ficam na lista 1.
 for _challenge_id, _mechanism, _difficulty in (
     (1, "source", "Fácil"), (2, "sitemap", "Fácil"), (3, "base64", "Fácil"), (4, "js", "Fácil"),
-    (5, "header", "Fácil"), (6, "idor", "Médio"), (7, "search", "Médio"), (8, "audit", "Difícil"),
+    (5, "header", "Fácil"), (6, "idor", "Difícil"), (7, "search", "Médio"), (8, "audit", "Difícil"),
 ):
     CHALLENGES[_challenge_id - 1].update({"list_id": "lista-1", "mechanism": _mechanism, "difficulty": _difficulty})
 
@@ -156,7 +156,7 @@ _EXTRA_CHALLENGES = [
     (14, "lista-1", "Médio", "search", "Filtro de inventário", "A busca foi implementada sem tratar corretamente a entrada."),
     (15, "lista-1", "Médio", "header", "Resposta temporária", "Um serviço devolve uma pista apenas nos cabeçalhos HTTP."),
     (16, "lista-1", "Médio", "js", "Console de manutenção", "O painel frontend carrega uma configuração que não deveria ser pública."),
-    (17, "lista-1", "Difícil", "redirect", "Cadeia de redirecionamento", "Siga as respostas HTTP para encontrar a evidência correta."),
+    (17, "lista-1", "Médio", "redirect", "Cadeia de redirecionamento", "Siga as respostas HTTP para encontrar a evidência correta."),
     (18, "lista-1", "Difícil", "idor", "Documento com acesso cruzado", "A validação de acesso depende de mais que trocar um número."),
     # Lista 2
     (19, "lista-2", "Fácil", "source", "Comentário de implantação", "Uma página institucional publicou uma nota interna."),
@@ -239,14 +239,14 @@ HINTS_BY_MECHANISM = {
         "Na seção Response Headers/Cabeçalhos de resposta, procure por X-Receipt-Note.",
     ],
     "idor": [
-        "Ferramenta necessária: DevTools (aba Network) ou um interceptador de requisições (ex.: Burp Suite) para repetir a chamada alterando parâmetros e cabeçalhos.",
+        "Ferramenta necessária: Burp Suite (ou outro interceptador de requisições) — o DevTools não permite adicionar ou alterar cabeçalhos na requisição antes de reenviá-la.",
         "Depois de ver a requisição original, tente trocar o identificador do recurso e observe a resposta.",
         "A autorização pode depender de um cabeçalho que a primeira resposta já revelou — reenvie a requisição incluindo-o.",
     ],
     "search": [
         "Ferramenta necessária: DevTools (aba Network) ou Burp Suite para observar e reenviar a requisição feita pelo formulário de busca.",
-        "Depois de ver como o parâmetro de busca é enviado, teste substituí-lo por uma expressão lógica.",
-        "Uma condição sempre verdadeira na consulta pode revelar registros que não deveriam aparecer.",
+        "A busca normal só retorna registros públicos cujo título contém o termo pesquisado — procurar palavras do senso comum não revela nada escondido.",
+        "O filtro quebra diante de uma condição de comparação sempre verdadeira dentro de um valor com aspas (ex.: fechar a aspa e encadear um OR com algo que sempre bate), não apenas pela palavra \"or\" estar na busca.",
     ],
     "audit": [
         "Ferramenta necessária: DevTools (aba Network) ou `curl` para inspecionar a resposta completa e os cabeçalhos do endpoint de status.",
@@ -264,9 +264,9 @@ HINTS_BY_MECHANISM = {
         "Leia os cabeçalhos customizados da resposta, não apenas o corpo retornado.",
     ],
     "redirect": [
-        "Ferramenta necessária: DevTools (aba Network, com \"Preserve log\" ativado) ou `curl -IL` para acompanhar toda a cadeia de redirecionamentos HTTP.",
-        "Cada etapa da cadeia pode carregar um cabeçalho próprio — não olhe apenas a resposta final.",
-        "Siga o redirecionamento passo a passo até a resposta que já não redireciona mais.",
+        "Ferramenta necessária: DevTools (aba Network) para observar a cadeia, e Burp Suite ou `curl` para repetir uma das etapas manualmente — o DevTools sozinho não deixa adicionar cabeçalhos a uma requisição. Se usar `curl`/Burp fora do navegador, a requisição precisa levar o cookie da sua sessão ativa; o jeito mais simples é clicar com o botão direito na requisição, no Network, e usar \"Copy as cURL\" — isso já inclui o cookie certo.",
+        "Clicar e seguir a cadeia normalmente (302 → 302 → 200) nunca mostra a flag, nem olhando o Network: a primeira etapa só devolve um token num cabeçalho, que precisa ser usado em outra requisição.",
+        "Reenvie a segunda etapa manualmente (fora do navegador), incluindo o token obtido na primeira resposta como cabeçalho.",
     ],
 }
 
@@ -902,22 +902,27 @@ _WALKTHROUGH_BY_MECHANISM = {
         "steps": ["Abra {root}/app.webmanifest.", "Leia o JSON retornado.", "A flag está no campo 'maintenance_note'."]},
     "metadata": {"tool": "DevTools → Network ou `curl -I`", "where": "Cabeçalho X-Image-Description do recurso de prévia.",
         "steps": ["Requisite {root}/asset-preview (ex.: `curl -I http://<host>{root}/asset-preview`).", "Leia os cabeçalhos da resposta.", "A flag está no cabeçalho 'X-Image-Description'."]},
-    "idor": {"tool": "DevTools → Network ou Burp Suite (repetir requisição com cabeçalho)", "where": "Registro 701 autorizado pelo cabeçalho vindo do 700.",
+    "idor": {"tool": "Burp Suite (ou `curl`) — o DevTools não permite adicionar cabeçalhos a uma requisição", "where": "Registro 701 autorizado pelo cabeçalho vindo do 700.",
         "steps": ["Requisite {root}/api/record/700 e anote o cabeçalho 'X-Lab-Delegation' da resposta.", "Requisite {root}/api/record/701 incluindo esse cabeçalho (ex.: `curl -H 'X-Lab-Delegation: <valor>' http://<host>{root}/api/record/701`).", "A flag vem no campo 'reference'."]},
-    "search": {"tool": "DevTools → Network ou Burp Suite (manipular o parâmetro de busca)", "where": "Resposta da busca com condição sempre verdadeira.",
-        "steps": ["Use a busca de {root} e observe a requisição a {root}/api/search?q=...", "Reenvie com um payload de injeção, ex.: {root}/api/search?q=' OR 1=1 --", "A flag vem no campo 'reference' do resultado."]},
+    "search": {"tool": "DevTools → Network ou Burp Suite (manipular o parâmetro de busca)", "where": "Resposta da busca com uma tautologia que burla o filtro de registros públicos.",
+        "steps": ["Use a busca de {root} e observe a requisição a {root}/api/search?q=...", "Reenvie com um payload de tautologia real, ex.: {root}/api/search?q=' OR '1'='1", "O registro restrito aparece junto dos demais, com a flag no campo 'nota'."]},
     "audit": {"tool": "DevTools → Network ou `curl -I`", "where": "Cabeçalho X-Audit-Path → endpoint de auditoria.",
         "steps": ["Requisite {root}/operations/ping e leia o cabeçalho 'X-Audit-Path'.", "Abra o caminho indicado ({root}/operations/audit).", "A flag vem no campo 'reference'."]},
-    "redirect": {"tool": "DevTools → Network (Preserve log) ou `curl -IL`", "where": "Cabeçalho X-Delivery-Receipt no fim da cadeia 302.",
-        "steps": ["Inicie em {root}/delivery/start e acompanhe o redirecionamento 302 (ex.: `curl -IL http://<host>{root}/delivery/start`).", "Siga até {root}/delivery/receipt.", "A flag está no cabeçalho 'X-Delivery-Receipt'."]},
+    "redirect": {"tool": "Burp Suite (ou `curl`) — o DevTools mostra a cadeia mas não permite reenviar com um cabeçalho novo", "where": "Cabeçalho X-Delivery-Receipt no segundo salto (/delivery/processing), só quando reenviado com o token de /start.",
+        "steps": [
+            "No DevTools → Network, clique com o botão direito na requisição de {root}/delivery/start e use \"Copy as cURL\" (isso já inclui o cookie da sessão ativa — sem ele, qualquer requisição a /lab/* é redirecionada para a home e nada funciona).",
+            "Rode esse comando colado no terminal; a resposta (302) traz o cabeçalho 'X-Delivery-Token'.",
+            "Repita o \"Copy as cURL\" na requisição de {root}/delivery/processing e adicione `-H 'X-Delivery-Token: <valor copiado>'` antes de rodar; só com esse cabeçalho a resposta traz 'X-Delivery-Receipt' com a flag.",
+            "Clicar o link normalmente (sem repassar o token manualmente) nunca expõe a flag, mesmo seguindo toda a cadeia pelo Network.",
+        ]},
 }
 _WALKTHROUGH_OVERRIDES = {
     2: {"tool": "Navegador (sitemap XML)", "where": "Mapa do site do portal → página auxiliar de relatório.",
         "steps": ["Abra Guias de viagem no site Wayfarer e clique em Mapa do site do portal.", "No sitemap XML, localize a URL da página auxiliar.", "Acesse /lab/2/files/report; a flag está no conteúdo da página."]},
-    6: {"tool": "DevTools → Network ou Burp Suite (repetir requisição com cabeçalho)", "where": "Perfil 102 autorizado pelo cabeçalho vindo do perfil 101.",
+    6: {"tool": "Burp Suite (ou `curl`) — o DevTools não permite adicionar cabeçalhos a uma requisição", "where": "Perfil 102 autorizado pelo cabeçalho vindo do perfil 101.",
         "steps": ["Requisite /lab/6/profile/101 e anote o cabeçalho 'X-Workspace-Access'.", "Requisite /lab/6/profile/102 incluindo esse cabeçalho.", "A flag vem no campo 'note'."]},
-    7: {"tool": "DevTools → Network ou Burp Suite (manipular o parâmetro de busca)", "where": "Resposta da busca com condição sempre verdadeira.",
-        "steps": ["Use a busca de /lab/7 e observe /lab/7/search?q=...", "Reenvie com um payload, ex.: /lab/7/search?q=' OR 1=1 --", "A flag vem no campo 'note' do resultado."]},
+    7: {"tool": "DevTools → Network ou Burp Suite (manipular o parâmetro de busca)", "where": "Resposta da busca com uma tautologia que burla o filtro de eventos públicos.",
+        "steps": ["Use a busca de /lab/7 e observe /lab/7/search?q=...", "Reenvie com um payload de tautologia real, ex.: /lab/7/search?q=' OR '1'='1", "O evento restrito da Night Owl aparece junto dos demais, com a flag no campo 'nota'."]},
     8: {"tool": "DevTools → Network ou acesso direto", "where": "Exportação de auditoria referenciada pela agenda.",
         "steps": ["Na agenda de /lab/8, observe a requisição a /lab/8/audit-log.", "Abra /lab/8/audit-log.", "A flag está no campo 'reference' da entrada de migração."]},
 }
@@ -991,6 +996,58 @@ def playable_challenge(challenge_id, mechanism=None):
     if not challenge or (mechanism and challenge.get("mechanism") != mechanism):
         return None
     return challenge
+
+
+# Detecta um bypass de SQLi por tautologia de verdade: precisa de uma aspa
+# fechando um literal, seguida de OR/|| e de uma comparação sempre verdadeira
+# (string=string, número=número ou TRUE), opcionalmente encerrada por um
+# marcador de comentário. Isso rejeita buscas que só contenham "or" como
+# palavra comum (ex.: "jazz or blues") e exige a forma real de um payload de
+# tautologia, em vez do antigo "'" in query and "or" in query.lower()`.
+_SQLI_TAUTOLOGY_RE = re.compile(
+    r"""['"]\s*(?:or|\|\|)\s*(?:'[^']*'\s*=\s*'[^']*'?|"[^"]*"\s*=\s*"[^"]*"?|\d+\s*=\s*\d+|true)\s*(?:--|#|;|['"])?""",
+    re.IGNORECASE,
+)
+
+
+def sql_injection_bypasses_filter(query):
+    return bool(_SQLI_TAUTOLOGY_RE.search(query or ""))
+
+
+# Arquivo de eventos da Night Owl (desafio 7): os registros públicos batem com
+# as sugestões de busca já mostradas na página ("música", "cinema", "galeria")
+# e o registro restrito só aparece de verdade quando o filtro é burlado.
+NIGHT_OWL_ARCHIVE = [
+    {"title": "Noite de jazz no Porão 7", "local": "Porão 7", "public": True},
+    {"title": "Cinema ao relento: clássicos de verão", "local": "Praça das Artes", "public": True},
+    {"title": "Vernissage coletiva de fotografia", "local": "Galeria Lumen", "public": True},
+    {"title": "Reunião de prestação de contas com patrocinadores", "local": "Arquivo do campus", "public": False},
+]
+
+# Mesma lógica para os desafios genéricos do catálogo que usam o mecanismo
+# "search" (sem o tema específico da Night Owl).
+CATALOG_SEARCH_ARCHIVE = [
+    {"title": "Guia de primeiros passos", "categoria": "Documentação pública", "public": True},
+    {"title": "Registro de manutenção preventiva", "categoria": "Operações", "public": True},
+    {"title": "Ata de auditoria interna", "categoria": "Restrito", "public": False},
+]
+
+
+def run_mock_search(dataset, query, flag):
+    if sql_injection_bypasses_filter(query):
+        records = dataset
+    else:
+        needle = (query or "").strip().lower()
+        if not needle:
+            return []
+        records = [record for record in dataset if record["public"] and needle in record["title"].lower()]
+    results = []
+    for record in records:
+        entry = {key: value for key, value in record.items() if key != "public"}
+        if not record["public"]:
+            entry["nota"] = f"Registro de uso interno — {flag}"
+        results.append(entry)
+    return results
 
 
 def make_app_config():
@@ -1125,9 +1182,10 @@ def create_app(testing=False):
         if not challenge:
             return jsonify({"error": "Recurso indisponível"}), 404
         query = request.args.get("q", "")
-        if "'" in query and ("or" in query.lower() or "1=1" in query.replace(" ", "")):
-            return jsonify({"results": [{"title": "Registro de treinamento", "reference": challenge["flags"][0]}]})
-        return jsonify({"results": [], "message": "Nenhum resultado para a busca informada."})
+        results = run_mock_search(CATALOG_SEARCH_ARCHIVE, query, challenge["flags"][0])
+        if not results:
+            return jsonify({"results": [], "message": "Nenhum resultado para a busca informada."})
+        return jsonify({"results": results})
 
     @app.get("/lab/<int:challenge_id>/operations/ping")
     def catalog_audit_ping(challenge_id):
@@ -1136,19 +1194,40 @@ def create_app(testing=False):
             return "", 404
         return jsonify({"status": "ok"}), 200, {"X-Audit-Path": f"/lab/{challenge_id}/operations/audit"}
 
+    # Cadeia de redirecionamento com 3 saltos (start → processing → receipt) e
+    # um token repassado manualmente, para que um clique normal (o navegador
+    # segue os 302 sozinho, sem reenviar cabeçalhos customizados) nunca exponha
+    # a flag, mesmo abrindo o Network: /start só devolve um token no cabeçalho;
+    # a flag só sai no cabeçalho de /processing se a requisição a /processing
+    # for refeita manualmente (curl/Burp) incluindo esse token — é preciso
+    # capturar e repetir a requisição, não só acompanhar a navegação.
     @app.get("/lab/<int:challenge_id>/delivery/start")
     def catalog_delivery_start(challenge_id):
         challenge = selected_catalog_challenge(challenge_id, "redirect")
         if not challenge:
             return "", 404
-        return redirect(url_for("catalog_delivery_receipt", challenge_id=challenge_id), code=302)
+        response = redirect(url_for("catalog_delivery_processing", challenge_id=challenge_id), code=302)
+        response.headers["X-Delivery-Stage"] = "1/3 · solicitação registrada"
+        response.headers["X-Delivery-Token"] = f"dl-token-{challenge_id}"
+        return response
+
+    @app.get("/lab/<int:challenge_id>/delivery/processing")
+    def catalog_delivery_processing(challenge_id):
+        challenge = selected_catalog_challenge(challenge_id, "redirect")
+        if not challenge:
+            return "", 404
+        response = redirect(url_for("catalog_delivery_receipt", challenge_id=challenge_id), code=302)
+        response.headers["X-Delivery-Stage"] = "2/3 · em processamento"
+        if request.headers.get("X-Delivery-Token") == f"dl-token-{challenge_id}":
+            response.headers["X-Delivery-Receipt"] = challenge["flags"][0]
+        return response
 
     @app.get("/lab/<int:challenge_id>/delivery/receipt")
     def catalog_delivery_receipt(challenge_id):
         challenge = selected_catalog_challenge(challenge_id, "redirect")
         if not challenge:
             return "", 404
-        return "Entrega concluída.", 200, {"X-Delivery-Receipt": challenge["flags"][0]}
+        return "Entrega concluída.", 200, {"X-Delivery-Stage": "3/3 · concluído"}
 
     def lab_redirect_target():
         # Para onde mandar quando um laboratório não está acessível no contexto.
@@ -1224,11 +1303,10 @@ def create_app(testing=False):
         if not playable_challenge(7):
             return jsonify({"error": "Atividade indisponível"}), 404
         query = request.args.get("q", "")
-        if "'" in query and ("or" in query.lower() or "1=1" in query.replace(" ", "")):
-            return jsonify({"results": [
-                {"title": "Registro reservado", "owner": "Arquivo do campus", "note": CHALLENGES[6]["flags"][0]}
-            ]})
-        return jsonify({"results": [{"title": "Nenhum resultado", "owner": "", "note": "Tente outra busca."}]})
+        results = run_mock_search(NIGHT_OWL_ARCHIVE, query, CHALLENGES[6]["flags"][0])
+        if not results:
+            return jsonify({"results": [], "message": "Nenhum evento encontrado no arquivo."})
+        return jsonify({"results": results})
 
     @app.post("/join")
     def join_ctf():
