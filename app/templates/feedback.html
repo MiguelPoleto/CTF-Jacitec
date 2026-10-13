@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}Feedback · JACITEC CTF{% endblock %}
+
+{% block content %}
+<main class="feedback-page">
+  <header class="participation-nav">
+    <a href="{{ url_for('ctf_home') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
+    <a href="{{ url_for('public_ranking_page') }}" class="participation-back">Pular e ver a classificação →</a>
+  </header>
+
+  <section class="feedback-heading">
+    <p class="eyebrow-line"><span>✓</span> PARTICIPAÇÃO FINALIZADA</p>
+    <h1>Valeu, {{ participant.name }}!<br>Conta pra gente <em>como foi.</em></h1>
+    <p>Sua opinião ajuda a montar as próximas edições. Leva menos de 1 minuto — e, fora o nome, nenhuma resposta é obrigatória.</p>
+  </section>
+
+  {% if error %}<div class="notice error feedback-error">{{ error }}</div>{% endif %}
+
+  <form method="post" action="{{ url_for('submit_feedback') }}" class="feedback-form">
+    <div class="feedback-identity">
+      <div>
+        <label for="feedback-name">Seu nome <span class="field-required">obrigatório</span></label>
+        <input id="feedback-name" name="name" type="text" value="{{ participant.name }}" maxlength="30" autocomplete="name" required />
+      </div>
+      <div>
+        <label for="feedback-turma">Sua turma <span class="field-optional">opcional</span></label>
+        <input id="feedback-turma" name="turma" type="text" maxlength="40" placeholder="Ex.: 3º Info" />
+      </div>
+    </div>
+
+    {% for question in questions %}
+      <fieldset class="feedback-question">
+        <legend>{{ question.label }} <span class="field-optional">opcional</span></legend>
+        {% if question.hint %}<p class="feedback-hint">{{ question.hint }}</p>{% endif %}
+        <div class="feedback-options">
+          {% for option in question.options %}
+            <label class="feedback-option{% if question.other_option == option %} feedback-other-trigger{% endif %}">
+              <input type="{{ 'checkbox' if question.multi else 'radio' }}" name="{{ question.field }}" value="{{ option }}" />
+              <span>{{ option }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% if question.other_field %}
+          <div class="feedback-other">
+            <label for="{{ question.other_field }}">Conta pra gente qual:</label>
+            <input id="{{ question.other_field }}" name="{{ question.other_field }}" type="text" maxlength="120" placeholder="Escreva aqui o que você mais gostou" />
+          </div>
+        {% endif %}
+      </fieldset>
+    {% endfor %}
+
+    <fieldset class="feedback-question">
+      <legend>{{ rating_label }} <span class="field-optional">opcional</span></legend>
+      <div class="feedback-scale">
+        <small>Ruim</small>
+        {% for value in [1, 2, 3, 4, 5] %}
+          <label class="feedback-scale-option">
+            <input type="radio" name="organization_rating" value="{{ value }}" />
+            <span>{{ value }}</span>
+          </label>
+        {% endfor %}
+        <small>Excelente</small>
+      </div>
+    </fieldset>
+
+    <fieldset class="feedback-question">
+      <legend><label for="feedback-improvements">{{ improvements_label }}</label> <span class="field-optional">opcional</span></legend>
+      <textarea id="feedback-improvements" name="improvements" rows="4" maxlength="{{ improvements_max }}" placeholder="Pode escrever à vontade — críticas, elogios, ideias de desafios…"></textarea>
+    </fieldset>
+
+    <div class="feedback-actions">
+      <a href="{{ url_for('public_ranking_page') }}" class="feedback-skip">Não quero responder</a>
+      <button type="submit" class="feedback-submit">Enviar feedback <span>→</span></button>
+    </div>
+  </form>
+
+  <footer class="participation-footer"><span>JACITEC CTF</span><a href="{{ url_for('public_ranking_page') }}">Ver classificação →</a></footer>
+</main>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Feedbacks · JACITEC CTF{% endblock %}
+
+{% block content %}
+<main class="admin-page">
+  <header class="admin-topbar">
+    <a href="{{ url_for('admin_dashboard') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
+    <div class="admin-topbar-right"><a class="back-button" href="{{ url_for('admin_dashboard') }}">Voltar ao painel</a></div>
+  </header>
+
+  <section class="admin-welcome">
+    <div>
+      <p class="section-kicker">OPINIÃO DOS PARTICIPANTES</p>
+      <h1>Feedbacks recebidos</h1>
+      <p>Respostas enviadas ao final de cada participação. Nenhuma pergunta é obrigatória, então campos em branco são normais.</p>
+    </div>
+    <div class="admin-event-state {% if total %}active{% endif %}"><span class="state-pulse"></span><div><small>TOTAL DE RESPOSTAS</small><strong>{{ total }}</strong></div></div>
+  </section>
+
+  {% if editions %}
+    <nav class="feedback-editions" aria-label="Edições do CTF">
+      <span class="feedback-editions-label">EDIÇÕES</span>
+      {% for edition in editions %}
+        <a href="{{ url_for('admin_feedbacks_page', ctf=edition.ctf.id) }}"
+           class="feedback-edition-tab {% if selected and edition.ctf.id == selected.ctf.id %}is-active{% endif %}"
+           {% if selected and edition.ctf.id == selected.ctf.id %}aria-current="page"{% endif %}>
+          <strong>{{ edition.ctf.code }}</strong>
+          <small><time data-datetime="{{ edition.ctf.created_at }}">{{ edition.ctf.created_at }}</time> · {{ edition.entries|length }} resposta{{ '' if edition.entries|length == 1 else 's' }}</small>
+        </a>
+      {% endfor %}
+    </nav>
+
+    <section class="admin-panel admin-feedback-event">
+      <div class="admin-panel-heading">
+        <div><p class="section-kicker">EVENTO {{ selected.ctf.status }}</p><h2>{{ selected.ctf.code }}</h2></div>
+        <span>{{ selected.entries|length }} resposta{{ '' if selected.entries|length == 1 else 's' }}{% if summary.rating_average %} · organização {{ summary.rating_average }}/5{% endif %}</span>
+      </div>
+
+      <div class="feedback-summary">
+        {% for question in summary.questions %}
+          {% if question.counts %}
+            <article class="feedback-summary-card">
+              <h3>{{ question.label }}{% if question.multi %} <em>múltipla</em>{% endif %}</h3>
+              <ul>
+                {% for count in question.counts %}
+                  <li>
+                    <div class="summary-bar-row"><span>{{ count.option }}</span><b>{{ count.total }}</b></div>
+                    <div class="summary-bar"><i style="width: {{ count.percent }}%"></i></div>
+                  </li>
+                {% endfor %}
+              </ul>
+              {% if question.others %}
+                <p class="summary-others"><strong>“Outro”:</strong> {{ question.others|join(' · ') }}</p>
+              {% endif %}
+            </article>
+          {% endif %}
+        {% endfor %}
+        {% if summary.rating_average %}
+          <article class="feedback-summary-card">
+            <h3>{{ rating_label }}</h3>
+            <p class="summary-rating"><strong>{{ summary.rating_average }}</strong><span>/ 5 · {{ summary.rating_count }} nota{{ '' if summary.rating_count == 1 else 's' }}</span></p>
+          </article>
+        {% endif %}
+      </div>
+
+      <h3 class="feedback-list-title">Respostas individuais · clique para ver em detalhe</h3>
+      <div class="admin-feedback-list is-full">
+        {% for entry in selected.entries %}
+          <a class="admin-feedback-card is-link" href="{{ url_for('admin_feedback_detail', feedback_id=entry.id) }}">
+            <header>
+              <strong>{{ entry.name }}</strong>
+              {% if entry.turma %}<span class="feedback-turma">{{ entry.turma }}</span>{% endif %}
+              <time data-datetime="{{ entry.created_at }}">{{ entry.created_at }}</time>
+            </header>
+            <dl class="admin-feedback-answers">
+              {% for question in questions %}
+                {% if entry.answers[question.field] %}
+                  <div>
+                    <dt>{{ question.label }}</dt>
+                    <dd>
+                      {{ entry.answers[question.field]|join(', ') }}
+                      {% if question.other_field and entry[question.other_field] %}<em>— {{ entry[question.other_field] }}</em>{% endif %}
+                    </dd>
+                  </div>
+                {% endif %}
+              {% endfor %}
+              {% if entry.organization_rating %}<div><dt>Organização do evento</dt><dd>{{ entry.organization_rating }}/5</dd></div>{% endif %}
+            </dl>
+            {% if entry.improvements %}<p class="admin-feedback-text">“{{ entry.improvements }}”</p>{% endif %}
+            <span class="feedback-card-cta">Ver detalhe completo →</span>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+  {% else %}
+    <section class="admin-panel">
+      <div class="admin-empty"><span>◎</span><strong>Nenhum feedback recebido ainda.</strong><p>As respostas aparecem aqui conforme os participantes finalizam suas participações e enviam o formulário.</p></div>
+    </section>
+  {% endif %}
+
+  <footer class="admin-footer"><span>JACITEC CTF · PAINEL ADMINISTRATIVO</span><a href="{{ url_for('admin_dashboard') }}">Voltar ao painel ↗</a></footer>
+</main>
+{% endblock %}

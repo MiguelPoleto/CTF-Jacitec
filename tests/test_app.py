@@ -180,9 +180,11 @@ def test_participant_can_confirm_finish_without_ending_global_ctf(monkeypatch, t
     assert b'finish-dialog' in workspace.data
     assert b'event-ended-dialog' in workspace.data
 
+    # Ao finalizar, o participante passa pela tela de feedback rápido antes da
+    # classificação (pode pular, mas é o destino padrão).
     response = client.post('/dashboard/finish', follow_redirects=False)
     assert response.status_code == 302
-    assert response.headers['Location'].endswith('/ranking')
+    assert response.headers['Location'].endswith('/feedback')
     assert client.get('/api/ctf-status').get_json()['status'] == 'ATIVO'
     assert client.get('/dashboard', follow_redirects=False).headers['Location'].endswith('/ranking')
     ranking = client.get('/api/ranking').get_json()['ranking']
@@ -193,6 +195,200 @@ def test_participant_can_confirm_finish_without_ending_global_ctf(monkeypatch, t
     rejoin_response = client.post('/join', data={'name': 'Jordan', 'code': ctf_code}, follow_redirects=False)
     assert rejoin_response.status_code == 302
     assert rejoin_response.headers['Location'].endswith('/dashboard')
+
+
+def test_feedback_after_finishing_only_requires_the_name(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/generate')
+    ctf_code = client.get('/api/ctf-status').get_json()['code']
+    client.post('/join', data={'name': 'Alex', 'code': ctf_code})
+
+    # Antes de finalizar não há tela de feedback para abrir.
+    assert client.get('/feedback', follow_redirects=False).headers['Location'].endswith('/ranking')
+
+    client.post('/dashboard/finish')
+    form = client.get('/feedback')
+    assert form.status_code == 200
+    assert 'Alex'.encode() in form.data
+    assert b'name="turma"' in form.data
+    for field in ('difficulty', 'clarity', 'favorite_part', 'time_enough', 'organization_rating', 'improvements'):
+        assert f'name="{field}"'.encode() in form.data
+
+    # Só o nome vai preenchido: o resto fica nulo, sem erro.
+    sent = client.post('/feedback', data={'name': 'Alex'}, follow_redirects=False)
+    assert sent.status_code == 302
+    assert sent.headers['Location'].endswith('/ranking')
+    with sqlite3.connect(database_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute('SELECT * FROM participant_feedback').fetchone()
+    assert row['name'] == 'Alex'
+    assert [row[field] for field in ('turma', 'difficulty', 'clarity', 'favorite_part', 'time_enough', 'organization_rating', 'improvements')] == [None] * 7
+
+    # Uma resposta por participante: a tela não reabre depois de enviada.
+    assert client.get('/feedback', follow_redirects=False).headers['Location'].endswith('/ranking')
+
+
+def test_feedback_stores_answers_and_rejects_invalid_values(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/generate')
+    ctf_code = client.get('/api/ctf-status').get_json()['code']
+    client.post('/join', data={'name': 'Sam', 'code': ctf_code})
+    client.post('/dashboard/finish')
+
+    client.post('/feedback', data={
+        'name': 'Sam', 'turma': '3º Info', 'difficulty': 'Ideal', 'clarity': 'Sim',
+        # "Qual parte você mais gostou" aceita várias marcações.
+        'favorite_part': ['Desafios web', 'Ranking e competição'], 'time_enough': 'Parcialmente',
+        'organization_rating': '5', 'improvements': 'Mais desafios de terminal.',
+        # Valores forjados fora das opções não devem ser gravados.
+        'unexpected': 'ignored',
+    })
+    with sqlite3.connect(database_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute('SELECT * FROM participant_feedback').fetchone()
+    assert (row['turma'], row['difficulty'], row['clarity']) == ('3º Info', 'Ideal', 'Sim')
+    assert row['favorite_part'] == 'Desafios web; Ranking e competição'
+    assert (row['time_enough'], row['organization_rating']) == ('Parcialmente', 5)
+    assert row['improvements'] == 'Mais desafios de terminal.'
+
+    # O painel do admin mostra a resposta recebida.
+    panel = client.get('/admin')
+    assert b'Sam' in panel.data
+    assert '3º Info'.encode() in panel.data
+    assert 'Mais desafios de terminal.'.encode() in panel.data
+    assert 'Desafios web, Ranking e competição'.encode() in panel.data
+
+    # E a página dedicada lista a resposta com o resumo agregado.
+    full = client.get('/admin/feedbacks')
+    assert full.status_code == 200
+    assert b'Sam' in full.data
+    assert 'Mais desafios de terminal.'.encode() in full.data
+
+
+def test_admin_reads_feedbacks_one_by_one_grouped_by_edition(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    app_instance = create_app(testing=True)
+    client = app_instance.test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+
+    # Duas edições, cada uma com seus próprios respondentes.
+    editions = {}
+    for edition_label, names in (('primeira', ['Ana', 'Bruno']), ('segunda', ['Cora'])):
+        client.post('/admin/generate')
+        code = client.get('/api/ctf-status').get_json()['code']
+        editions[edition_label] = code
+        for name in names:
+            client.post('/join', data={'name': name, 'code': code})
+            client.post('/dashboard/finish')
+            client.post('/feedback', data={'name': name, 'difficulty': 'Ideal',
+                                           'improvements': f'Comentário de {name}.'})
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+
+    with app_instance.app_context():
+        import app as module
+        conn = module.get_db()
+        rows = {row['name']: dict(row) for row in conn.execute('SELECT id, name, ctf_id FROM participant_feedback')}
+        conn.close()
+
+    # A listagem abre a edição mais recente e não mistura respostas das outras.
+    latest = client.get('/admin/feedbacks')
+    assert b'Cora' in latest.data
+    assert b'Ana' not in latest.data
+    assert editions['primeira'].encode() in latest.data  # a outra edição fica disponível como aba
+
+    older = client.get(f"/admin/feedbacks?ctf={rows['Ana']['ctf_id']}")
+    assert b'Ana' in older.data and b'Bruno' in older.data
+    assert b'Cora' not in older.data
+
+    # Detalhe individual: respostas em branco aparecem como não respondidas.
+    detail = client.get(f"/admin/feedbacks/{rows['Ana']['id']}")
+    assert detail.status_code == 200
+    assert b'Ana' in detail.data
+    assert 'Comentário de Ana.'.encode() in detail.data
+    assert 'Não respondeu'.encode() in detail.data
+
+    # E navega um a um dentro da mesma edição, sem vazar para a outra.
+    assert f"/admin/feedbacks/{rows['Bruno']['id']}".encode() in detail.data
+    assert f"/admin/feedbacks/{rows['Cora']['id']}".encode() not in detail.data
+
+    assert client.get('/admin/feedbacks/9999', follow_redirects=False).headers['Location'].endswith('/admin/feedbacks')
+
+
+def test_feedback_admin_pages_require_login(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    for path in ('/admin/feedbacks', '/admin/feedbacks/1'):
+        response = client.get(path, follow_redirects=False)
+        assert response.status_code == 302
+        assert response.headers['Location'].endswith('/admin/login')
+
+
+def test_feedback_other_option_stores_free_text_only_when_selected(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/generate')
+    ctf_code = client.get('/api/ctf-status').get_json()['code']
+
+    form = None
+    for name, payload, expected in (
+        ('Noa', {'favorite_part': ['Outro'], 'favorite_part_other': 'A parte de redes'}, 'A parte de redes'),
+        # Sem marcar "Outro", o texto livre é descartado em vez de guardado.
+        ('Lia', {'favorite_part': ['Desafios web'], 'favorite_part_other': 'texto solto'}, None),
+    ):
+        client.post('/join', data={'name': name, 'code': ctf_code})
+        client.post('/dashboard/finish')
+        if form is None:
+            form = client.get('/feedback').data
+        client.post('/feedback', data={'name': name, **payload})
+        with sqlite3.connect(database_path) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute('SELECT * FROM participant_feedback WHERE name = ?', (name,)).fetchone()
+        assert row['favorite_part_other'] == expected
+
+    # A pergunta de múltipla escolha usa checkbox e traz o campo de "Outro".
+    assert b'type="checkbox" name="favorite_part"' in form
+    assert b'name="favorite_part_other"' in form
+    assert b'feedback-other-trigger' in form
+
+
+def test_feedback_rejects_an_empty_name_and_out_of_range_answers(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/generate')
+    ctf_code = client.get('/api/ctf-status').get_json()['code']
+    client.post('/join', data={'name': 'Robin', 'code': ctf_code})
+    client.post('/dashboard/finish')
+
+    blank = client.post('/feedback', data={'name': '   '})
+    assert blank.status_code == 400
+    with sqlite3.connect(database_path) as conn:
+        assert conn.execute('SELECT COUNT(*) FROM participant_feedback').fetchone()[0] == 0
+
+    client.post('/feedback', data={'name': 'Robin', 'difficulty': 'Impossível', 'organization_rating': '9'})
+    with sqlite3.connect(database_path) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute('SELECT * FROM participant_feedback').fetchone()
+    assert row['difficulty'] is None
+    assert row['organization_rating'] is None
+
+
+def test_landing_page_shows_the_explainer_video(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    page = client.get('/')
+    assert b'id="o-que-e-ctf"' in page.data
+    assert b'video/jacitec-ctf.mp4' in page.data
+    assert b'video/jacitec-ctf-poster.jpg' in page.data
+    # Vídeo com áudio: nunca deve tocar sozinho.
+    assert b'autoplay' not in page.data
+    assert client.get('/static/video/jacitec-ctf.mp4').status_code == 200
+    assert client.get('/static/video/jacitec-ctf-poster.jpg').status_code == 200
 
 
 def test_admin_duration_automatically_finalizes_and_archives_ctf(monkeypatch, tmp_path):

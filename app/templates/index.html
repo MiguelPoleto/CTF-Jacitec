@@ -5,6 +5,7 @@
   <header class="landing-nav">
     <a href="{{ url_for('ctf_home') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
     <nav aria-label="Navegação principal">
+      <a href="#o-que-e-ctf">O que é um CTF</a>
       <a href="#como-funciona">Como funciona</a>
       <a href="{{ url_for('rules_page') }}">Regras</a>
       <a href="{{ url_for('public_ranking_page') }}">Classificação</a>
@@ -37,6 +38,31 @@
       <div class="floating-tag tag-score"><strong>+10</strong><span> pontos</span></div>
       <div class="hero-orb"></div>
     </div>
+  </section>
+
+  <section class="landing-video-section" id="o-que-e-ctf" aria-label="O que é um CTF">
+    <div class="video-copy">
+      <span class="note-index">EM 30 SEGUNDOS</span>
+      <h2>Nunca ouviu falar<br>em <em>CTF?</em></h2>
+      <p>CTF é a sigla de <strong>Capture The Flag</strong>: uma competição em que você investiga sistemas propositalmente vulneráveis para encontrar trechos de texto escondidos — as <em>flags</em>. Cada flag encontrada vale pontos.</p>
+      <p class="video-copy-note">Aqui nenhum conhecimento prévio é obrigatório: os desafios começam do zero e as dicas acompanham você quando travar.</p>
+      <div class="video-highlights">
+        <span>INVESTIGAR</span><span>ENCONTRAR A FLAG</span><span>PONTUAR</span>
+      </div>
+    </div>
+    <figure class="video-frame">
+      <video
+        class="landing-video"
+        controls
+        playsinline
+        preload="metadata"
+        poster="{{ url_for('static', filename='video/jacitec-ctf-poster.jpg') }}"
+      >
+        <source src="{{ url_for('static', filename='video/jacitec-ctf.mp4') }}" type="video/mp4" />
+        Seu navegador não consegue reproduzir este vídeo.
+      </video>
+      <figcaption>Vídeo explicativo · 30s · com áudio</figcaption>
+    </figure>
   </section>
 
   <section class="landing-bottom" id="como-funciona">

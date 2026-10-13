@@ -509,6 +509,29 @@ def init_db():
     )
     conn.execute(
         """
+        CREATE TABLE IF NOT EXISTS participant_feedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ctf_id INTEGER NOT NULL,
+            participant_id INTEGER,
+            name TEXT NOT NULL,
+            turma TEXT,
+            difficulty TEXT,
+            clarity TEXT,
+            favorite_part TEXT,
+            time_enough TEXT,
+            organization_rating INTEGER,
+            improvements TEXT,
+            created_at TEXT NOT NULL,
+            UNIQUE(participant_id),
+            FOREIGN KEY(ctf_id) REFERENCES ctfs(id)
+        )
+        """
+    )
+    feedback_columns = {row["name"] for row in conn.execute("PRAGMA table_info(participant_feedback)").fetchall()}
+    if "favorite_part_other" not in feedback_columns:
+        conn.execute("ALTER TABLE participant_feedback ADD COLUMN favorite_part_other TEXT")
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ctf_id INTEGER,
@@ -684,6 +707,114 @@ def validate_participant_name(raw_name):
     if not re.search(r"[A-Za-zÀ-ÖØ-öø-ÿ]", name):
         return None, "O nome deve conter ao menos uma letra."
     return name, None
+
+
+# Perguntas do feedback pós-participação. Só o nome é obrigatório; qualquer
+# resposta pode ficar em branco, e o participante pode pular a tela inteira.
+FEEDBACK_QUESTIONS = (
+    {"field": "difficulty", "label": "Como você avalia a dificuldade dos desafios?",
+     "options": ("Muito fácil", "Fácil", "Ideal", "Difícil", "Muito difícil")},
+    {"field": "clarity", "label": "Os enunciados dos desafios foram claros?",
+     "options": ("Sim", "Parcialmente", "Não")},
+    {"field": "favorite_part", "label": "Qual parte do CTF você mais gostou?",
+     "options": ("Desafios web", "Desafios de terminal", "Ranking e competição", "Dicas e suporte da organização", "Outro"),
+     "multi": True, "hint": "Pode marcar mais de uma.",
+     "other_option": "Outro", "other_field": "favorite_part_other"},
+    {"field": "time_enough", "label": "O tempo do CTF foi suficiente?",
+     "options": ("Sim", "Parcialmente", "Não")},
+)
+# Respostas de múltipla escolha moram em uma coluna só, unidas por "; " (nenhuma
+# das opções contém esse separador).
+FEEDBACK_MULTI_SEPARATOR = "; "
+FEEDBACK_OTHER_MAX = 120
+FEEDBACK_RATING_LABEL = "Como você avalia a organização do evento?"
+FEEDBACK_IMPROVEMENTS_LABEL = "O que podemos melhorar nas próximas edições?"
+FEEDBACK_IMPROVEMENTS_MAX = 1000
+
+
+def clean_feedback_payload(form):
+    """Normaliza o formulário de feedback, descartando valores fora das opções.
+
+    Devolve (dados, erro_de_nome): só o nome é validado de verdade; o resto é
+    opcional e vira None quando em branco ou inválido.
+    """
+    name, name_error = validate_participant_name(form.get("name"))
+    if name_error:
+        return None, name_error
+    data = {"name": name, "turma": " ".join((form.get("turma") or "").split())[:40] or None}
+    for question in FEEDBACK_QUESTIONS:
+        if question.get("multi"):
+            chosen = [value for value in form.getlist(question["field"]) if value in question["options"]]
+            data[question["field"]] = FEEDBACK_MULTI_SEPARATOR.join(chosen) or None
+        else:
+            value = (form.get(question["field"]) or "").strip()
+            chosen = [value] if value in question["options"] else []
+            data[question["field"]] = chosen[0] if chosen else None
+        # O texto livre de "Outro" só é guardado se a opção foi mesmo marcada.
+        if question.get("other_field"):
+            text = (form.get(question["other_field"]) or "").strip()[:FEEDBACK_OTHER_MAX]
+            data[question["other_field"]] = text if text and question["other_option"] in chosen else None
+    try:
+        rating = int((form.get("organization_rating") or "").strip())
+    except ValueError:
+        rating = None
+    data["organization_rating"] = rating if rating in (1, 2, 3, 4, 5) else None
+    improvements = (form.get("improvements") or "").strip()
+    data["improvements"] = improvements[:FEEDBACK_IMPROVEMENTS_MAX] or None
+    return data, None
+
+
+def feedback_answers(entry, question):
+    """Respostas de uma pergunta como lista (1 item, ou várias no multi)."""
+    raw = entry.get(question["field"])
+    if not raw:
+        return []
+    return raw.split(FEEDBACK_MULTI_SEPARATOR) if question.get("multi") else [raw]
+
+
+def feedback_for_ctf(ctf_id):
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM participant_feedback WHERE ctf_id = ? ORDER BY created_at DESC, id DESC",
+        (ctf_id,),
+    ).fetchall()
+    conn.close()
+    entries = []
+    for row in rows:
+        entry = dict(row)
+        entry["answers"] = {
+            question["field"]: feedback_answers(entry, question) for question in FEEDBACK_QUESTIONS
+        }
+        entries.append(entry)
+    return entries
+
+
+def feedback_summary(entries):
+    """Contagem por opção e média da nota, para a visão geral do admin."""
+    questions = []
+    for question in FEEDBACK_QUESTIONS:
+        counts = {}
+        for entry in entries:
+            for value in entry["answers"][question["field"]]:
+                counts[value] = counts.get(value, 0) + 1
+        answered = sum(1 for entry in entries if entry["answers"][question["field"]])
+        questions.append({
+            "label": question["label"],
+            "answered": answered,
+            "multi": bool(question.get("multi")),
+            "counts": [
+                {"option": option, "total": counts[option], "percent": round(counts[option] * 100 / answered) if answered else 0}
+                for option in question["options"] if counts.get(option)
+            ],
+            "others": [entry[question["other_field"]] for entry in entries if question.get("other_field") and entry.get(question["other_field"])],
+        })
+    ratings = [entry["organization_rating"] for entry in entries if entry["organization_rating"]]
+    return {
+        "questions": questions,
+        "rating_average": round(sum(ratings) / len(ratings), 1) if ratings else None,
+        "rating_count": len(ratings),
+        "comments": [entry for entry in entries if entry["improvements"]],
+    }
 
 
 def generate_ctf_code():
@@ -1614,6 +1745,79 @@ def create_app(testing=False):
         conn.commit()
         conn.close()
         log_event(ctf["id"], participant_id, "participant_finished", "finished")
+        return redirect(url_for("feedback_page"))
+
+    def finished_participant():
+        """Participante que acabou de encerrar a participação, se houver.
+
+        A tela de feedback vive depois do fim da partida, então ela não pode
+        exigir participação ativa — só uma participação já finalizada nesta
+        sessão, e que ainda não tenha respondido.
+        """
+        participant_id = session.get("participant_id")
+        if not participant_id:
+            return None
+        conn = get_db()
+        participant = conn.execute(
+            "SELECT id, ctf_id, name, finished_at FROM participants WHERE id = ?", (participant_id,)
+        ).fetchone()
+        already_sent = conn.execute(
+            "SELECT 1 FROM participant_feedback WHERE participant_id = ?", (participant_id,)
+        ).fetchone()
+        conn.close()
+        if not participant or not participant["finished_at"] or already_sent:
+            return None
+        return dict(participant)
+
+    @app.get("/feedback")
+    def feedback_page():
+        participant = finished_participant()
+        if not participant:
+            return redirect(url_for("public_ranking_page"))
+        return render_template(
+            "feedback.html",
+            participant=participant,
+            questions=FEEDBACK_QUESTIONS,
+            rating_label=FEEDBACK_RATING_LABEL,
+            improvements_label=FEEDBACK_IMPROVEMENTS_LABEL,
+            improvements_max=FEEDBACK_IMPROVEMENTS_MAX,
+            error=None,
+        )
+
+    @app.post("/feedback")
+    def submit_feedback():
+        participant = finished_participant()
+        if not participant:
+            return redirect(url_for("public_ranking_page"))
+        data, name_error = clean_feedback_payload(request.form)
+        if name_error:
+            return render_template(
+                "feedback.html",
+                participant=participant,
+                questions=FEEDBACK_QUESTIONS,
+                rating_label=FEEDBACK_RATING_LABEL,
+                improvements_label=FEEDBACK_IMPROVEMENTS_LABEL,
+                improvements_max=FEEDBACK_IMPROVEMENTS_MAX,
+                error=name_error,
+            ), 400
+        conn = get_db()
+        conn.execute(
+            """
+            INSERT INTO participant_feedback
+                (ctf_id, participant_id, name, turma, difficulty, clarity, favorite_part,
+                 favorite_part_other, time_enough, organization_rating, improvements, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                participant["ctf_id"], participant["id"], data["name"], data["turma"],
+                data["difficulty"], data["clarity"], data["favorite_part"], data["favorite_part_other"],
+                data["time_enough"], data["organization_rating"], data["improvements"], timestamp_now(),
+            ),
+        )
+        conn.commit()
+        conn.close()
+        log_event(participant["ctf_id"], participant["id"], "feedback_sent", "feedback")
+        session["feedback_thanks"] = True
         return redirect(url_for("public_ranking_page"))
 
     @app.get("/ranking")
@@ -1622,7 +1826,7 @@ def create_app(testing=False):
         # "current" ranking for the most recent past edition.
         ctf = current_ctf()
         history = ctf_history()
-        return render_template("ranking.html", ctf=ctf, history=history)
+        return render_template("ranking.html", ctf=ctf, history=history, feedback_thanks=session.pop("feedback_thanks", False))
 
     @app.get("/api/ranking")
     def api_ranking():
@@ -1765,6 +1969,10 @@ def create_app(testing=False):
             ).fetchone()["total"]
             history.append({"ctf": dict(item), "participants": participant_count})
         conn.close()
+        # O feedback pertence a um evento: mostramos o do CTF ativo ou, fora de
+        # um evento, o da edição mais recente que tenha respostas.
+        feedback_event = ctf or next((item["ctf"] for item in history if feedback_for_ctf(item["ctf"]["id"])), None)
+        feedback_entries = feedback_for_ctf(feedback_event["id"]) if feedback_event else []
         ranking = participant_ranking(ctf["id"]) if ctf else []
         participant_count = len(ranking)
         active_count = sum(1 for row in ranking if not row["finished_at"])
@@ -1781,6 +1989,9 @@ def create_app(testing=False):
             challenge_lists=CHALLENGE_LISTS,
             challenge_availability={key: {difficulty: len(challenge_pool(key, difficulty)) for difficulty in ("Fácil", "Médio", "Difícil")} for key in CHALLENGE_LISTS},
             fixed_challenge_lists=FIXED_CHALLENGE_LISTS,
+            feedback_entries=feedback_entries,
+            feedback_event=feedback_event,
+            feedback_questions=FEEDBACK_QUESTIONS,
         )
 
     @app.post("/admin/generate")
@@ -1872,6 +2083,70 @@ def create_app(testing=False):
         conn.close()
         log_event(ctf["id"], None, "ctf_finished", ctf["code"])
         return redirect(url_for("admin_dashboard"))
+
+    def feedback_editions():
+        """Edições que já receberam feedback, da mais recente para a mais antiga."""
+        conn = get_db()
+        event_rows = conn.execute("SELECT * FROM ctfs ORDER BY created_at DESC, id DESC").fetchall()
+        conn.close()
+        editions = []
+        for row in event_rows:
+            entries = feedback_for_ctf(row["id"])
+            if entries:
+                editions.append({"ctf": dict(row), "entries": entries})
+        return editions
+
+    @app.get("/admin/feedbacks")
+    def admin_feedbacks_page():
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        editions = feedback_editions()
+        # Uma edição por vez: a escolhida na URL, ou a mais recente com respostas.
+        requested = request.args.get("ctf", type=int)
+        selected = next((item for item in editions if item["ctf"]["id"] == requested), None) or (editions[0] if editions else None)
+        return render_template(
+            "admin_feedbacks.html",
+            editions=editions,
+            selected=selected,
+            summary=feedback_summary(selected["entries"]) if selected else None,
+            total=sum(len(item["entries"]) for item in editions),
+            questions=FEEDBACK_QUESTIONS,
+            rating_label=FEEDBACK_RATING_LABEL,
+            improvements_label=FEEDBACK_IMPROVEMENTS_LABEL,
+        )
+
+    @app.get("/admin/feedbacks/<int:feedback_id>")
+    def admin_feedback_detail(feedback_id):
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        conn = get_db()
+        row = conn.execute("SELECT ctf_id FROM participant_feedback WHERE id = ?", (feedback_id,)).fetchone()
+        event_row = conn.execute("SELECT * FROM ctfs WHERE id = ?", (row["ctf_id"],)).fetchone() if row else None
+        conn.close()
+        if not row:
+            return redirect(url_for("admin_feedbacks_page"))
+        # Navegar "um por um" segue a mesma ordem da listagem da edição.
+        entries = feedback_for_ctf(row["ctf_id"])
+        position = next(index for index, item in enumerate(entries) if item["id"] == feedback_id)
+        entry = entries[position]
+        ranking = participant_ranking(row["ctf_id"])
+        performance = next((item for item in ranking if item["id"] == entry["participant_id"]), None)
+        if performance:
+            performance = dict(performance, position=ranking.index(performance) + 1, total=len(ranking))
+        return render_template(
+            "admin_feedback_detail.html",
+            entry=entry,
+            ctf=dict(event_row),
+            questions=FEEDBACK_QUESTIONS,
+            rating_label=FEEDBACK_RATING_LABEL,
+            improvements_label=FEEDBACK_IMPROVEMENTS_LABEL,
+            performance=performance,
+            breakdown=score_breakdown(entry["participant_id"]) if entry["participant_id"] else None,
+            position=position + 1,
+            count=len(entries),
+            previous_entry=entries[position - 1] if position > 0 else None,
+            next_entry=entries[position + 1] if position + 1 < len(entries) else None,
+        )
 
     @app.get("/admin/desafios")
     def admin_challenges_index():

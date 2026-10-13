@@ -4,8 +4,10 @@
 <main class="ranking-page">
   <header class="ranking-nav">
     <a href="{{ url_for('ctf_home') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
-    <a href="{{ url_for('ctf_home') }}" class="ranking-back">← Voltar ao início</a>
+    <a href="{{ url_for('ctf_home') }}" class="back-button on-dark">Voltar ao início</a>
   </header>
+
+  {% if feedback_thanks %}<p class="feedback-thanks">Feedback enviado. Obrigado por ajudar a melhorar as próximas edições do JACITEC CTF!</p>{% endif %}
 
   <section class="ranking-hero">
     <div>

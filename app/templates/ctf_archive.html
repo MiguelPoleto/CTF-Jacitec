@@ -54,7 +54,7 @@
     </div>
   </section>
 
-  <footer class="archive-footer"><a href="{{ url_for('ctf_home') }}">← Voltar ao início</a><span>JACITEC CTF · {{ ctf.code }}</span><a href="{{ url_for('public_ranking_page') }}">Ver todos os eventos →</a></footer>
+  <footer class="archive-footer"><a class="back-button on-dark" href="{{ url_for('ctf_home') }}">Voltar ao início</a><span>JACITEC CTF · {{ ctf.code }}</span><a href="{{ url_for('public_ranking_page') }}">Ver todos os eventos →</a></footer>
 </main>
 {% include 'partials/score_breakdown_modal.html' %}
 {% include 'partials/challenge_results_modal.html' %}

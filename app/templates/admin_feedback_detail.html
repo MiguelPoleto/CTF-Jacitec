@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Feedback de {{ entry.name }} · JACITEC CTF{% endblock %}
+
+{% block content %}
+<main class="admin-page">
+  <header class="admin-topbar">
+    <a href="{{ url_for('admin_dashboard') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
+    <div class="admin-topbar-right"><a class="back-button" href="{{ url_for('admin_feedbacks_page', ctf=ctf.id) }}">Todos os feedbacks de {{ ctf.code }}</a></div>
+  </header>
+
+  <section class="admin-welcome">
+    <div>
+      <p class="section-kicker">FEEDBACK INDIVIDUAL · {{ ctf.code }}</p>
+      <h1>{{ entry.name }}</h1>
+      <p>
+        {% if entry.turma %}Turma {{ entry.turma }} · {% endif %}Enviado em <time data-datetime="{{ entry.created_at }}">{{ entry.created_at }}</time>
+      </p>
+    </div>
+    <div class="admin-event-state active"><span class="state-pulse"></span><div><small>RESPOSTA</small><strong>{{ position }} de {{ count }}</strong></div></div>
+  </section>
+
+  <nav class="feedback-pager" aria-label="Navegar entre as respostas">
+    {% if previous_entry %}
+      <a class="feedback-pager-link" href="{{ url_for('admin_feedback_detail', feedback_id=previous_entry.id) }}"><span>← ANTERIOR</span><strong>{{ previous_entry.name }}</strong></a>
+    {% else %}<span class="feedback-pager-link is-disabled"><span>← ANTERIOR</span><strong>Primeira resposta</strong></span>{% endif %}
+    {% if next_entry %}
+      <a class="feedback-pager-link is-next" href="{{ url_for('admin_feedback_detail', feedback_id=next_entry.id) }}"><span>PRÓXIMA →</span><strong>{{ next_entry.name }}</strong></a>
+    {% else %}<span class="feedback-pager-link is-next is-disabled"><span>PRÓXIMA →</span><strong>Última resposta</strong></span>{% endif %}
+  </nav>
+
+  <div class="feedback-detail-grid">
+    <section class="admin-panel">
+      <div class="admin-panel-heading"><div><p class="section-kicker">RESPOSTAS</p><h2>O que {{ entry.name }} respondeu</h2></div></div>
+      <div class="feedback-detail-answers">
+        {% for question in questions %}
+          <article class="feedback-detail-item {% if not entry.answers[question.field] %}is-blank{% endif %}">
+            <h3>{{ question.label }}</h3>
+            {% if entry.answers[question.field] %}
+              <div class="feedback-detail-values">
+                {% for value in entry.answers[question.field] %}<span class="feedback-detail-chip">{{ value }}</span>{% endfor %}
+              </div>
+              {% if question.other_field and entry[question.other_field] %}
+                <p class="feedback-detail-other"><strong>“Outro”:</strong> {{ entry[question.other_field] }}</p>
+              {% endif %}
+            {% else %}
+              <p class="feedback-detail-blank">Não respondeu</p>
+            {% endif %}
+          </article>
+        {% endfor %}
+
+        <article class="feedback-detail-item {% if not entry.organization_rating %}is-blank{% endif %}">
+          <h3>{{ rating_label }}</h3>
+          {% if entry.organization_rating %}
+            <p class="feedback-detail-rating">
+              <strong>{{ entry.organization_rating }}</strong><span>/ 5</span>
+              <span class="rating-dots" aria-hidden="true">{% for value in [1, 2, 3, 4, 5] %}<i class="{% if value <= entry.organization_rating %}is-on{% endif %}"></i>{% endfor %}</span>
+            </p>
+          {% else %}<p class="feedback-detail-blank">Não respondeu</p>{% endif %}
+        </article>
+
+        <article class="feedback-detail-item is-wide {% if not entry.improvements %}is-blank{% endif %}">
+          <h3>{{ improvements_label }}</h3>
+          {% if entry.improvements %}
+            <blockquote class="feedback-detail-quote">{{ entry.improvements }}</blockquote>
+          {% else %}<p class="feedback-detail-blank">Não respondeu</p>{% endif %}
+        </article>
+      </div>
+    </section>
+
+    <aside class="admin-panel feedback-detail-side">
+      <div class="admin-panel-heading"><div><p class="section-kicker">CONTEXTO</p><h2>Como foi a participação</h2></div></div>
+      {% if performance %}
+        <div class="feedback-perf-grid">
+          <article><span>COLOCAÇÃO</span><strong>{{ performance.position }}º</strong><small>de {{ performance.total }}</small></article>
+          <article><span>PONTOS</span><strong>{{ performance.points }}</strong><small>{% if breakdown %}de {{ breakdown.total_max }}{% endif %}</small></article>
+          <article><span>TEMPO</span><strong>{{ '%02d:%02d:%02d'|format(performance.elapsed // 3600, (performance.elapsed % 3600) // 60, performance.elapsed % 60) }}</strong><small>em prova</small></article>
+          <article><span>DICAS</span><strong>{{ breakdown.hints_used if breakdown else 0 }}</strong><small>reveladas</small></article>
+        </div>
+        {% if breakdown %}
+          <h3 class="feedback-list-title">Desempenho por dificuldade</h3>
+          <ul class="feedback-difficulty-list">
+            {% for bucket in breakdown.by_difficulty %}
+              <li>
+                <div class="summary-bar-row"><span>{{ bucket.label }}</span><b>{{ bucket.solved }}/{{ bucket.total }}</b></div>
+                <div class="summary-bar"><i style="width: {{ (bucket.solved * 100 / bucket.total) if bucket.total else 0 }}%"></i></div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        <p class="feedback-perf-note">{{ performance.participation_status }}</p>
+      {% else %}
+        <div class="admin-empty"><span>◎</span><strong>Participação não encontrada.</strong><p>O registro do participante pode ter sido removido junto com um evento arquivado.</p></div>
+      {% endif %}
+      <a class="feedback-detail-back" href="{{ url_for('admin_feedbacks_page', ctf=ctf.id) }}">Ver todas as respostas de {{ ctf.code }} ↗</a>
+    </aside>
+  </div>
+
+  <footer class="admin-footer"><span>JACITEC CTF · PAINEL ADMINISTRATIVO</span><a href="{{ url_for('admin_dashboard') }}">Voltar ao painel ↗</a></footer>
+</main>
+{% endblock %}

@@ -39,6 +39,44 @@
         {% else %}<div class="admin-empty"><span>◎</span><strong>A disputa começa com o primeiro participante.</strong><p>Inicie um CTF e compartilhe o código do evento.</p></div>{% endif %}
       </section>
 
+      <section class="admin-panel admin-feedback-panel">
+        <div class="admin-panel-heading">
+          <div><p class="section-kicker">OPINIÃO DOS PARTICIPANTES</p><h2>Feedback{% if feedback_event %} · {{ feedback_event.code }}{% endif %}</h2></div>
+          <a href="{{ url_for('admin_feedbacks_page') }}">Ver todos os feedbacks ({{ feedback_entries|length }}) ↗</a>
+        </div>
+        {% if feedback_entries %}
+          <div class="admin-feedback-list">
+            {% for entry in feedback_entries %}
+              <a class="admin-feedback-card is-link" href="{{ url_for('admin_feedback_detail', feedback_id=entry.id) }}">
+                <header>
+                  <strong>{{ entry.name }}</strong>
+                  {% if entry.turma %}<span class="feedback-turma">{{ entry.turma }}</span>{% endif %}
+                  <time data-datetime="{{ entry.created_at }}">{{ entry.created_at }}</time>
+                </header>
+                <dl class="admin-feedback-answers">
+                  {% for question in feedback_questions %}
+                    {% if entry.answers[question.field] %}
+                      <div>
+                        <dt>{{ question.label }}</dt>
+                        <dd>
+                          {{ entry.answers[question.field]|join(', ') }}
+                          {% if question.other_field and entry[question.other_field] %}<em>— {{ entry[question.other_field] }}</em>{% endif %}
+                        </dd>
+                      </div>
+                    {% endif %}
+                  {% endfor %}
+                  {% if entry.organization_rating %}<div><dt>Organização do evento</dt><dd>{{ entry.organization_rating }}/5</dd></div>{% endif %}
+                </dl>
+                {% if entry.improvements %}<p class="admin-feedback-text">“{{ entry.improvements }}”</p>{% endif %}
+                <span class="feedback-card-cta">Ver detalhe completo →</span>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="admin-empty"><span>◎</span><strong>Nenhum feedback ainda.</strong><p>As respostas aparecem aqui conforme os participantes finalizam suas participações.</p></div>
+        {% endif %}
+      </section>
+
       <section class="admin-panel admin-archive-panel">
         <div class="admin-panel-heading"><div><p class="section-kicker">RESULTADOS PRESERVADOS</p><h2>Arquivo de CTFs</h2></div><span>{{ history|length }} eventos</span></div>
         <div class="admin-archive-list">
