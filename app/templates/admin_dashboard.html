@@ -121,6 +121,17 @@
           <button type="button" class="danger-btn finalize-open" id="finalize-open">ENCERRAR EVENTO</button>
         {% endif %}
       </section>
+      <a class="admin-library-link" href="{{ url_for('admin_schedule_page') }}">
+        <span class="section-kicker">AGENDA E DIVULGAÇÃO</span>
+        <strong>Agendar próximo CTF →</strong>
+        <small>
+          {%- if announcement_live -%}
+            Banner de “{{ announcement_live.title }}” no ar na página inicial.
+          {%- else -%}
+            Anuncie data, hora e local no topo da página inicial.
+          {%- endif -%}
+        </small>
+      </a>
       <a class="admin-library-link" href="{{ url_for('admin_challenges_index') }}">
         <span class="section-kicker">BIBLIOTECA DE DESAFIOS</span>
         <strong>Ver gabarito dos desafios →</strong>

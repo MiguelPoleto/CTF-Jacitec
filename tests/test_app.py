@@ -318,6 +318,130 @@ def test_admin_reads_feedbacks_one_by_one_grouped_by_edition(monkeypatch, tmp_pa
     assert client.get('/admin/feedbacks/9999', follow_redirects=False).headers['Location'].endswith('/admin/feedbacks')
 
 
+def test_admin_schedules_an_event_and_banner_respects_its_window(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+
+    client.post('/admin/agenda', data={
+        'title': 'JACITEC CTF 2026 — 2ª edição',
+        'location': 'Laboratório de Informática 2 — Bloco B',
+        'details': 'Traga seu notebook.',
+        'event_date': '2026-11-14', 'event_time': '19:00', 'event_end_time': '22:00',
+        'banner_start_date': '2026-11-01', 'banner_start_time': '00:00',
+        'banner_end_date': '2026-11-14', 'banner_end_time': '23:59',
+    })
+
+    # Horário local (America/Sao_Paulo, UTC-3) é convertido para UTC no banco.
+    with sqlite3.connect(tmp_path / 'ctf.db') as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute('SELECT * FROM scheduled_events').fetchone()
+    assert row['starts_at'] == '2026-11-14 22:00:00'
+    assert row['ends_at'] == '2026-11-15 01:00:00'
+    assert row['banner_starts_at'] == '2026-11-01 03:00:00'
+
+    # Dentro da janela, o banner aparece na página inicial com data, hora e local.
+    monkeypatch.setattr(app_module, 'timestamp_now', lambda: '2026-11-05 12:00:00')
+    page = client.get('/')
+    assert b'event-banner' in page.data
+    assert '2ª edição'.encode() in page.data
+    assert 'Laboratório de Informática 2'.encode() in page.data
+    assert b'14/11/2026' in page.data and b'19h00' in page.data
+
+    # Antes e depois da janela, some.
+    for moment in ('2026-10-20 12:00:00', '2026-11-20 12:00:00'):
+        monkeypatch.setattr(app_module, 'timestamp_now', lambda moment=moment: moment)
+        assert b'event-banner' not in client.get('/').data
+
+
+def test_banner_button_uses_the_signup_link_and_rejects_unsafe_schemes(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    base = {'title': 'CTF com inscrição', 'event_date': '2026-11-14', 'event_time': '19:00',
+            'banner_start_date': '2026-11-01', 'banner_start_time': '00:00',
+            'banner_end_date': '2026-11-14', 'banner_end_time': '23:59'}
+    monkeypatch.setattr(app_module, 'timestamp_now', lambda: '2026-11-05 12:00:00')
+
+    # Sem link, o botão aponta para a página de participação do próprio site.
+    client.post('/admin/agenda', data=base)
+    assert b'href="/participar"' in client.get('/').data
+
+    with sqlite3.connect(tmp_path / 'ctf.db') as conn:
+        event_id = conn.execute('SELECT id FROM scheduled_events').fetchone()[0]
+
+    # Com link, o botão abre o formulário externo em outra aba.
+    client.post('/admin/agenda', data={**base, 'event_id': event_id,
+                                       'signup_url': 'https://forms.gle/exemplo123'})
+    page = client.get('/').data
+    assert b'https://forms.gle/exemplo123' in page
+    assert b'rel="noopener noreferrer"' in page
+
+    # Um esquema perigoso é recusado e o link anterior continua valendo.
+    client.post('/admin/agenda', data={**base, 'event_id': event_id,
+                                       'signup_url': 'javascript:alert(1)'})
+    assert 'http:// ou https://'.encode() in client.get('/admin/agenda').data
+    assert b'javascript:alert' not in client.get('/').data
+
+
+def test_schedule_form_rejects_invalid_windows(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    base = {'title': 'CTF', 'event_date': '2026-11-14', 'event_time': '19:00',
+            'banner_start_date': '2026-11-01', 'banner_start_time': '00:00',
+            'banner_end_date': '2026-11-14', 'banner_end_time': '23:59'}
+
+    for payload, expected in (
+        ({**base, 'title': '   '}, 'nome do evento'),
+        ({**base, 'event_date': ''}, 'data válida'),
+        ({**base, 'banner_end_date': '2026-10-01'}, 'depois do início'),
+        ({**base, 'event_end_time': '18:00'}, 'depois do horário de início'),
+    ):
+        client.post('/admin/agenda', data=payload)
+        assert expected.encode() in client.get('/admin/agenda').data
+
+    with sqlite3.connect(tmp_path / 'ctf.db') as conn:
+        assert conn.execute('SELECT COUNT(*) FROM scheduled_events').fetchone()[0] == 0
+
+
+def test_admin_can_edit_and_remove_a_scheduled_event(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    base = {'event_date': '2026-11-14', 'event_time': '19:00',
+            'banner_start_date': '2026-11-01', 'banner_start_time': '00:00',
+            'banner_end_date': '2026-11-14', 'banner_end_time': '23:59'}
+    client.post('/admin/agenda', data={**base, 'title': 'Primeira versão', 'location': 'Bloco A'})
+
+    with sqlite3.connect(tmp_path / 'ctf.db') as conn:
+        event_id = conn.execute('SELECT id FROM scheduled_events').fetchone()[0]
+
+    # O formulário de edição vem preenchido com o horário local, não o UTC.
+    form = client.get(f'/admin/agenda?editar={event_id}')
+    assert b'value="19:00"' in form.data
+    assert b'Primeira vers' in form.data
+
+    client.post('/admin/agenda', data={**base, 'event_id': event_id, 'title': 'Versão corrigida', 'location': 'Bloco C'})
+    with sqlite3.connect(tmp_path / 'ctf.db') as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute('SELECT * FROM scheduled_events').fetchall()
+    assert len(rows) == 1 and rows[0]['title'] == 'Versão corrigida' and rows[0]['location'] == 'Bloco C'
+
+    client.post(f'/admin/agenda/{event_id}/remover')
+    with sqlite3.connect(tmp_path / 'ctf.db') as conn:
+        assert conn.execute('SELECT COUNT(*) FROM scheduled_events').fetchone()[0] == 0
+
+
+def test_schedule_admin_pages_require_login(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    for method, path in (('get', '/admin/agenda'), ('post', '/admin/agenda'), ('post', '/admin/agenda/1/remover')):
+        response = getattr(client, method)(path, follow_redirects=False)
+        assert response.status_code == 302
+        assert response.headers['Location'].endswith('/admin/login')
+
+
 def test_feedback_admin_pages_require_login(monkeypatch, tmp_path):
     isolate_database(monkeypatch, tmp_path)
     client = create_app(testing=True).test_client()

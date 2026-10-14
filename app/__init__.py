@@ -6,6 +6,8 @@ import string
 import base64
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
 from flask import Flask, jsonify, make_response, redirect, render_template, request, session, url_for
 
@@ -433,6 +435,35 @@ def timestamp_now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
+# O admin preenche a agenda no horário local do evento; o banco guarda tudo em
+# UTC, como o resto do app, para a comparação com timestamp_now() bater.
+EVENT_TIMEZONE = ZoneInfo(os.getenv("EVENT_TIMEZONE", "America/Sao_Paulo"))
+
+
+def local_to_utc(date_value, time_value, fallback_time="00:00"):
+    """'2026-11-14' + '19:30' (horário local) -> '2026-11-14 22:30:00' em UTC."""
+    date_value = (date_value or "").strip()
+    if not date_value:
+        return None
+    time_value = (time_value or "").strip() or fallback_time
+    try:
+        local = datetime.strptime(f"{date_value} {time_value}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        return None
+    return local.replace(tzinfo=EVENT_TIMEZONE).astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def utc_to_local(stamp):
+    """Datetime local (aware) a partir de um timestamp UTC do banco."""
+    if not stamp:
+        return None
+    try:
+        parsed = datetime.strptime(stamp, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=timezone.utc).astimezone(EVENT_TIMEZONE)
+
+
 def get_db():
     conn = sqlite3.connect(str(DATABASE_PATH), timeout=30)
     conn.row_factory = sqlite3.Row
@@ -530,6 +561,24 @@ def init_db():
     feedback_columns = {row["name"] for row in conn.execute("PRAGMA table_info(participant_feedback)").fetchall()}
     if "favorite_part_other" not in feedback_columns:
         conn.execute("ALTER TABLE participant_feedback ADD COLUMN favorite_part_other TEXT")
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS scheduled_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            location TEXT,
+            details TEXT,
+            starts_at TEXT NOT NULL,
+            ends_at TEXT,
+            banner_starts_at TEXT NOT NULL,
+            banner_ends_at TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    schedule_columns = {row["name"] for row in conn.execute("PRAGMA table_info(scheduled_events)").fetchall()}
+    if "signup_url" not in schedule_columns:
+        conn.execute("ALTER TABLE scheduled_events ADD COLUMN signup_url TEXT")
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS logs (
@@ -815,6 +864,89 @@ def feedback_summary(entries):
         "rating_count": len(ratings),
         "comments": [entry for entry in entries if entry["improvements"]],
     }
+
+
+SCHEDULED_TITLE_MAX = 70
+SCHEDULED_LOCATION_MAX = 90
+SCHEDULED_DETAILS_MAX = 220
+
+
+def scheduled_event_rows():
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM scheduled_events ORDER BY starts_at ASC, id ASC").fetchall()
+    conn.close()
+    now = timestamp_now()
+    events = []
+    for row in rows:
+        event = dict(row)
+        event["local_starts_at"] = utc_to_local(event["starts_at"])
+        event["local_ends_at"] = utc_to_local(event["ends_at"])
+        event["local_banner_starts_at"] = utc_to_local(event["banner_starts_at"])
+        event["local_banner_ends_at"] = utc_to_local(event["banner_ends_at"])
+        event["banner_live"] = event["banner_starts_at"] <= now <= event["banner_ends_at"]
+        event["banner_waiting"] = now < event["banner_starts_at"]
+        event["banner_expired"] = now > event["banner_ends_at"]
+        events.append(event)
+    return events
+
+
+def active_announcement():
+    """Agendamento cujo banner está dentro da janela configurada, se houver."""
+    now = timestamp_now()
+    conn = get_db()
+    row = conn.execute(
+        """SELECT * FROM scheduled_events
+           WHERE banner_starts_at <= ? AND banner_ends_at >= ?
+           ORDER BY starts_at ASC, id ASC LIMIT 1""",
+        (now, now),
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    event = dict(row)
+    event["local_starts_at"] = utc_to_local(event["starts_at"])
+    event["local_ends_at"] = utc_to_local(event["ends_at"])
+    return event
+
+
+def clean_scheduled_event(form):
+    """Valida o formulário da agenda. Retorna (dados, erro)."""
+    title = " ".join((form.get("title") or "").split())
+    if not title:
+        return None, "Informe o nome do evento."
+    if len(title) > SCHEDULED_TITLE_MAX:
+        return None, f"O nome do evento deve ter no máximo {SCHEDULED_TITLE_MAX} caracteres."
+
+    starts_at = local_to_utc(form.get("event_date"), form.get("event_time"))
+    if not starts_at:
+        return None, "Informe uma data válida para o evento."
+    ends_at = local_to_utc(form.get("event_date"), form.get("event_end_time")) if (form.get("event_end_time") or "").strip() else None
+    if ends_at and ends_at <= starts_at:
+        return None, "O horário de término do evento deve ser depois do horário de início."
+
+    banner_starts_at = local_to_utc(form.get("banner_start_date"), form.get("banner_start_time"), fallback_time="00:00")
+    banner_ends_at = local_to_utc(form.get("banner_end_date"), form.get("banner_end_time"), fallback_time="23:59")
+    if not banner_starts_at or not banner_ends_at:
+        return None, "Informe o período em que o banner deve aparecer na página inicial."
+    if banner_ends_at <= banner_starts_at:
+        return None, "O fim da exibição do banner deve ser depois do início."
+
+    # Só http(s): um "javascript:" colado aqui viraria um link executável na
+    # página pública.
+    signup_url = (form.get("signup_url") or "").strip()
+    if signup_url and urlparse(signup_url).scheme not in ("http", "https"):
+        return None, "O link de inscrição deve começar com http:// ou https://."
+
+    return {
+        "title": title,
+        "signup_url": signup_url[:500] or None,
+        "location": " ".join((form.get("location") or "").split())[:SCHEDULED_LOCATION_MAX] or None,
+        "details": " ".join((form.get("details") or "").split())[:SCHEDULED_DETAILS_MAX] or None,
+        "starts_at": starts_at,
+        "ends_at": ends_at,
+        "banner_starts_at": banner_starts_at,
+        "banner_ends_at": banner_ends_at,
+    }, None
 
 
 def generate_ctf_code():
@@ -1224,13 +1356,13 @@ def create_app(testing=False):
         session.pop("participant_id", None)
         session.pop("participant_name", None)
         ctf = current_ctf()
-        return render_template("index.html", ctf=ctf)
+        return render_template("index.html", ctf=ctf, announcement=active_announcement())
 
     @app.get("/inicio")
     def ctf_home():
         session.pop("participant_id", None)
         session.pop("participant_name", None)
-        return render_template("index.html", ctf=current_ctf())
+        return render_template("index.html", ctf=current_ctf(), announcement=active_announcement())
 
     @app.get("/participar")
     def participation_page():
@@ -1992,6 +2124,7 @@ def create_app(testing=False):
             feedback_entries=feedback_entries,
             feedback_event=feedback_event,
             feedback_questions=FEEDBACK_QUESTIONS,
+            announcement_live=active_announcement(),
         )
 
     @app.post("/admin/generate")
@@ -2095,6 +2228,64 @@ def create_app(testing=False):
             if entries:
                 editions.append({"ctf": dict(row), "entries": entries})
         return editions
+
+    @app.get("/admin/agenda")
+    def admin_schedule_page():
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        events = scheduled_event_rows()
+        editing = next((item for item in events if item["id"] == request.args.get("editar", type=int)), None)
+        return render_template(
+            "admin_schedule.html",
+            events=events,
+            editing=editing,
+            error=session.pop("schedule_error", None),
+            notice=session.pop("schedule_notice", None),
+            today=datetime.now(EVENT_TIMEZONE).strftime("%Y-%m-%d"),
+            timezone_label=str(EVENT_TIMEZONE),
+        )
+
+    @app.post("/admin/agenda")
+    def admin_schedule_save():
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        event_id = request.form.get("event_id", type=int)
+        data, error = clean_scheduled_event(request.form)
+        if error:
+            session["schedule_error"] = error
+            return redirect(url_for("admin_schedule_page", editar=event_id) if event_id else url_for("admin_schedule_page"))
+        conn = get_db()
+        if event_id:
+            conn.execute(
+                """UPDATE scheduled_events SET title=?, signup_url=?, location=?, details=?, starts_at=?,
+                   ends_at=?, banner_starts_at=?, banner_ends_at=? WHERE id=?""",
+                (data["title"], data["signup_url"], data["location"], data["details"], data["starts_at"],
+                 data["ends_at"], data["banner_starts_at"], data["banner_ends_at"], event_id),
+            )
+            session["schedule_notice"] = f"Agendamento de “{data['title']}” atualizado."
+        else:
+            conn.execute(
+                """INSERT INTO scheduled_events
+                   (title, signup_url, location, details, starts_at, ends_at, banner_starts_at, banner_ends_at, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (data["title"], data["signup_url"], data["location"], data["details"], data["starts_at"],
+                 data["ends_at"], data["banner_starts_at"], data["banner_ends_at"], timestamp_now()),
+            )
+            session["schedule_notice"] = f"“{data['title']}” agendado."
+        conn.commit()
+        conn.close()
+        return redirect(url_for("admin_schedule_page"))
+
+    @app.post("/admin/agenda/<int:event_id>/remover")
+    def admin_schedule_delete(event_id):
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        conn = get_db()
+        conn.execute("DELETE FROM scheduled_events WHERE id = ?", (event_id,))
+        conn.commit()
+        conn.close()
+        session["schedule_notice"] = "Agendamento removido."
+        return redirect(url_for("admin_schedule_page"))
 
     @app.get("/admin/feedbacks")
     def admin_feedbacks_page():

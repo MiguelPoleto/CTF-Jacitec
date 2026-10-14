@@ -1865,6 +1865,75 @@ img.brand-symbol {
 .back-button:hover::before { background: var(--mint); color: #fff; }
 .back-button:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
 .back-button.admin-login-back { display: flex; width: fit-content; margin: 18px auto 0; }
+
+/* Banner de evento agendado, no topo da página inicial */
+.event-banner { display: flex; align-items: center; justify-content: space-between; gap: clamp(16px, 4vw, 44px); margin: 14px 0 0; padding: 18px 26px; border: 1px solid rgba(255, 95, 158, .34); border-radius: 12px; background: linear-gradient(118deg, rgba(255, 95, 158, .16), rgba(255, 137, 93, .08) 58%, rgba(255, 255, 255, .02)); }
+.event-banner-logo { flex: 0 0 auto; width: auto; height: 62px; object-fit: contain; }
+/* Lockup da JACITEC: a marca sozinha fica frágil ao lado do bloco do IFES. */
+.event-banner-brand { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.event-banner-brand img { width: 42px; height: 42px; }
+.event-banner-brand > span { color: #f1f4f6; font-size: .62rem; font-weight: 850; letter-spacing: .12em; line-height: 1; }
+.event-banner-brand small { display: block; margin-top: 4px; color: #a9b7c2; font-size: .5rem; font-weight: 800; letter-spacing: .18em; }
+.event-banner-main { flex: 1 1 auto; min-width: 0; text-align: center; }
+.event-banner-tag { display: inline-block; padding: 5px 10px; border-radius: 99px; background: var(--mint); color: #1a0a12; font-size: .5rem; font-weight: 900; letter-spacing: .12em; white-space: nowrap; }
+.event-banner-main > strong { display: block; margin-top: 8px; color: #f6f8f4; font-size: 1.05rem; letter-spacing: -.02em; }
+.event-banner-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; margin-top: 6px; }
+.event-banner-meta span { display: inline-flex; align-items: center; gap: 6px; color: #c3cfd9; font-size: .74rem; }
+.event-banner-meta span::before { font-size: .78rem; opacity: .85; }
+.event-banner-when::before { content: "🗓"; }
+.event-banner-where::before { content: "📍"; }
+.event-banner-details { max-width: 560px; margin: 8px auto 0; color: #93a3b1; font-size: .69rem; line-height: 1.55; }
+.event-banner-cta { display: inline-flex; align-items: center; gap: 8px; margin-top: 13px; padding: 11px 20px; border-radius: 8px; background: var(--mint); color: #1a0a12; font-size: .73rem; font-weight: 850; text-decoration: none; white-space: nowrap; transition: transform .18s, background .18s; }
+.event-banner-cta:hover { transform: translateY(-2px); background: #ff7fb0; }
+
+/* Agenda no painel administrativo */
+.schedule-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(290px, .95fr); align-items: start; gap: 16px; }
+.schedule-form { display: grid; gap: 7px; }
+.schedule-form > label { margin-top: 7px; color: #46586a; font-size: .68rem; font-weight: 650; }
+.schedule-form input[type="text"], .schedule-form textarea, .schedule-row input { width: 100%; min-height: 42px; padding: 10px 11px; border: 1px solid #d8e0d9; border-radius: 7px; background: #fff; color: #22313d; font: inherit; font-size: .74rem; }
+.schedule-form textarea { min-height: 62px; line-height: 1.55; resize: vertical; }
+.schedule-form input:focus, .schedule-form textarea:focus { outline: 2px solid rgba(255, 95, 158, .4); border-color: transparent; }
+.schedule-fieldset { margin: 14px 0 4px; padding: 14px 15px; border: 1px solid #e4e9e4; border-radius: 10px; background: #fafbfa; }
+.schedule-fieldset legend { padding: 0 7px; color: #46586a; font-size: .64rem; font-weight: 800; }
+.schedule-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 10px; }
+.schedule-row + .schedule-row { margin-top: 10px; }
+.schedule-row label { display: block; margin-bottom: 5px; color: #6b7a86; font-size: .6rem; font-weight: 700; }
+.schedule-hint { margin: 10px 0 0; color: #87948f; font-size: .59rem; }
+.schedule-submit { display: inline-flex; align-items: center; justify-content: center; gap: 9px; margin-top: 16px; padding: 13px; border: 0; border-radius: 8px; background: var(--mint); color: #1a0a12; font: inherit; font-size: .74rem; font-weight: 850; cursor: pointer; transition: transform .18s, background .18s; }
+.schedule-submit:hover { transform: translateY(-2px); background: #ff7fb0; }
+.schedule-list { display: grid; gap: 10px; }
+.schedule-card { padding: 14px 15px; border: 1px solid #e6ebe6; border-radius: 10px; background: #fff; }
+.schedule-card.is-live { border-color: rgba(255, 95, 158, .45); background: #fff8fb; }
+.schedule-card > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.schedule-card > header strong { color: #2c3d4b; font-size: .78rem; }
+.schedule-state { padding: 4px 9px; border-radius: 99px; background: #eef1ee; color: #6b7a86; font-size: .48rem; font-weight: 900; letter-spacing: .1em; white-space: nowrap; }
+.schedule-state.is-live { background: var(--mint); color: #1a0a12; }
+.schedule-state.is-done { background: #f2f4f2; color: #9aa5a0; }
+.schedule-facts { display: grid; gap: 7px; margin: 11px 0 0; }
+.schedule-facts dt { color: #8a9691; font-size: .52rem; font-weight: 800; letter-spacing: .05em; }
+.schedule-facts dd { margin: 2px 0 0; color: #33475a; font-size: .68rem; font-weight: 650; }
+.schedule-details { margin: 10px 0 0; color: #5a6a74; font-size: .64rem; line-height: 1.55; }
+.schedule-link { color: var(--mint-deep); text-decoration: none; word-break: break-all; }
+.schedule-link:hover { text-decoration: underline; }
+.schedule-actions { display: flex; align-items: center; gap: 12px; margin-top: 13px; padding-top: 11px; border-top: 1px solid #eef1ee; }
+.schedule-actions form { margin: 0; }
+.schedule-edit { color: var(--mint-deep); font-size: .63rem; font-weight: 800; text-decoration: none; }
+.schedule-remove { padding: 0; border: 0; background: none; color: #a4868f; font: inherit; font-size: .63rem; font-weight: 700; cursor: pointer; }
+.schedule-remove:hover { color: #c0392b; }
+
+@media (max-width: 900px) {
+  .schedule-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  /* Em telas estreitas os dois logos dividem a primeira linha e o conteúdo
+     centralizado vem abaixo. */
+  .event-banner { flex-wrap: wrap; gap: 12px; padding: 14px 16px; }
+  .event-banner-logo { height: 42px; }
+  .event-banner-brand img { width: 32px; height: 32px; }
+  .event-banner-main { flex: 1 0 100%; order: 3; }
+  .event-banner-cta { display: flex; justify-content: center; }
+}
 /* Mesma peça sobre os fundos escuros (feedback do participante, classificação). */
 .back-button.on-dark { border-color: rgba(229,238,230,.2); background: rgba(255,255,255,.04); color: #dfe7ec; }
 .back-button.on-dark::before { background: rgba(255,255,255,.08); color: #b7c4ce; }

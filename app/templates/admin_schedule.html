@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}Agenda de eventos · JACITEC CTF{% endblock %}
+
+{% block content %}
+<main class="admin-page">
+  <header class="admin-topbar">
+    <a href="{{ url_for('admin_dashboard') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
+    <div class="admin-topbar-right"><a class="back-button" href="{{ url_for('admin_dashboard') }}">Voltar ao painel</a></div>
+  </header>
+
+  <section class="admin-welcome">
+    <div>
+      <p class="section-kicker">DIVULGAÇÃO</p>
+      <h1>Agenda de eventos</h1>
+      <p>Anuncie quando e onde o próximo CTF acontece. Durante o período escolhido, um banner aparece no topo da página inicial.</p>
+    </div>
+    <div class="admin-event-state {% if events|selectattr('banner_live')|list %}active{% endif %}"><span class="state-pulse"></span><div><small>BANNER NO AR</small><strong>{{ events|selectattr('banner_live')|list|length }}</strong></div></div>
+  </section>
+
+  {% if notice %}<div class="notice admin-notice">{{ notice }}</div>{% endif %}
+  {% if error %}<div class="notice error admin-notice">{{ error }}</div>{% endif %}
+
+  <div class="schedule-grid">
+    <section class="admin-panel">
+      <div class="admin-panel-heading">
+        <div><p class="section-kicker">{{ 'EDITANDO' if editing else 'NOVO AGENDAMENTO' }}</p><h2>{{ editing.title if editing else 'Agendar um CTF' }}</h2></div>
+        {% if editing %}<a href="{{ url_for('admin_schedule_page') }}">Cancelar edição ✕</a>{% endif %}
+      </div>
+
+      <form method="post" action="{{ url_for('admin_schedule_save') }}" class="schedule-form">
+        {% if editing %}<input type="hidden" name="event_id" value="{{ editing.id }}" />{% endif %}
+
+        <label for="schedule-title">Nome do evento</label>
+        <input id="schedule-title" name="title" type="text" maxlength="70" required
+               placeholder="Ex.: JACITEC CTF 2026 — 2ª edição"
+               value="{{ editing.title if editing else '' }}" />
+
+        <label for="schedule-signup">Link do botão “Quero participar” <span class="field-optional">opcional</span></label>
+        <input id="schedule-signup" name="signup_url" type="url" maxlength="500"
+               placeholder="https://forms.gle/… (deixe em branco para abrir a página de participação)"
+               value="{{ editing.signup_url or '' if editing else '' }}" />
+
+        <label for="schedule-location">Local <span class="field-optional">opcional</span></label>
+        <input id="schedule-location" name="location" type="text" maxlength="90"
+               placeholder="Ex.: Laboratório de Informática 2 — Bloco B"
+               value="{{ editing.location or '' if editing else '' }}" />
+
+        <fieldset class="schedule-fieldset">
+          <legend>Quando acontece</legend>
+          <div class="schedule-row">
+            <div>
+              <label for="schedule-date">Data</label>
+              <input id="schedule-date" name="event_date" type="date" required
+                     value="{{ editing.local_starts_at.strftime('%Y-%m-%d') if editing else today }}" />
+            </div>
+            <div>
+              <label for="schedule-time">Início</label>
+              <input id="schedule-time" name="event_time" type="time" required
+                     value="{{ editing.local_starts_at.strftime('%H:%M') if editing else '19:00' }}" />
+            </div>
+            <div>
+              <label for="schedule-end-time">Término <span class="field-optional">opcional</span></label>
+              <input id="schedule-end-time" name="event_end_time" type="time"
+                     value="{{ editing.local_ends_at.strftime('%H:%M') if editing and editing.local_ends_at else '' }}" />
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="schedule-fieldset">
+          <legend>Quando o banner fica visível na página inicial</legend>
+          <div class="schedule-row">
+            <div>
+              <label for="banner-start-date">Começa em</label>
+              <input id="banner-start-date" name="banner_start_date" type="date" required
+                     value="{{ editing.local_banner_starts_at.strftime('%Y-%m-%d') if editing else today }}" />
+            </div>
+            <div>
+              <label for="banner-start-time">Hora</label>
+              <input id="banner-start-time" name="banner_start_time" type="time"
+                     value="{{ editing.local_banner_starts_at.strftime('%H:%M') if editing else '00:00' }}" />
+            </div>
+          </div>
+          <div class="schedule-row">
+            <div>
+              <label for="banner-end-date">Termina em</label>
+              <input id="banner-end-date" name="banner_end_date" type="date" required
+                     value="{{ editing.local_banner_ends_at.strftime('%Y-%m-%d') if editing else today }}" />
+            </div>
+            <div>
+              <label for="banner-end-time">Hora</label>
+              <input id="banner-end-time" name="banner_end_time" type="time"
+                     value="{{ editing.local_banner_ends_at.strftime('%H:%M') if editing else '23:59' }}" />
+            </div>
+          </div>
+          <p class="schedule-hint">Horários no fuso {{ timezone_label }}.</p>
+        </fieldset>
+
+        <label for="schedule-details">Observação no banner <span class="field-optional">opcional</span></label>
+        <textarea id="schedule-details" name="details" rows="2" maxlength="220"
+                  placeholder="Ex.: Traga seu notebook. Inscrições na hora.">{{ editing.details or '' if editing else '' }}</textarea>
+
+        <button type="submit" class="schedule-submit">{{ 'Salvar alterações' if editing else 'Agendar evento' }} <span>→</span></button>
+      </form>
+    </section>
+
+    <section class="admin-panel">
+      <div class="admin-panel-heading"><div><p class="section-kicker">PROGRAMADOS</p><h2>Eventos na agenda</h2></div><span>{{ events|length }}</span></div>
+      {% if events %}
+        <div class="schedule-list">
+          {% for event in events %}
+            <article class="schedule-card {% if event.banner_live %}is-live{% endif %}">
+              <header>
+                <strong>{{ event.title }}</strong>
+                {% if event.banner_live %}<span class="schedule-state is-live">BANNER NO AR</span>
+                {% elif event.banner_waiting %}<span class="schedule-state">AGUARDANDO</span>
+                {% else %}<span class="schedule-state is-done">ENCERRADO</span>{% endif %}
+              </header>
+              <dl class="schedule-facts">
+                <div><dt>Quando</dt><dd>{{ event.local_starts_at.strftime('%d/%m/%Y') }} · {{ event.local_starts_at.strftime('%Hh%M') }}{% if event.local_ends_at %} às {{ event.local_ends_at.strftime('%Hh%M') }}{% endif %}</dd></div>
+                {% if event.location %}<div><dt>Local</dt><dd>{{ event.location }}</dd></div>{% endif %}
+                <div><dt>Botão do banner</dt><dd>{% if event.signup_url %}<a class="schedule-link" href="{{ event.signup_url }}" target="_blank" rel="noopener noreferrer">{{ event.signup_url }}</a>{% else %}Página de participação do site{% endif %}</dd></div>
+                <div><dt>Banner</dt><dd>{{ event.local_banner_starts_at.strftime('%d/%m · %Hh%M') }} até {{ event.local_banner_ends_at.strftime('%d/%m · %Hh%M') }}</dd></div>
+              </dl>
+              {% if event.details %}<p class="schedule-details">{{ event.details }}</p>{% endif %}
+              <div class="schedule-actions">
+                <a class="schedule-edit" href="{{ url_for('admin_schedule_page', editar=event.id) }}">Editar</a>
+                <form method="post" action="{{ url_for('admin_schedule_delete', event_id=event.id) }}">
+                  <button type="submit" class="schedule-remove">Remover</button>
+                </form>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="admin-empty"><span>◎</span><strong>Nenhum evento agendado.</strong><p>Cadastre o próximo CTF ao lado para anunciá-lo na página inicial.</p></div>
+      {% endif %}
+    </section>
+  </div>
+
+  <footer class="admin-footer"><span>JACITEC CTF · PAINEL ADMINISTRATIVO</span><a href="{{ url_for('ctf_home') }}">Ver página inicial ↗</a></footer>
+</main>
+{% endblock %}

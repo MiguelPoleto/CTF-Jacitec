@@ -2,6 +2,34 @@
 
 {% block content %}
 <main class="landing-page">
+  {% if announcement %}
+    <aside class="event-banner" aria-label="Próximo evento">
+      <img class="event-banner-logo" src="{{ url_for('static', filename='img/ifes-logo-invertido.png') }}" alt="Instituto Federal do Espírito Santo" />
+
+      <div class="event-banner-main">
+        <span class="event-banner-tag">PRÓXIMO CTF</span>
+        <strong>{{ announcement.title }}</strong>
+        <div class="event-banner-meta">
+          <span class="event-banner-when">
+            <time datetime="{{ announcement.local_starts_at.isoformat() }}">{{ announcement.local_starts_at.strftime('%d/%m/%Y') }} · {{ announcement.local_starts_at.strftime('%Hh%M') }}</time>{% if announcement.local_ends_at %} às {{ announcement.local_ends_at.strftime('%Hh%M') }}{% endif %}
+          </span>
+          {% if announcement.location %}<span class="event-banner-where">{{ announcement.location }}</span>{% endif %}
+        </div>
+        {% if announcement.details %}<p class="event-banner-details">{{ announcement.details }}</p>{% endif %}
+        {% if announcement.signup_url %}
+          <a class="event-banner-cta" href="{{ announcement.signup_url }}" target="_blank" rel="noopener noreferrer">Quero participar <span>↗</span></a>
+        {% else %}
+          <a class="event-banner-cta" href="{{ url_for('participation_page') }}">Quero participar <span>→</span></a>
+        {% endif %}
+      </div>
+
+      <span class="event-banner-brand">
+        <img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="" />
+        <span>JACITEC <small>CTF</small></span>
+      </span>
+    </aside>
+  {% endif %}
+
   <header class="landing-nav">
     <a href="{{ url_for('ctf_home') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
     <nav aria-label="Navegação principal">
