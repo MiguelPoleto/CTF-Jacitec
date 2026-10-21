@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ edition.name }} · JACITEC CTF<script>
+  (() => {
+    const rounds = {{ round_rankings|tojson }};
+    const modal = document.getElementById('round-modal');
+    if (!modal) return;
+    const pad = (n) => String(n).padStart(2, '0');
+    const duration = (s) => `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+    const level = (d) => (d === 'Fácil' ? 'F' : d === 'Médio' ? 'M' : 'D');
+
+    document.querySelectorAll('[data-round]').forEach((card) => {
+      card.addEventListener('click', () => {
+        const round = rounds[Number(card.dataset.round)];
+        document.getElementById('round-modal-title').textContent = round.ctf_code;
+        const body = document.getElementById('round-modal-body');
+        body.replaceChildren();
+        round.rows.forEach((row) => {
+          const item = document.createElement('article');
+          item.className = 'round-modal-row';
+          const head = document.createElement('header');
+          const pos = document.createElement('span');
+          pos.className = 'round-modal-pos';
+          pos.textContent = pad(row.position);
+          const name = document.createElement('strong');
+          name.textContent = row.name;
+          const points = document.createElement('span');
+          points.className = 'round-modal-points';
+          points.textContent = `${row.points} pts`;
+          const time = document.createElement('time');
+          time.textContent = duration(row.elapsed);
+          head.append(pos, name, points, time);
+          item.appendChild(head);
+
+          if (row.challenges.length) {
+            const list = document.createElement('ul');
+            list.className = 'round-modal-challenges';
+            row.challenges.forEach((challenge) => {
+              const entry = document.createElement('li');
+              const tag = document.createElement('span');
+              tag.className = `level-tag level-${level(challenge.difficulty)}`;
+              tag.textContent = challenge.difficulty;
+              const label = document.createElement('span');
+              label.className = 'edition-solved-name';
+              label.textContent = challenge.name;
+              const pts = document.createElement('b');
+              pts.textContent = `${challenge.points} pts`;
+              entry.append(tag, label, pts);
+              list.appendChild(entry);
+            });
+            item.appendChild(list);
+          } else {
+            const empty = document.createElement('p');
+            empty.className = 'round-modal-empty';
+            empty.textContent = 'Nenhum desafio resolvido nesta rodada.';
+            item.appendChild(empty);
+          }
+          body.appendChild(item);
+        });
+        modal.showModal();
+      });
+    });
+
+    document.getElementById('round-modal-close').addEventListener('click', () => modal.close());
+    modal.addEventListener('click', (event) => { if (event.target === modal) modal.close(); });
+  })();
+</script>
+{% endblock %}
+
+{% block content %}
+<main class="ranking-page">
+  <header class="ranking-nav">
+    <a href="{{ url_for('ctf_home') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
+    <a href="{{ url_for('public_editions_page') }}" class="back-button on-dark">Todas as edições</a>
+  </header>
+
+  <section class="ranking-hero">
+    <div>
+      <p class="eyebrow-line"><span>RESULTADO FINAL</span> · JACITEC CTF</p>
+      <h1>{{ edition.name }}</h1>
+      {% if edition.summary %}<p>{{ edition.summary }}</p>{% endif %}
+    </div>
+    <div class="ranking-event-card">
+      <span class="event-card-label">PARTICIPANTES</span>
+      <strong>{{ ranking|length }}</strong>
+      <span class="status-pill">Classificação encerrada</span>
+    </div>
+  </section>
+
+  <section class="ranking-board">
+    <div class="board-heading"><div><span class="section-kicker">CLASSIFICAÇÃO OFICIAL</span><h2>Quem levou a edição</h2></div><span class="history-caption">Resultado consolidado</span></div>
+    {% if ranking %}
+      <div class="ranking-table-wrap"><table>
+        <thead><tr><th>POSIÇÃO</th><th>PARTICIPANTE</th><th>DESAFIOS</th><th>PONTOS TOTAIS</th><th>TEMPO</th></tr></thead>
+        <tbody>
+          {% for row in ranking %}
+            <tr>
+              <td>{{ '%02d'|format(row.position) }}</td>
+              <td>
+                {{ row.name }}
+                {% if row.kind == 'merge' %}<span class="edition-merge-tag" title="Participações unidas: {{ row.sources|map(attribute='original_name')|join(', ') }}">participações unidas</span>{% endif %}
+                {% if row.challenges %}
+                  <details class="edition-solved">
+                    <summary>Ver os {{ row.solved }} desafios resolvidos</summary>
+                    <ul>
+                      {% for challenge in row.challenges %}
+                        <li>
+                          <span class="level-tag level-{{ 'F' if challenge.difficulty == 'Fácil' else 'M' if challenge.difficulty == 'Médio' else 'D' }}">{{ challenge.difficulty }}</span>
+                          <span class="edition-solved-name">{{ challenge.name }}</span>
+                          <b>{{ challenge.points }} pts</b>
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  </details>
+                {% endif %}
+              </td>
+              <td>{{ row.solved }}</td>
+              <td><strong>{{ row.points }}</strong></td>
+              <td><time>{{ '%02d:%02d:%02d'|format(row.elapsed // 3600, (row.elapsed % 3600) // 60, row.elapsed % 60) }}</time></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+
+      <details class="edition-explainer">
+        <summary>Por que alguns nomes aparecem juntos — e outros não aparecem</summary>
+        <p>Uma edição pode ter acontecido em <strong>mais de uma rodada</strong>. A classificação acima é o resultado
+           consolidado de todas elas; logo abaixo você também vê como ficou cada rodada separadamente.</p>
+        <p><strong>Nomes unidos:</strong> quem participou mais de uma vez (em rodadas diferentes, ou entrando duas vezes
+           com nomes diferentes) é reunido pela organização em um participante só, marcado como
+           <em>participações unidas</em>. Um desafio resolvido em mais de uma rodada conta uma vez só; desafios
+           diferentes somam. O tempo soma entre rodadas, mas duas entradas na mesma rodada valem apenas a maior.</p>
+        <p><strong>Nomes ausentes:</strong> contas de teste, entradas duplicadas e participações sem atividade são
+           retiradas pela organização para o resultado não ficar distorcido. Os registros originais continuam
+           guardados — só não entram nesta classificação.</p>
+      </details>
+    {% else %}
+      <p class="edition-public-note">Esta edição ainda não tem participantes na classificação.</p>
+    {% endif %}
+  </section>
+
+  {% if round_rankings|length > 1 %}
+    <section class="ranking-board">
+      <div class="board-heading"><div><span class="section-kicker">RODADA A RODADA</span><h2>Como ficou cada rodada</h2></div><span class="history-caption">{{ round_rankings|length }} rodadas</span></div>
+      <div class="edition-rounds-grid">
+        {% for round in round_rankings %}
+          <button type="button" class="edition-round-card" data-round="{{ loop.index0 }}">
+            <span class="note-index">RODADA</span>
+            <strong>{{ round.ctf_code }}</strong>
+            <span class="edition-round-stats">{{ round.rows|length }} participantes</span>
+            {% if round.rows %}
+              <span class="edition-round-winner">1º {{ round.rows[0].name }} · {{ round.rows[0].points }} pts</span>
+            {% endif %}
+            <span class="edition-round-open">Ver classificação desta rodada <span>→</span></span>
+          </button>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if challenges %}
+    <section class="ranking-board">
+      <div class="board-heading"><div><span class="section-kicker">DESAFIOS LIBERADOS</span><h2>As questões e como resolvê-las</h2></div><span class="history-caption">{{ challenges|length }} desafios</span></div>
+      <p class="edition-public-note">A organização liberou os desafios desta edição. Cada bloco traz o que era pedido e o caminho da solução — e dá para abrir o laboratório e tentar antes de ver a resposta.</p>
+      <div class="edition-solution-list">
+        {% for challenge in challenges %}
+          {% set guide = walkthroughs[challenge.id] %}
+          <article class="edition-solution">
+            <header>
+              <span class="level-tag level-{{ 'F' if challenge.difficulty == 'Fácil' else 'M' if challenge.difficulty == 'Médio' else 'D' }}">{{ challenge.difficulty }}</span>
+              <strong>{{ challenge.name }}</strong>
+            </header>
+            <p class="edition-solution-brief">{{ challenge.description }}</p>
+            <a class="training-open" href="{{ url_for('lab_page', challenge_id=challenge.id) }}" target="_blank" rel="noopener">Abrir laboratório ↗</a>
+            <details>
+              <summary>Ver solução</summary>
+              <p class="edition-solution-tool"><strong>Ferramenta:</strong> {{ guide.tool }}</p>
+              <ol>{% for step in guide.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+              <p class="edition-solution-flag"><strong>Flag:</strong> <code>{{ challenge.flags[0] }}</code></p>
+            </details>
+          </article>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <dialog class="round-modal" id="round-modal" aria-labelledby="round-modal-title">
+    <div class="round-modal-head">
+      <div><p class="section-kicker">CLASSIFICAÇÃO DA RODADA</p><h2 id="round-modal-title"></h2></div>
+      <button type="button" id="round-modal-close" aria-label="Fechar">✕</button>
+    </div>
+    <div class="round-modal-body" id="round-modal-body"></div>
+  </dialog>
+
+  <footer class="participation-footer"><span>JACITEC CTF · {{ edition.name }}</span><a href="{{ url_for('public_editions_page') }}">Todas as edições →</a></footer>
+</main>
+<script>
+  (() => {
+    const rounds = {{ round_rankings|tojson }};
+    const modal = document.getElementById('round-modal');
+    if (!modal) return;
+    const pad = (n) => String(n).padStart(2, '0');
+    const duration = (s) => `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+    const level = (d) => (d === 'Fácil' ? 'F' : d === 'Médio' ? 'M' : 'D');
+
+    document.querySelectorAll('[data-round]').forEach((card) => {
+      card.addEventListener('click', () => {
+        const round = rounds[Number(card.dataset.round)];
+        document.getElementById('round-modal-title').textContent = round.ctf_code;
+        const body = document.getElementById('round-modal-body');
+        body.replaceChildren();
+        round.rows.forEach((row) => {
+          const item = document.createElement('article');
+          item.className = 'round-modal-row';
+          const head = document.createElement('header');
+          const pos = document.createElement('span');
+          pos.className = 'round-modal-pos';
+          pos.textContent = pad(row.position);
+          const name = document.createElement('strong');
+          name.textContent = row.name;
+          const points = document.createElement('span');
+          points.className = 'round-modal-points';
+          points.textContent = `${row.points} pts`;
+          const time = document.createElement('time');
+          time.textContent = duration(row.elapsed);
+          head.append(pos, name, points, time);
+          item.appendChild(head);
+
+          if (row.challenges.length) {
+            const list = document.createElement('ul');
+            list.className = 'round-modal-challenges';
+            row.challenges.forEach((challenge) => {
+              const entry = document.createElement('li');
+              const tag = document.createElement('span');
+              tag.className = `level-tag level-${level(challenge.difficulty)}`;
+              tag.textContent = challenge.difficulty;
+              const label = document.createElement('span');
+              label.className = 'edition-solved-name';
+              label.textContent = challenge.name;
+              const pts = document.createElement('b');
+              pts.textContent = `${challenge.points} pts`;
+              entry.append(tag, label, pts);
+              list.appendChild(entry);
+            });
+            item.appendChild(list);
+          } else {
+            const empty = document.createElement('p');
+            empty.className = 'round-modal-empty';
+            empty.textContent = 'Nenhum desafio resolvido nesta rodada.';
+            item.appendChild(empty);
+          }
+          body.appendChild(item);
+        });
+        modal.showModal();
+      });
+    });
+
+    document.getElementById('round-modal-close').addEventListener('click', () => modal.close());
+    modal.addEventListener('click', (event) => { if (event.target === modal) modal.close(); });
+  })();
+</script>
+{% endblock %}

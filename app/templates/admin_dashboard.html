@@ -25,18 +25,20 @@
     <div class="admin-main-column">
       <section class="admin-panel admin-ranking-panel">
         <div class="admin-panel-heading"><div><p class="section-kicker">ACOMPANHAMENTO</p><h2>Classificação ao vivo</h2></div><a href="{{ url_for('public_ranking_page') }}">Abrir tabela pública ↗</a></div>
-        {% if ranking %}
-          <div class="admin-ranking-list">
-            {% for row in ranking[:10] %}
-              <div class="admin-rank-row">
-                <span class="admin-rank-number {% if loop.index <= 3 %}rank-medal{% endif %}">{{ '%02d'|format(loop.index) }}</span>
-                <span class="admin-rank-name">{{ row.name }}<small>{{ 'Finalizou antes do encerramento' if row.finished_at else 'Em andamento' if ctf else 'Encerrado pelo admin/limite de tempo' }}</small></span>
-                <span class="ranking-points-cell"><strong>{{ row.points }} <small>PTS</small></strong><button type="button" class="score-eye-btn" title="Ver pontuação detalhada" aria-label="Ver pontuação detalhada de {{ row.name }}" data-score-participant-id="{{ row.id }}" data-score-participant-name="{{ row.name }}">{{ eye_icon_svg|safe }}</button></span>
-                <time>{{ '%02d:%02d:%02d'|format(row.elapsed // 3600, (row.elapsed % 3600) // 60, row.elapsed % 60) }}</time>
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}<div class="admin-empty"><span>◎</span><strong>A disputa começa com o primeiro participante.</strong><p>Inicie um CTF e compartilhe o código do evento.</p></div>{% endif %}
+        <div id="admin-ranking-live" data-live="{{ 'true' if ctf else 'false' }}">
+          {% if ranking %}
+            <div class="admin-ranking-list">
+              {% for row in ranking[:10] %}
+                <div class="admin-rank-row" data-elapsed="{{ row.elapsed }}" data-running="{{ 'true' if ctf and not row.finished_at else 'false' }}">
+                  <span class="admin-rank-number {% if loop.index <= 3 %}rank-medal{% endif %}">{{ '%02d'|format(loop.index) }}</span>
+                  <span class="admin-rank-name">{{ row.name }}<small>{{ 'Finalizou antes do encerramento' if row.finished_at else 'Em andamento' if ctf else 'Encerrado pelo admin/limite de tempo' }}</small></span>
+                  <span class="ranking-points-cell"><strong>{{ row.points }} <small>PTS</small></strong><button type="button" class="score-eye-btn" title="Ver pontuação detalhada" aria-label="Ver pontuação detalhada de {{ row.name }}" data-score-participant-id="{{ row.id }}" data-score-participant-name="{{ row.name }}">{{ eye_icon_svg|safe }}</button></span>
+                  <time>{{ '%02d:%02d:%02d'|format(row.elapsed // 3600, (row.elapsed % 3600) // 60, row.elapsed % 60) }}</time>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}<div class="admin-empty"><span>◎</span><strong>A disputa começa com o primeiro participante.</strong><p>Inicie um CTF e compartilhe o código do evento.</p></div>{% endif %}
+        </div>
       </section>
 
       <section class="admin-panel admin-feedback-panel">
@@ -98,19 +100,23 @@
     <aside class="admin-side-column">
       <section class="admin-panel create-event-panel">
         <p class="section-kicker">NOVA DISPUTA</p><h2>Preparar CTF</h2>
-        <p>Escolha uma coleção para sortear desafios ou use uma seleção fixa já preparada.</p>
+        <p>Todo evento usa a seleção fixa do CTF 1, na mesma ordem de dificuldade.</p>
         <form method="post" action="{{ url_for('generate_ctf') }}">
           <label for="challenge-list">Lista de desafios</label>
           <select id="challenge-list" name="challenge_list">
-            {% for key, item in challenge_lists.items() %}<option value="{{ key }}" {% if key in fixed_challenge_lists %}selected{% endif %}>{{ item.label }} · {{ item.description }}</option>{% endfor %}
+            {% for key, item in challenge_lists.items() %}
+              <option value="{{ key }}" {% if key == default_challenge_list %}selected{% endif %}>{{ item.label }} · {{ item.description }}</option>
+            {% endfor %}
           </select>
-          <div class="challenge-counts">
-            <label>Fáceis<input name="easy_count" type="number" min="0" max="8" value="5" /></label>
-            <label>Médios<input name="medium_count" type="number" min="0" max="8" value="2" /></label>
-            <label>Difíceis<input name="hard_count" type="number" min="0" max="8" value="1" /></label>
+          <div class="fixed-list-card">
+            {% for key, item in challenge_lists.items() %}
+              <div class="fixed-list-option" data-list="{{ key }}" {% if key != default_challenge_list %}hidden{% endif %}>
+                <strong>{{ item.label }}</strong>
+                <span>{{ item.description }}</span>
+                <small>Pontuação máxima de 1.000 pontos, distribuída entre os desafios da lista.</small>
+              </div>
+            {% endfor %}
           </div>
-          <small id="challenge-total-note">Máximo de 8 desafios. O sorteio usa apenas a lista escolhida. A pontuação máxima é sempre 1.000 pontos, distribuídos entre os desafios escolhidos.</small>
-          <small id="challenge-availability" class="challenge-availability"></small>
           <label for="max-duration">Duração máxima</label>
           <div class="duration-input"><input id="max-duration" name="max_duration_minutes" type="number" min="1" max="1440" value="60" placeholder="60" /><span>minutos</span></div>
           <small>De 1 a 1440 minutos. Use 60 para uma hora.</small>
@@ -121,6 +127,39 @@
           <button type="button" class="danger-btn finalize-open" id="finalize-open">ENCERRAR EVENTO</button>
         {% endif %}
       </section>
+
+      {% if ctf %}
+        <section class="admin-panel extra-time-panel">
+          <p class="section-kicker">CTF EM ANDAMENTO</p>
+          <h2>Tempo extra</h2>
+          {% if ctf.max_duration_minutes %}
+            <div class="extra-time-state">
+              <div><small>RESTAM</small><strong id="extra-time-remaining" data-remaining="{{ remaining_seconds if remaining_seconds is not none else '' }}">—</strong></div>
+              <div><small>LIMITE ATUAL</small><strong>{{ ctf.max_duration_minutes }} min</strong></div>
+            </div>
+            <p class="extra-time-note">Prorrogue sem encerrar o evento: o cronômetro de todo mundo é atualizado na hora.</p>
+            <form method="post" action="{{ url_for('extend_ctf') }}" class="extra-time-form">
+              <div class="extra-time-presets">
+                {% for minutes in [5, 10, 15, 30] %}
+                  <button type="submit" name="extra_minutes" value="{{ minutes }}">+{{ minutes }} min</button>
+                {% endfor %}
+              </div>
+              <div class="extra-time-custom">
+                <input id="extra-minutes" name="extra_minutes" type="number" min="1" max="240" placeholder="outro valor" aria-label="Minutos extras" />
+                <button type="submit">Adicionar</button>
+              </div>
+            </form>
+          {% else %}
+            <p class="extra-time-note">Este CTF foi criado sem tempo limite — ele continua aberto até você encerrar.</p>
+          {% endif %}
+        </section>
+      {% endif %}
+
+      <a class="admin-library-link" href="{{ url_for('admin_editions_page') }}">
+        <span class="section-kicker">RESULTADO OFICIAL</span>
+        <strong>Montar edições →</strong>
+        <small>Junte as rodadas numa classificação final e publique os desafios.</small>
+      </a>
       <a class="admin-library-link" href="{{ url_for('admin_schedule_page') }}">
         <span class="section-kicker">AGENDA E DIVULGAÇÃO</span>
         <strong>Agendar próximo CTF →</strong>
@@ -173,37 +212,107 @@
         document.getElementById('delete-archive-form').action = `/admin/ctf/${button.dataset.ctfId}/delete`;
         deleteDialog.showModal();
       }));
-      const counts = [...document.querySelectorAll('.challenge-counts input')];
-      const totalNote = document.getElementById('challenge-total-note');
-      const listSelect = document.getElementById('challenge-list');
-      const availability = {{ challenge_availability|tojson }};
-      const fixedLists = {{ fixed_challenge_lists|tojson }};
-      const availabilityNote = document.getElementById('challenge-availability');
-      const updateTotal = () => {
-        const total = counts.reduce((sum, input) => sum + (Number(input.value) || 0), 0);
-        totalNote.textContent = `${total}/8 desafios selecionados · pontuação máxima sempre 1.000 pontos, distribuída entre eles.`;
-        totalNote.classList.toggle('count-invalid', total < 1 || total > 8);
-      };
-      const updateAvailability = () => {
-        const current = availability[listSelect.value];
-        const labels = ['Fácil', 'Médio', 'Difícil'];
-        const isFixed = Object.hasOwn(fixedLists, listSelect.value);
-        counts.forEach((input, index) => {
-          input.max = current[labels[index]];
-          input.disabled = isFixed;
-          if (isFixed || Number(input.value) > Number(input.max)) input.value = current[labels[index]];
-        });
-        availabilityNote.textContent = isFixed
-          ? 'Seleção fixa desta edição; estes desafios serão usados sem sorteio.'
-          : `Catálogo desta lista: ${current['Fácil']} fáceis · ${current['Médio']} médios · ${current['Difícil']} difíceis (os desafios sorteados podem se repetir entre edições).`;
-        updateTotal();
-      };
-      counts.forEach((input) => input.addEventListener('input', updateTotal));
-      listSelect.addEventListener('change', updateAvailability);
-      updateAvailability();
       document.querySelectorAll('[data-score-participant-id]').forEach((button) => {
         button.addEventListener('click', () => window.openScoreBreakdown?.(button.dataset.scoreParticipantId, button.dataset.scoreParticipantName));
       });
+
+      const listSelect = document.getElementById('challenge-list');
+      if (listSelect) {
+        const showListDescription = () => document.querySelectorAll('.fixed-list-option').forEach((item) => {
+          item.hidden = item.dataset.list !== listSelect.value;
+        });
+        listSelect.addEventListener('change', showListDescription);
+        showListDescription();
+      }
+
+      // Classificação do painel: antes só atualizava com F5.
+      const liveRanking = document.getElementById('admin-ranking-live');
+      if (liveRanking && liveRanking.dataset.live === 'true') {
+        const pad = (n) => String(n).padStart(2, '0');
+        const duration = (s) => `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+        const eyeIcon = {{ eye_icon_svg|tojson }};
+
+        const renderRanking = (entries, status) => {
+          if (!entries.length) return;
+          const list = document.createElement('div');
+          list.className = 'admin-ranking-list';
+          entries.slice(0, 10).forEach((entry) => {
+            const row = document.createElement('div');
+            row.className = 'admin-rank-row';
+            row.dataset.elapsed = String(entry.time);
+            row.dataset.running = entry.finished_at ? 'false' : String(status === 'ATIVO');
+
+            const position = document.createElement('span');
+            position.className = `admin-rank-number${entry.position <= 3 ? ' rank-medal' : ''}`;
+            position.textContent = pad(entry.position);
+
+            const name = document.createElement('span');
+            name.className = 'admin-rank-name';
+            name.textContent = entry.name;
+            const status_ = document.createElement('small');
+            status_.textContent = entry.participation_status;
+            name.appendChild(status_);
+
+            const points = document.createElement('span');
+            points.className = 'ranking-points-cell';
+            const strong = document.createElement('strong');
+            strong.textContent = `${entry.points} `;
+            const pts = document.createElement('small');
+            pts.textContent = 'PTS';
+            strong.appendChild(pts);
+            const eye = document.createElement('button');
+            eye.type = 'button';
+            eye.className = 'score-eye-btn';
+            eye.title = 'Ver pontuação detalhada';
+            eye.setAttribute('aria-label', `Ver pontuação detalhada de ${entry.name}`);
+            eye.innerHTML = eyeIcon;
+            eye.addEventListener('click', () => window.openScoreBreakdown?.(entry.id, entry.name));
+            points.append(strong, eye);
+
+            const time = document.createElement('time');
+            time.textContent = duration(entry.time);
+
+            row.append(position, name, points, time);
+            list.appendChild(row);
+          });
+          liveRanking.replaceChildren(list);
+        };
+
+        const refresh = async () => {
+          try {
+            const response = await fetch('/api/ranking', { cache: 'no-store' });
+            const data = await response.json();
+            renderRanking(data.ranking || [], data.status);
+            if (data.status !== 'ATIVO') liveRanking.dataset.live = 'false';
+          } catch (_) {
+            // mantém a última lista renderizada se a atualização falhar
+          }
+        };
+        const tick = () => liveRanking.querySelectorAll('.admin-rank-row[data-running="true"]').forEach((row) => {
+          const elapsed = Number(row.dataset.elapsed) + 1;
+          row.dataset.elapsed = String(elapsed);
+          const cell = row.querySelector('time');
+          if (cell) cell.textContent = duration(elapsed);
+        });
+        refresh();
+        setInterval(refresh, 5000);
+        setInterval(tick, 1000);
+      }
+
+      const remainingEl = document.getElementById('extra-time-remaining');
+      if (remainingEl && remainingEl.dataset.remaining !== '') {
+        let left = Number(remainingEl.dataset.remaining);
+        const render = () => {
+          const safe = Math.max(0, left);
+          const pad = (n) => String(n).padStart(2, '0');
+          remainingEl.textContent = safe
+            ? `${pad(Math.floor(safe / 3600))}:${pad(Math.floor((safe % 3600) / 60))}:${pad(safe % 60)}`
+            : 'encerrado';
+          left -= 1;
+        };
+        render();
+        setInterval(render, 1000);
+      }
     })();
   </script>
 </main>

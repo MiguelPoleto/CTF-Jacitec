@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Edições · JACITEC CTF{% endblock %}
+
+{% block content %}
+<main class="ranking-page">
+  <header class="ranking-nav">
+    <a href="{{ url_for('ctf_home') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
+    <a href="{{ url_for('ctf_home') }}" class="back-button on-dark">Voltar ao início</a>
+  </header>
+
+  <section class="ranking-hero">
+    <div>
+      <p class="eyebrow-line"><span>MEMÓRIA DO EVENTO</span> · JACITEC CTF</p>
+      <h1>Todas as<br><em>edições.</em></h1>
+      <p>Os resultados finais de cada edição, com a classificação consolidada e — quando liberados — os desafios e suas soluções.</p>
+    </div>
+  </section>
+
+  {% if editions %}
+    <div class="edition-public-grid">
+      {% for edition in editions %}
+        <a class="edition-public-card" href="{{ url_for('public_edition_page', edition_id=edition.id) }}">
+          <span class="note-index">EDIÇÃO</span>
+          <strong>{{ edition.name }}</strong>
+          {% if edition.summary %}<p>{{ edition.summary }}</p>{% endif %}
+          <span class="edition-public-cta">Ver classificação <span>→</span></span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="edition-public-empty">
+      <strong>Nenhuma edição publicada ainda.</strong>
+      <p>Assim que os resultados de uma edição forem fechados pela organização, eles aparecem aqui.</p>
+    </div>
+  {% endif %}
+
+  <footer class="participation-footer"><span>JACITEC CTF</span><a href="{{ url_for('public_ranking_page') }}">Ver classificação ao vivo →</a></footer>
+</main>
+{% endblock %}

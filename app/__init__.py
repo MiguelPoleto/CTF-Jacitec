@@ -4,6 +4,7 @@ import re
 import sqlite3
 import string
 import base64
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
@@ -420,15 +421,20 @@ for _challenge in CHALLENGES:
     }
 
 CHALLENGE_BY_ID = {challenge["id"]: challenge for challenge in CHALLENGES}
+# Só a seleção fixa fica disponível para gerar eventos. O catálogo completo
+# (lista-1/2/3) continua existindo por trás, porque os desafios são
+# referenciados por id nos eventos já realizados.
 CHALLENGE_LISTS = {
-    "lista-1": {"label": "Lista de desafios 1", "description": "Fundamentos de segurança web e laboratórios clássicos."},
-    "lista-2": {"label": "Lista de desafios 2", "description": "Uma edição alternativa com novos cenários e técnicas."},
-    "lista-3": {"label": "Lista de desafios 3", "description": "Terceira coleção para evitar repetição entre edições."},
     "ctf-1": {"label": "CTF 1", "description": "Seleção fixa: 5 fáceis, 2 médios e 1 difícil."},
 }
 FIXED_CHALLENGE_LISTS = {
     "ctf-1": (1, 2, 3, 4, 5, 6, 7, 17),
 }
+DEFAULT_CHALLENGE_LIST = "ctf-1"
+
+# Versão da plataforma (semver). Suba a cada entrega: patch para correções,
+# minor para funcionalidades novas, major para mudanças incompatíveis.
+APP_VERSION = "1.0.0"
 
 
 def timestamp_now():
@@ -579,6 +585,93 @@ def init_db():
     schedule_columns = {row["name"] for row in conn.execute("PRAGMA table_info(scheduled_events)").fetchall()}
     if "signup_url" not in schedule_columns:
         conn.execute("ALTER TABLE scheduled_events ADD COLUMN signup_url TEXT")
+    # Listas liberadas para treino livre: a presença da linha já significa
+    # "disponível em /treino".
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS training_lists (
+            list_id TEXT PRIMARY KEY,
+            enabled_at TEXT NOT NULL
+        )
+        """
+    )
+    # Uma "edição" junta uma ou mais rodadas de CTF num resultado final único,
+    # montado à mão pelo admin.
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS editions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            summary TEXT,
+            status TEXT NOT NULL DEFAULT 'rascunho',
+            show_challenges INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            published_at TEXT
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS edition_ctfs (
+            edition_id INTEGER NOT NULL,
+            ctf_id INTEGER NOT NULL,
+            PRIMARY KEY (edition_id, ctf_id),
+            FOREIGN KEY(edition_id) REFERENCES editions(id)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS edition_feedback (
+            edition_id INTEGER NOT NULL,
+            feedback_id INTEGER NOT NULL,
+            PRIMARY KEY (edition_id, feedback_id),
+            FOREIGN KEY(edition_id) REFERENCES editions(id)
+        )
+        """
+    )
+    # Uma fusão vira um participante NOVO e editável; as participações de
+    # origem continuam intactas no banco, só saem da classificação final.
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS edition_merges (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            edition_id INTEGER NOT NULL,
+            display_name TEXT NOT NULL,
+            challenge_ids TEXT NOT NULL,
+            points INTEGER NOT NULL,
+            elapsed INTEGER NOT NULL,
+            hidden INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(edition_id) REFERENCES editions(id)
+        )
+        """
+    )
+    merge_columns = {row["name"] for row in conn.execute("PRAGMA table_info(edition_merges)").fetchall()}
+    if "challenge_points" not in merge_columns:
+        conn.execute("ALTER TABLE edition_merges ADD COLUMN challenge_points TEXT")
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS edition_merge_sources (
+            merge_id INTEGER NOT NULL,
+            participant_id INTEGER NOT NULL,
+            PRIMARY KEY (merge_id, participant_id),
+            FOREIGN KEY(merge_id) REFERENCES edition_merges(id)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS edition_participants (
+            edition_id INTEGER NOT NULL,
+            participant_id INTEGER NOT NULL,
+            display_name TEXT NOT NULL,
+            included INTEGER NOT NULL DEFAULT 1,
+            PRIMARY KEY (edition_id, participant_id),
+            FOREIGN KEY(edition_id) REFERENCES editions(id)
+        )
+        """
+    )
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS logs (
@@ -864,6 +957,329 @@ def feedback_summary(entries):
         "rating_count": len(ratings),
         "comments": [entry for entry in entries if entry["improvements"]],
     }
+
+
+EDITION_NAME_MAX = 80
+EDITION_SUMMARY_MAX = 400
+
+
+def edition_row(edition_id):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM editions WHERE id = ?", (edition_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def edition_ctf_ids(edition_id):
+    conn = get_db()
+    rows = conn.execute("SELECT ctf_id FROM edition_ctfs WHERE edition_id = ?", (edition_id,)).fetchall()
+    conn.close()
+    return [row["ctf_id"] for row in rows]
+
+
+def edition_entries(edition_id):
+    """Participações da edição, com o nome de exibição escolhido pelo admin."""
+    conn = get_db()
+    rows = conn.execute(
+        """SELECT ep.participant_id, ep.display_name, ep.included,
+                  p.name AS original_name, p.ctf_id, p.entered_at, p.finished_at, c.code AS ctf_code
+           FROM edition_participants ep
+           JOIN participants p ON p.id = ep.participant_id
+           JOIN ctfs c ON c.id = p.ctf_id
+           WHERE ep.edition_id = ?
+           ORDER BY p.ctf_id, p.entered_at""",
+        (edition_id,),
+    ).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def _participant_elapsed(entry, event_finished_at):
+    if not entry["entered_at"]:
+        return 0
+    ended = entry["finished_at"] or event_finished_at or timestamp_now()
+    try:
+        delta = datetime.strptime(ended, "%Y-%m-%d %H:%M:%S") - datetime.strptime(entry["entered_at"], "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return 0
+    return max(0, int(delta.total_seconds()))
+
+
+def participation_stats(participant_id, event_finished_at=None):
+    """Desafios resolvidos, pontos e tempo de uma participação."""
+    conn = get_db()
+    participant = conn.execute(
+        "SELECT id, name, ctf_id, entered_at, finished_at FROM participants WHERE id = ?",
+        (participant_id,),
+    ).fetchone()
+    if not participant:
+        conn.close()
+        return None
+    rows = conn.execute(
+        """SELECT challenge_id, score_earned, hints_used FROM participant_challenges
+           WHERE participant_id = ? AND status = 'solved'""",
+        (participant_id,),
+    ).fetchall()
+    event = conn.execute("SELECT code, finished_at FROM ctfs WHERE id = ?", (participant["ctf_id"],)).fetchone()
+    ctf_code = event["code"] if event else "—"
+    if event_finished_at is None:
+        event_finished_at = event["finished_at"] if event else None
+    conn.close()
+    challenges = []
+    for row in rows:
+        catalog = CHALLENGE_BY_ID.get(row["challenge_id"])
+        challenges.append({
+            "id": row["challenge_id"],
+            "name": catalog["name"] if catalog else f"Desafio {row['challenge_id']}",
+            "difficulty": catalog["difficulty"] if catalog else "—",
+            "points": row["score_earned"] or 0,
+            "hints_used": row["hints_used"] or 0,
+        })
+    challenges.sort(key=lambda item: -item["points"])
+    return {
+        "participant_id": participant["id"],
+        "name": participant["name"],
+        "ctf_id": participant["ctf_id"],
+        "ctf_code": ctf_code,
+        "entered_at": participant["entered_at"],
+        "ended_at": participant["finished_at"] or event_finished_at,
+        "challenges": challenges,
+        "points": sum(item["points"] for item in challenges),
+        "solved": len(challenges),
+        "elapsed": _participant_elapsed(dict(participant), event_finished_at),
+    }
+
+
+def edition_round_rankings(edition_id):
+    """Classificação de cada rodada, exatamente como ela aconteceu."""
+    entries = [entry for entry in edition_entries(edition_id) if entry["included"]]
+    by_round = {}
+    for entry in entries:
+        stats = participation_stats(entry["participant_id"])
+        if not stats:
+            continue
+        group = by_round.setdefault(entry["ctf_code"], [])
+        group.append({
+            "name": entry["original_name"],
+            "points": stats["points"],
+            "solved": stats["solved"],
+            "elapsed": stats["elapsed"],
+            "entered_at": stats["entered_at"],
+            "ended_at": stats["ended_at"],
+            "challenges": stats["challenges"],
+        })
+    rounds = []
+    for code in sorted(by_round):
+        rows = sorted(by_round[code], key=lambda item: (-item["points"], item["elapsed"], item["name"].lower()))
+        for position, row in enumerate(rows, start=1):
+            row["position"] = position
+        rounds.append({"ctf_code": code, "rows": rows})
+    return rounds
+
+
+def edition_merge_rows(edition_id):
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM edition_merges WHERE edition_id = ? ORDER BY id", (edition_id,)
+    ).fetchall()
+    merges = []
+    for row in rows:
+        sources = conn.execute(
+            """SELECT ems.participant_id, p.name AS original_name, c.code AS ctf_code
+               FROM edition_merge_sources ems
+               JOIN participants p ON p.id = ems.participant_id
+               JOIN ctfs c ON c.id = p.ctf_id
+               WHERE ems.merge_id = ?""",
+            (row["id"],),
+        ).fetchall()
+        merge = dict(row)
+        merge["challenge_ids"] = json.loads(merge["challenge_ids"])
+        merge["challenge_points"] = json.loads(merge["challenge_points"] or "{}")
+        merge["sources"] = [dict(item) for item in sources]
+        merges.append(merge)
+    conn.close()
+    return merges
+
+
+def merge_preview(participant_ids):
+    """Números propostos ao fundir participações: desafios, pontos e tempo.
+
+    Desafio repetido entre participações entra uma vez só, valendo a MENOR
+    pontuação obtida — se a pessoa resolveu o mesmo desafio duas vezes, conta
+    a tentativa mais cara (a que usou mais dicas). O tempo soma entre rodadas
+    diferentes e, na mesma rodada, vale só a maior das entradas.
+    """
+    chosen, origins, elapsed_by_ctf, sources = {}, {}, {}, []
+    for participant_id in participant_ids:
+        stats = participation_stats(participant_id)
+        if not stats:
+            continue
+        for challenge in stats["challenges"]:
+            current = chosen.get(challenge["id"])
+            if not current or challenge["points"] < current["points"]:
+                chosen[challenge["id"]] = dict(challenge)
+            origins.setdefault(challenge["id"], []).append({
+                "name": stats["name"], "points": challenge["points"],
+            })
+        previous = elapsed_by_ctf.get(stats["ctf_id"], 0)
+        elapsed_by_ctf[stats["ctf_id"]] = max(previous, stats["elapsed"])
+        sources.append({
+            "participant_id": participant_id, "name": stats["name"], "ctf_id": stats["ctf_id"],
+            "ctf_code": stats["ctf_code"], "entered_at": stats["entered_at"],
+            "ended_at": stats["ended_at"], "elapsed": stats["elapsed"],
+            "counted": True, "points": stats["points"], "solved": stats["solved"],
+        })
+    # Numa mesma rodada só o maior tempo entra na conta: marca quais contaram.
+    for ctf_id, total in elapsed_by_ctf.items():
+        same_round = [item for item in sources if item["ctf_id"] == ctf_id]
+        winner = max(same_round, key=lambda item: item["elapsed"])
+        for item in same_round:
+            item["counted"] = item is winner
+    challenges = sorted(chosen.values(), key=lambda item: -item["points"])
+    for challenge in challenges:
+        challenge["origins"] = origins.get(challenge["id"], [])
+        challenge["duplicated"] = len(challenge["origins"]) > 1
+    return {
+        "challenges": challenges,
+        "points": sum(item["points"] for item in challenges),
+        "elapsed": sum(elapsed_by_ctf.values()),
+        "suggested_name": sources[0]["name"] if sources else "",
+        "sources": sources,
+    }
+
+
+def edition_final_ranking(edition_id):
+    """Classificação final: participações avulsas + participantes fundidos."""
+    merges = edition_merge_rows(edition_id)
+    merged_ids = {source["participant_id"] for merge in merges for source in merge["sources"]}
+    rows = []
+    for entry in edition_entries(edition_id):
+        if not entry["included"] or entry["participant_id"] in merged_ids:
+            continue
+        stats = participation_stats(entry["participant_id"])
+        if not stats:
+            continue
+        rows.append({
+            "kind": "single", "key": entry["participant_id"], "name": entry["original_name"],
+            "points": stats["points"], "solved": stats["solved"], "elapsed": stats["elapsed"],
+            "challenges": stats["challenges"],
+            "sources": [{"original_name": entry["original_name"], "ctf_code": entry["ctf_code"]}],
+        })
+    for merge in merges:
+        if merge["hidden"]:
+            continue
+        chosen = [CHALLENGE_BY_ID.get(cid) for cid in merge["challenge_ids"]]
+        rows.append({
+            "kind": "merge", "key": merge["id"], "name": merge["display_name"],
+            "points": merge["points"], "solved": len(merge["challenge_ids"]), "elapsed": merge["elapsed"],
+            "challenges": [
+                {"id": item["id"], "name": item["name"], "difficulty": item["difficulty"],
+                 "points": merge["challenge_points"].get(str(item["id"]), 0)}
+                for item in chosen if item
+            ],
+            "sources": merge["sources"],
+        })
+    rows.sort(key=lambda item: (-item["points"], item["elapsed"], item["name"].lower()))
+    for position, row in enumerate(rows, start=1):
+        row["position"] = position
+    return rows
+
+
+def edition_feedback_entries(edition_id):
+    conn = get_db()
+    rows = conn.execute(
+        """SELECT f.* FROM edition_feedback ef
+           JOIN participant_feedback f ON f.id = ef.feedback_id
+           WHERE ef.edition_id = ?
+           ORDER BY f.created_at DESC, f.id DESC""",
+        (edition_id,),
+    ).fetchall()
+    conn.close()
+    entries = []
+    for row in rows:
+        entry = dict(row)
+        entry["answers"] = {q["field"]: feedback_answers(entry, q) for q in FEEDBACK_QUESTIONS}
+        entries.append(entry)
+    return entries
+
+
+def edition_feedback_candidates(edition_id):
+    """Todos os feedbacks das rodadas da edição, marcando quais estão incluídos."""
+    conn = get_db()
+    rows = conn.execute(
+        """SELECT f.*, c.code AS ctf_code,
+                  EXISTS(SELECT 1 FROM edition_feedback ef
+                         WHERE ef.edition_id = ? AND ef.feedback_id = f.id) AS included
+           FROM participant_feedback f
+           JOIN ctfs c ON c.id = f.ctf_id
+           WHERE f.ctf_id IN (SELECT ctf_id FROM edition_ctfs WHERE edition_id = ?)
+           ORDER BY f.created_at DESC, f.id DESC""",
+        (edition_id, edition_id),
+    ).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def edition_challenges(edition_id):
+    """Desafios usados na edição, sem repetir entre as rodadas."""
+    challenges, seen = [], set()
+    for ctf_id in edition_ctf_ids(edition_id):
+        for challenge in challenges_for_ctf(ctf_id):
+            if challenge["id"] not in seen:
+                seen.add(challenge["id"])
+                challenges.append(challenge)
+    challenges.sort(key=lambda item: (DIFFICULTY_ORDER.index(item["difficulty"]), item["id"]))
+    return challenges
+
+
+def sync_edition_sources(edition_id, ctf_ids):
+    """Casa participantes e feedbacks da edição com as rodadas escolhidas.
+
+    Mantém o que o admin já ajustou (nome de exibição, inclusão) e só adiciona
+    o que entrou ou remove o que saiu junto com a rodada.
+    """
+    conn = get_db()
+    conn.execute("DELETE FROM edition_ctfs WHERE edition_id = ?", (edition_id,))
+    conn.executemany(
+        "INSERT INTO edition_ctfs (edition_id, ctf_id) VALUES (?, ?)",
+        [(edition_id, ctf_id) for ctf_id in ctf_ids],
+    )
+    if ctf_ids:
+        placeholders = ",".join("?" * len(ctf_ids))
+        conn.execute(
+            f"""DELETE FROM edition_participants WHERE edition_id = ? AND participant_id NOT IN
+                (SELECT id FROM participants WHERE ctf_id IN ({placeholders}))""",
+            (edition_id, *ctf_ids),
+        )
+        conn.execute(
+            f"""DELETE FROM edition_feedback WHERE edition_id = ? AND feedback_id NOT IN
+                (SELECT id FROM participant_feedback WHERE ctf_id IN ({placeholders}))""",
+            (edition_id, *ctf_ids),
+        )
+        conn.execute(
+            f"""INSERT OR IGNORE INTO edition_participants (edition_id, participant_id, display_name)
+                SELECT ?, id, name FROM participants WHERE ctf_id IN ({placeholders})""",
+            (edition_id, *ctf_ids),
+        )
+        conn.execute(
+            f"""INSERT OR IGNORE INTO edition_feedback (edition_id, feedback_id)
+                SELECT ?, id FROM participant_feedback WHERE ctf_id IN ({placeholders})""",
+            (edition_id, *ctf_ids),
+        )
+    else:
+        conn.execute("DELETE FROM edition_participants WHERE edition_id = ?", (edition_id,))
+        conn.execute("DELETE FROM edition_feedback WHERE edition_id = ?", (edition_id,))
+    conn.commit()
+    conn.close()
+
+
+def published_editions():
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM editions WHERE status = 'publicada' ORDER BY published_at DESC, id DESC"
+    ).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
 
 
 SCHEDULED_TITLE_MAX = 70
@@ -1249,16 +1665,70 @@ def sandbox_challenge(challenge_id, mechanism=None):
     return challenge
 
 
+def training_list_ids():
+    conn = get_db()
+    rows = conn.execute("SELECT list_id FROM training_lists").fetchall()
+    conn.close()
+    return {row["list_id"] for row in rows}
+
+
+def training_challenges(list_id):
+    """Desafios de uma lista liberada para treino, em ordem de dificuldade."""
+    if list_id not in training_list_ids():
+        return []
+    challenges = []
+    for difficulty in DIFFICULTY_ORDER:
+        challenges.extend(sorted(challenge_pool(list_id, difficulty), key=lambda item: item["code"]))
+    return challenges
+
+
+def training_challenge(challenge_id, mechanism=None):
+    challenge = CHALLENGE_BY_ID.get(challenge_id)
+    if not challenge or (mechanism and challenge.get("mechanism") != mechanism):
+        return None
+    enabled = training_list_ids()
+    for list_id in enabled:
+        if any(item["id"] == challenge_id for item in challenge_pool(list_id, challenge["difficulty"])):
+            return challenge
+    return None
+
+
+def open_challenge(challenge_id, mechanism=None):
+    """Desafio aberto ao público: treino livre ou edição com gabarito liberado.
+
+    Quando o admin publica os gabaritos de uma edição a flag já é pública, então
+    deixar o laboratório aberto para visitar não esconde mais nada — e é o que
+    permite "tentar antes de ver a resposta".
+    """
+    challenge = training_challenge(challenge_id, mechanism)
+    if challenge:
+        return challenge
+    candidate = CHALLENGE_BY_ID.get(challenge_id)
+    if not candidate or (mechanism and candidate.get("mechanism") != mechanism):
+        return None
+    conn = get_db()
+    row = conn.execute(
+        """SELECT 1 FROM editions e
+           JOIN edition_ctfs ec ON ec.edition_id = e.id
+           JOIN ctf_challenges cc ON cc.ctf_id = ec.ctf_id
+           WHERE e.status = 'publicada' AND e.show_challenges = 1 AND cc.challenge_id = ?
+           LIMIT 1""",
+        (challenge_id,),
+    ).fetchone()
+    conn.close()
+    return candidate if row else None
+
+
 def playable_challenge(challenge_id, mechanism=None):
-    """Desafio jogável no contexto atual: sandbox do admin ou CTF ativo."""
+    """Desafio jogável agora: sandbox do admin, CTF ativo ou acesso público."""
     challenge = sandbox_challenge(challenge_id, mechanism)
     if challenge:
         return challenge
     ctf = current_ctf()
     challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
-    if not challenge or (mechanism and challenge.get("mechanism") != mechanism):
-        return None
-    return challenge
+    if challenge and (not mechanism or challenge.get("mechanism") == mechanism):
+        return challenge
+    return open_challenge(challenge_id, mechanism)
 
 
 # Detecta um bypass de SQLi por tautologia de verdade: precisa de uma aspa
@@ -1320,6 +1790,7 @@ def make_app_config():
     app.jinja_env.globals["current_ctf"] = current_ctf
     app.jinja_env.globals["challenge_list"] = CHALLENGES
     app.jinja_env.globals["eye_icon_svg"] = EYE_ICON_SVG
+    app.jinja_env.globals["app_version"] = APP_VERSION
     app.jinja_env.filters["b64encode"] = lambda value: base64.b64encode(value.encode("utf-8")).decode("ascii")
     return app
 
@@ -1335,6 +1806,12 @@ def create_app(testing=False):
         # O admin no ambiente de teste acessa os laboratórios; cada rota /lab
         # valida o acesso via playable_challenge.
         if admin_sandbox():
+            return None
+        # Laboratórios liberados para treino são públicos: cada rota /lab ainda
+        # valida o acesso via playable_challenge. O id vem do caminho porque
+        # algumas rotas (ex.: /lab/7/search) fixam o desafio na própria URL.
+        path_match = re.match(r"/lab/(\d+)", request.path)
+        if path_match and open_challenge(int(path_match.group(1))):
             return None
         participant_id = session.get("participant_id")
         if not participant_id:
@@ -1620,7 +2097,9 @@ def create_app(testing=False):
 
         active_ctf = current_ctf()
         if not active_ctf:
-            return redirect(url_for("public_ranking_page"))
+            # Evento encerrado (pelo tempo ou pelo admin): o feedback vem antes
+            # da classificação para quem ainda não respondeu.
+            return redirect(url_for("feedback_page") if finished_participant() else url_for("public_ranking_page"))
 
         conn = get_db()
         participant = conn.execute(
@@ -1631,7 +2110,7 @@ def create_app(testing=False):
             session.clear()
             return redirect(url_for("index"))
         if participant["ctf_id"] != active_ctf["id"] or participant["finished_at"]:
-            return redirect(url_for("public_ranking_page"))
+            return redirect(url_for("feedback_page") if finished_participant() else url_for("public_ranking_page"))
         ctf = conn.execute("SELECT * FROM ctfs WHERE id = ?", (participant["ctf_id"],)).fetchone()
         conn.close()
 
@@ -1707,6 +2186,7 @@ def create_app(testing=False):
                 "code": event["code"],
                 "ranking_url": url_for("ctf_archive_page", ctf_id=event["ctf_id"]),
                 "home_url": url_for("ctf_home"),
+                "feedback_url": url_for("feedback_page") if finished_participant() else None,
             }), 409
 
         conn = get_db()
@@ -1758,7 +2238,7 @@ def create_app(testing=False):
             event = participant_event_summary(participant_id)
             if not event:
                 return jsonify({"error": "Participação não encontrada"}), 404
-            return jsonify({"status": "FINALIZADO", "code": event["code"], "ranking_url": url_for("ctf_archive_page", ctf_id=event["ctf_id"]), "home_url": url_for("ctf_home")}), 409
+            return jsonify({"status": "FINALIZADO", "code": event["code"], "ranking_url": url_for("ctf_archive_page", ctf_id=event["ctf_id"]), "home_url": url_for("ctf_home"), "feedback_url": url_for("feedback_page") if finished_participant() else None}), 409
         ctf = current_ctf()
         challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
         if not challenge:
@@ -1838,7 +2318,7 @@ def create_app(testing=False):
             event = participant_event_summary(participant_id)
             if not event:
                 return jsonify({"error": "Participação não encontrada"}), 404
-            return jsonify({"status": "FINALIZADO", "code": event["code"], "ranking_url": url_for("ctf_archive_page", ctf_id=event["ctf_id"]), "home_url": url_for("ctf_home")}), 409
+            return jsonify({"status": "FINALIZADO", "code": event["code"], "ranking_url": url_for("ctf_archive_page", ctf_id=event["ctf_id"]), "home_url": url_for("ctf_home"), "feedback_url": url_for("feedback_page") if finished_participant() else None}), 409
         ctf = current_ctf()
         challenge = challenge_for_ctf(ctf["id"], challenge_id) if ctf else None
         if not challenge:
@@ -1880,24 +2360,30 @@ def create_app(testing=False):
         return redirect(url_for("feedback_page"))
 
     def finished_participant():
-        """Participante que acabou de encerrar a participação, se houver.
+        """Participante que já encerrou a participação e ainda não deu feedback.
 
-        A tela de feedback vive depois do fim da partida, então ela não pode
-        exigir participação ativa — só uma participação já finalizada nesta
-        sessão, e que ainda não tenha respondido.
+        Vale para dois caminhos: quem clicou em "finalizar" (finished_at
+        preenchido) e quem foi pego pelo fim do tempo — nesse caso o
+        finished_at fica vazio, mas o evento já está encerrado, e a pessoa
+        também precisa ver a tela de feedback.
         """
         participant_id = session.get("participant_id")
         if not participant_id:
             return None
+        current_ctf()  # encerra na hora um evento cujo tempo já estourou
         conn = get_db()
         participant = conn.execute(
-            "SELECT id, ctf_id, name, finished_at FROM participants WHERE id = ?", (participant_id,)
+            """SELECT p.id, p.ctf_id, p.name, p.finished_at, c.status AS ctf_status
+               FROM participants p JOIN ctfs c ON c.id = p.ctf_id WHERE p.id = ?""",
+            (participant_id,),
         ).fetchone()
         already_sent = conn.execute(
             "SELECT 1 FROM participant_feedback WHERE participant_id = ?", (participant_id,)
         ).fetchone()
         conn.close()
-        if not participant or not participant["finished_at"] or already_sent:
+        if not participant or already_sent:
+            return None
+        if not participant["finished_at"] and participant["ctf_status"] == "ATIVO":
             return None
         return dict(participant)
 
@@ -2119,12 +2605,12 @@ def create_app(testing=False):
             finished_count=finished_count,
             admin_notice=admin_notice,
             challenge_lists=CHALLENGE_LISTS,
-            challenge_availability={key: {difficulty: len(challenge_pool(key, difficulty)) for difficulty in ("Fácil", "Médio", "Difícil")} for key in CHALLENGE_LISTS},
-            fixed_challenge_lists=FIXED_CHALLENGE_LISTS,
+            default_challenge_list=DEFAULT_CHALLENGE_LIST,
             feedback_entries=feedback_entries,
             feedback_event=feedback_event,
             feedback_questions=FEEDBACK_QUESTIONS,
             announcement_live=active_announcement(),
+            remaining_seconds=ctf_remaining_seconds(ctf) if ctf else None,
         )
 
     @app.post("/admin/generate")
@@ -2142,44 +2628,14 @@ def create_app(testing=False):
         if max_duration_minutes is not None and not 1 <= max_duration_minutes <= 1440:
             session["admin_notice"] = "Informe a duração máxima em minutos, entre 1 e 1440."
             return redirect(url_for("admin_dashboard"))
-        list_id = request.form.get("challenge_list", "lista-1")
+        list_id = request.form.get("challenge_list", DEFAULT_CHALLENGE_LIST)
         if list_id not in CHALLENGE_LISTS:
             session["admin_notice"] = "Escolha uma lista de desafios válida."
             return redirect(url_for("admin_dashboard"))
-        if list_id in FIXED_CHALLENGE_LISTS:
-            selected = sorted(
-                (CHALLENGE_BY_ID[challenge_id] for challenge_id in FIXED_CHALLENGE_LISTS[list_id]),
-                key=lambda challenge: (DIFFICULTY_ORDER.index(challenge["difficulty"]), challenge["id"]),
-            )
-        else:
-            # Keep bare POSTs from pre-selection integrations compatible with
-            # the original eight-lab event. The admin form always submits these
-            # fields and therefore always uses the randomized workflow below.
-            legacy_default_request = not any(request.form.get(field) is not None for field in ("challenge_list", "easy_count", "medium_count", "hard_count"))
-            requested = {}
-            for difficulty, field, default in (("Fácil", "easy_count", 4), ("Médio", "medium_count", 3), ("Difícil", "hard_count", 1)):
-                raw_count = (request.form.get(field) or str(default)).strip()
-                try:
-                    requested[difficulty] = int(raw_count)
-                except ValueError:
-                    requested[difficulty] = -1
-                available = challenge_pool(list_id, difficulty)
-                if requested[difficulty] < 0 or requested[difficulty] > len(available):
-                    session["admin_notice"] = f"Não há desafios {difficulty.lower()} inéditos suficientes nessa lista. Escolha outra composição ou lista."
-                    return redirect(url_for("admin_dashboard"))
-            total_challenges = sum(requested.values())
-            if not 1 <= total_challenges <= 8:
-                session["admin_notice"] = "Escolha entre 1 e 8 desafios no total."
-                return redirect(url_for("admin_dashboard"))
-            if legacy_default_request:
-                selected = CHALLENGES[:8]
-            else:
-                # Sorteio dentro de cada nível, mas a ordem da edição é sempre
-                # fáceis → médios → difíceis (ex.: 5/2/1 = posições 1-5 fáceis,
-                # 6-7 médios e 8 difícil).
-                selected = []
-                for difficulty in ("Fácil", "Médio", "Difícil"):
-                    selected.extend(random.sample(challenge_pool(list_id, difficulty), requested[difficulty]))
+        selected = sorted(
+            (CHALLENGE_BY_ID[challenge_id] for challenge_id in FIXED_CHALLENGE_LISTS[list_id]),
+            key=lambda challenge: (DIFFICULTY_ORDER.index(challenge["difficulty"]), challenge["id"]),
+        )
         # A pontuação máxima de qualquer edição é sempre 1.000 pontos, não
         # importa quantos desafios fáceis/médios/difíceis o administrador
         # escolher: o peso de cada dificuldade é redistribuído proporcionalmente.
@@ -2201,6 +2657,32 @@ def create_app(testing=False):
         conn.commit()
         conn.close()
         log_event(ctf_id, None, "ctf_started", code)
+        return redirect(url_for("admin_dashboard"))
+
+    @app.post("/admin/tempo-extra")
+    def extend_ctf():
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        # current_ctf() já encerra um evento cujo tempo acabou: depois disso não
+        # há mais o que prorrogar.
+        ctf = current_ctf()
+        if not ctf:
+            session["admin_notice"] = "Nenhum CTF em andamento para prorrogar."
+            return redirect(url_for("admin_dashboard"))
+        if not ctf["max_duration_minutes"]:
+            session["admin_notice"] = "Este CTF não tem tempo limite — ele só termina quando você encerrar."
+            return redirect(url_for("admin_dashboard"))
+        extra = request.form.get("extra_minutes", type=int) or 0
+        if not 1 <= extra <= 240:
+            session["admin_notice"] = "Informe de 1 a 240 minutos de tempo extra."
+            return redirect(url_for("admin_dashboard"))
+        total = min(1440, ctf["max_duration_minutes"] + extra)
+        conn = get_db()
+        conn.execute("UPDATE ctfs SET max_duration_minutes = ? WHERE id = ? AND status = 'ATIVO'", (total, ctf["id"]))
+        conn.commit()
+        conn.close()
+        log_event(ctf["id"], None, "ctf_extended", f"+{extra}min")
+        session["admin_notice"] = f"+{extra} min no CTF {ctf['code']}. Novo limite: {total} minutos."
         return redirect(url_for("admin_dashboard"))
 
     @app.post("/admin/finalize")
@@ -2228,6 +2710,378 @@ def create_app(testing=False):
             if entries:
                 editions.append({"ctf": dict(row), "entries": entries})
         return editions
+
+    @app.get("/admin/edicoes")
+    def admin_editions_page():
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        conn = get_db()
+        rows = conn.execute("SELECT * FROM editions ORDER BY created_at DESC, id DESC").fetchall()
+        conn.close()
+        editions = []
+        for row in rows:
+            edition = dict(row)
+            edition["ctf_count"] = len(edition_ctf_ids(edition["id"]))
+            edition["ranking_size"] = len(edition_final_ranking(edition["id"]))
+            edition["feedback_count"] = len(edition_feedback_entries(edition["id"]))
+            editions.append(edition)
+        return render_template(
+            "admin_editions.html",
+            editions=editions,
+            notice=session.pop("edition_notice", None),
+            error=session.pop("edition_error", None),
+        )
+
+    @app.post("/admin/edicoes")
+    def admin_edition_create():
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        name = " ".join((request.form.get("name") or "").split())[:EDITION_NAME_MAX]
+        if not name:
+            session["edition_error"] = "Dê um nome para a edição."
+            return redirect(url_for("admin_editions_page"))
+        conn = get_db()
+        cur = conn.execute(
+            "INSERT INTO editions (name, summary, status, show_challenges, created_at) VALUES (?, NULL, 'rascunho', 0, ?)",
+            (name, timestamp_now()),
+        )
+        edition_id = cur.lastrowid
+        conn.commit()
+        conn.close()
+        session["edition_notice"] = f"Edição “{name}” criada. Agora escolha as rodadas que entram nela."
+        return redirect(url_for("admin_edition_detail", edition_id=edition_id))
+
+    @app.get("/admin/edicoes/<int:edition_id>")
+    def admin_edition_detail(edition_id):
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        edition = edition_row(edition_id)
+        if not edition:
+            return redirect(url_for("admin_editions_page"))
+        conn = get_db()
+        ctf_rows = conn.execute("SELECT * FROM ctfs ORDER BY created_at DESC, id DESC").fetchall()
+        conn.close()
+        selected_ids = set(edition_ctf_ids(edition_id))
+        available = []
+        for row in ctf_rows:
+            item = dict(row)
+            item["selected"] = item["id"] in selected_ids
+            item["participants"] = len(participant_ranking(item["id"]))
+            available.append(item)
+        return render_template(
+            "admin_edition_detail.html",
+            edition=edition,
+            available_ctfs=available,
+            entries=edition_entries(edition_id),
+            ranking=edition_final_ranking(edition_id),
+            feedback_entries=edition_feedback_candidates(edition_id),
+            challenges=edition_challenges(edition_id),
+            questions=FEEDBACK_QUESTIONS,
+            notice=session.pop("edition_notice", None),
+            error=session.pop("edition_error", None),
+        )
+
+    @app.post("/admin/edicoes/<int:edition_id>")
+    def admin_edition_save(edition_id):
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        if not edition_row(edition_id):
+            return redirect(url_for("admin_editions_page"))
+        name = " ".join((request.form.get("name") or "").split())[:EDITION_NAME_MAX]
+        if not name:
+            session["edition_error"] = "A edição precisa de um nome."
+            return redirect(url_for("admin_edition_detail", edition_id=edition_id))
+        conn = get_db()
+        conn.execute(
+            "UPDATE editions SET name = ?, summary = ?, show_challenges = ? WHERE id = ?",
+            (name, (request.form.get("summary") or "").strip()[:EDITION_SUMMARY_MAX] or None,
+             1 if request.form.get("show_challenges") else 0, edition_id),
+        )
+        conn.commit()
+        conn.close()
+        session["edition_notice"] = "Dados da edição salvos."
+        return redirect(url_for("admin_edition_detail", edition_id=edition_id))
+
+    def edition_state_payload(edition_id):
+        """Estado que a tela de montagem redesenha depois de cada mudança."""
+        entries = edition_entries(edition_id)
+        merged_ids = sorted({
+            source["participant_id"] for merge in edition_merge_rows(edition_id) for source in merge["sources"]
+        })
+        return jsonify({
+            "ranking": edition_final_ranking(edition_id),
+            "round_rankings": edition_round_rankings(edition_id),
+            "merged_participant_ids": merged_ids,
+            "entries": entries,
+            "rounds": sorted({entry["ctf_code"] for entry in entries}),
+            "feedbacks": [
+                {"id": item["id"], "name": item["name"], "turma": item["turma"],
+                 "ctf_code": item["ctf_code"], "included": bool(item["included"]),
+                 "improvements": item["improvements"]}
+                for item in edition_feedback_candidates(edition_id)
+            ],
+        })
+
+    def edition_guard(edition_id):
+        if not session.get("admin_logged_in"):
+            return jsonify({"error": "Sessão administrativa necessária"}), 401
+        if not edition_row(edition_id):
+            return jsonify({"error": "Edição não encontrada"}), 404
+        return None
+
+    @app.get("/admin/edicoes/<int:edition_id>/estado")
+    def admin_edition_state(edition_id):
+        blocked = edition_guard(edition_id)
+        if blocked:
+            return blocked
+        return edition_state_payload(edition_id)
+
+    @app.post("/admin/edicoes/<int:edition_id>/rodadas")
+    def admin_edition_rounds(edition_id):
+        blocked = edition_guard(edition_id)
+        if blocked:
+            return blocked
+        payload = request.get_json(silent=True) or {}
+        current = set(edition_ctf_ids(edition_id))
+        ctf_id = payload.get("ctf_id")
+        if ctf_id is None:
+            return jsonify({"error": "Informe a rodada"}), 400
+        current.add(int(ctf_id)) if payload.get("included") else current.discard(int(ctf_id))
+        sync_edition_sources(edition_id, sorted(current))
+        return edition_state_payload(edition_id)
+
+    @app.post("/admin/edicoes/<int:edition_id>/participantes")
+    def admin_edition_participants(edition_id):
+        blocked = edition_guard(edition_id)
+        if blocked:
+            return blocked
+        payload = request.get_json(silent=True) or {}
+        ids = [int(value) for value in payload.get("participant_ids", [])]
+        if not ids:
+            return jsonify({"error": "Nenhuma participação informada"}), 400
+        conn = get_db()
+        for participant_id in ids:
+            conn.execute(
+                "UPDATE edition_participants SET included = ? WHERE edition_id = ? AND participant_id = ?",
+                (1 if payload.get("included") else 0, edition_id, participant_id),
+            )
+        conn.commit()
+        conn.close()
+        return edition_state_payload(edition_id)
+
+    @app.post("/admin/edicoes/<int:edition_id>/fusao/previa")
+    def admin_edition_merge_preview(edition_id):
+        blocked = edition_guard(edition_id)
+        if blocked:
+            return blocked
+        payload = request.get_json(silent=True) or {}
+        allowed = {entry["participant_id"] for entry in edition_entries(edition_id) if entry["included"]}
+        ids = [int(value) for value in payload.get("participant_ids", []) if int(value) in allowed]
+        if len(ids) < 2:
+            return jsonify({"error": "Escolha ao menos duas participações da classificação."}), 400
+        return jsonify(merge_preview(ids))
+
+    @app.post("/admin/edicoes/<int:edition_id>/fusao")
+    def admin_edition_merge_create(edition_id):
+        blocked = edition_guard(edition_id)
+        if blocked:
+            return blocked
+        payload = request.get_json(silent=True) or {}
+        allowed = {entry["participant_id"] for entry in edition_entries(edition_id) if entry["included"]}
+        already_merged = {source["participant_id"] for merge in edition_merge_rows(edition_id) for source in merge["sources"]}
+        ids = [int(value) for value in payload.get("participant_ids", []) if int(value) in allowed - already_merged]
+        if len(ids) < 2:
+            return jsonify({"error": "Escolha ao menos duas participações ainda não fundidas."}), 400
+        name = " ".join((payload.get("display_name") or "").split())[:30]
+        if not name:
+            return jsonify({"error": "Dê um nome ao participante fundido."}), 400
+        preview = merge_preview(ids)
+        by_id = {item["id"]: item for item in preview["challenges"]}
+        chosen = [int(value) for value in payload.get("challenge_ids", []) if int(value) in by_id]
+        challenge_points = {str(cid): by_id[cid]["points"] for cid in chosen}
+        try:
+            points = max(0, int(payload.get("points")))
+            elapsed = max(0, int(payload.get("elapsed")))
+        except (TypeError, ValueError):
+            return jsonify({"error": "Pontuação e tempo precisam ser números."}), 400
+        conn = get_db()
+        cur = conn.execute(
+            """INSERT INTO edition_merges
+               (edition_id, display_name, challenge_ids, challenge_points, points, elapsed, hidden, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, 0, ?)""",
+            (edition_id, name, json.dumps(chosen), json.dumps(challenge_points), points, elapsed, timestamp_now()),
+        )
+        conn.executemany(
+            "INSERT INTO edition_merge_sources (merge_id, participant_id) VALUES (?, ?)",
+            [(cur.lastrowid, participant_id) for participant_id in ids],
+        )
+        conn.commit()
+        conn.close()
+        return edition_state_payload(edition_id)
+
+    @app.post("/admin/edicoes/<int:edition_id>/entrada")
+    def admin_edition_entry_update(edition_id):
+        """Esconde uma entrada da classificação final ou apaga uma fusão."""
+        blocked = edition_guard(edition_id)
+        if blocked:
+            return blocked
+        payload = request.get_json(silent=True) or {}
+        kind, key, action = payload.get("kind"), payload.get("key"), payload.get("action")
+        conn = get_db()
+        if kind == "merge":
+            merge = conn.execute(
+                "SELECT id FROM edition_merges WHERE id = ? AND edition_id = ?", (key, edition_id)
+            ).fetchone()
+            if not merge:
+                conn.close()
+                return jsonify({"error": "Fusão não encontrada"}), 404
+            if action == "remover":
+                conn.execute("DELETE FROM edition_merge_sources WHERE merge_id = ?", (key,))
+                conn.execute("DELETE FROM edition_merges WHERE id = ?", (key,))
+            else:
+                conn.execute("UPDATE edition_merges SET hidden = ? WHERE id = ?", (1 if payload.get("hidden") else 0, key))
+        elif kind == "single":
+            # Participações reais nunca são apagadas, só saem da classificação.
+            conn.execute(
+                "UPDATE edition_participants SET included = ? WHERE edition_id = ? AND participant_id = ?",
+                (0 if payload.get("hidden") else 1, edition_id, key),
+            )
+        else:
+            conn.close()
+            return jsonify({"error": "Entrada inválida"}), 400
+        conn.commit()
+        conn.close()
+        return edition_state_payload(edition_id)
+
+    @app.post("/admin/edicoes/<int:edition_id>/feedbacks")
+    def admin_edition_feedbacks(edition_id):
+        blocked = edition_guard(edition_id)
+        if blocked:
+            return blocked
+        payload = request.get_json(silent=True) or {}
+        feedback_id = payload.get("feedback_id")
+        if feedback_id is None:
+            return jsonify({"error": "Informe o feedback"}), 400
+        conn = get_db()
+        if payload.get("included"):
+            conn.execute(
+                """INSERT OR IGNORE INTO edition_feedback (edition_id, feedback_id)
+                   SELECT ?, id FROM participant_feedback
+                   WHERE id = ? AND ctf_id IN (SELECT ctf_id FROM edition_ctfs WHERE edition_id = ?)""",
+                (edition_id, int(feedback_id), edition_id),
+            )
+        else:
+            conn.execute(
+                "DELETE FROM edition_feedback WHERE edition_id = ? AND feedback_id = ?",
+                (edition_id, int(feedback_id)),
+            )
+        conn.commit()
+        conn.close()
+        return edition_state_payload(edition_id)
+
+    @app.post("/admin/edicoes/<int:edition_id>/publicar")
+    def admin_edition_publish(edition_id):
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        edition = edition_row(edition_id)
+        if not edition:
+            return redirect(url_for("admin_editions_page"))
+        publishing = edition["status"] != "publicada"
+        if publishing and not edition_final_ranking(edition_id):
+            session["edition_error"] = "Inclua ao menos uma rodada com participantes antes de publicar."
+            return redirect(url_for("admin_edition_detail", edition_id=edition_id))
+        conn = get_db()
+        conn.execute(
+            "UPDATE editions SET status = ?, published_at = ? WHERE id = ?",
+            ("publicada" if publishing else "rascunho", timestamp_now() if publishing else None, edition_id),
+        )
+        conn.commit()
+        conn.close()
+        session["edition_notice"] = "Edição publicada no site." if publishing else "Edição voltou para rascunho."
+        return redirect(url_for("admin_edition_detail", edition_id=edition_id))
+
+    @app.post("/admin/edicoes/<int:edition_id>/remover")
+    def admin_edition_delete(edition_id):
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        conn = get_db()
+        for table in ("edition_participants", "edition_feedback", "edition_ctfs"):
+            conn.execute(f"DELETE FROM {table} WHERE edition_id = ?", (edition_id,))
+        conn.execute("DELETE FROM editions WHERE id = ?", (edition_id,))
+        conn.commit()
+        conn.close()
+        session["edition_notice"] = "Edição removida. As rodadas e os feedbacks originais continuam no arquivo."
+        return redirect(url_for("admin_editions_page"))
+
+    @app.post("/admin/desafios/treino")
+    def admin_toggle_training():
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login_page"))
+        list_id = request.form.get("list_id")
+        if list_id not in CHALLENGE_LISTS:
+            session["admin_notice"] = "Lista inválida para treino."
+            return redirect(url_for("admin_challenges_index"))
+        conn = get_db()
+        if list_id in training_list_ids():
+            conn.execute("DELETE FROM training_lists WHERE list_id = ?", (list_id,))
+            session["admin_notice"] = f"{CHALLENGE_LISTS[list_id]['label']} saiu do treino livre."
+        else:
+            conn.execute("INSERT INTO training_lists (list_id, enabled_at) VALUES (?, ?)", (list_id, timestamp_now()))
+            session["admin_notice"] = f"{CHALLENGE_LISTS[list_id]['label']} liberada em /treino."
+        conn.commit()
+        conn.close()
+        return redirect(url_for("admin_challenges_index"))
+
+    @app.get("/treino")
+    def training_index():
+        enabled = training_list_ids()
+        lists = [
+            {"id": list_id, "label": meta["label"], "description": meta["description"],
+             "challenges": training_challenges(list_id)}
+            for list_id, meta in CHALLENGE_LISTS.items() if list_id in enabled
+        ]
+        return render_template("training.html", lists=lists)
+
+    @app.get("/treino/<list_id>")
+    def training_list_page(list_id):
+        challenges = training_challenges(list_id)
+        if not challenges:
+            return redirect(url_for("training_index"))
+        return render_template(
+            "training_list.html",
+            list_id=list_id,
+            meta=CHALLENGE_LISTS[list_id],
+            challenges=challenges,
+        )
+
+    @app.post("/treino/flag")
+    def training_check_flag():
+        """Confere a flag no treino, sem gravar pontuação nem tempo."""
+        payload = request.get_json(silent=True) or {}
+        challenge = training_challenge(payload.get("challenge_id"))
+        if not challenge:
+            return jsonify({"error": "Desafio indisponível para treino"}), 404
+        attempt = (payload.get("flag") or "").strip()
+        correct = any(attempt.lower() == flag.lower() for flag in challenge["flags"])
+        return jsonify({"correct": correct})
+
+    @app.get("/edicoes")
+    def public_editions_page():
+        return render_template("editions.html", editions=published_editions())
+
+    @app.get("/edicoes/<int:edition_id>")
+    def public_edition_page(edition_id):
+        edition = edition_row(edition_id)
+        if not edition or edition["status"] != "publicada":
+            return redirect(url_for("public_editions_page"))
+        return render_template(
+            "edition_detail.html",
+            edition=edition,
+            ranking=edition_final_ranking(edition_id),
+            round_rankings=edition_round_rankings(edition_id),
+            challenges=edition_challenges(edition_id) if edition["show_challenges"] else [],
+            walkthroughs={item["id"]: challenge_walkthrough(item) for item in edition_challenges(edition_id)} if edition["show_challenges"] else {},
+        )
 
     @app.get("/admin/agenda")
     def admin_schedule_page():
@@ -2352,7 +3206,10 @@ def create_app(testing=False):
                 difficulty: sorted(challenge_pool(list_id, difficulty), key=lambda item: item["code"])
                 for difficulty in DIFFICULTY_ORDER
             }
-            lists[list_id] = {"label": meta["label"], "description": meta["description"], "by_difficulty": by_difficulty}
+            lists[list_id] = {"label": meta["label"], "description": meta["description"], "by_difficulty": by_difficulty, "runnable": True}
+        enabled_training = training_list_ids()
+        for list_id, data in lists.items():
+            data["training"] = list_id in enabled_training
         return render_template(
             "admin_challenges.html",
             lists=lists,

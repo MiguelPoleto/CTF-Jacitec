@@ -36,7 +36,8 @@
       <a href="#o-que-e-ctf">O que é um CTF</a>
       <a href="#como-funciona">Como funciona</a>
       <a href="{{ url_for('rules_page') }}">Regras</a>
-      <a href="{{ url_for('public_ranking_page') }}">Classificação</a>
+      <a href="{{ url_for('public_editions_page') }}">Edições</a>
+      <a href="{{ url_for('training_index') }}">Treino</a>
     </nav>
     <div class="event-indicator {% if ctf %}is-live{% endif %}"><span></span>{{ 'CTF AO VIVO' if ctf else 'AGUARDANDO PRÓXIMO CTF' }}</div>
   </header>
@@ -137,7 +138,7 @@
   <footer class="landing-footer">
     <span class="landing-footer-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="jacitec-badge" />JACITEC CTF</span>
     <span>Feito pelos alunos <a href="https://www.linkedin.com/in/miguelpoleto/" target="_blank" rel="noopener noreferrer" class="landing-credit-link">Miguel Santuchi Poleto</a> e <a href="https://www.linkedin.com/in/alessandromb/" target="_blank" rel="noopener noreferrer" class="landing-credit-link">Alessandro Mion Batista</a></span>
-    <span>2026</span>
+    <span>2026 · v{{ app_version }}</span>
   </footer>
   <a class="admin-stealth-link" href="{{ url_for('admin_login_page') }}" aria-label="Acesso administrativo">Equipe · Admin ↗</a>
 </main>

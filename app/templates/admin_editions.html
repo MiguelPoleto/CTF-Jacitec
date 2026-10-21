@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Edições · JACITEC CTF{% endblock %}
+
+{% block content %}
+<main class="admin-page">
+  <header class="admin-topbar">
+    <a href="{{ url_for('admin_dashboard') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
+    <div class="admin-topbar-right"><a class="back-button" href="{{ url_for('admin_dashboard') }}">Voltar ao painel</a></div>
+  </header>
+
+  <section class="admin-welcome">
+    <div>
+      <p class="section-kicker">RESULTADO OFICIAL</p>
+      <h1>Edições</h1>
+      <p>Junte uma ou mais rodadas de CTF num resultado só, ajuste a classificação à mão e publique para o público.</p>
+    </div>
+    <div class="admin-event-state {% if editions %}active{% endif %}"><span class="state-pulse"></span><div><small>PUBLICADAS</small><strong>{{ editions|selectattr('status', 'equalto', 'publicada')|list|length }}</strong></div></div>
+  </section>
+
+  {% if notice %}<div class="notice admin-notice">{{ notice }}</div>{% endif %}
+  {% if error %}<div class="notice error admin-notice">{{ error }}</div>{% endif %}
+
+  <div class="schedule-grid">
+    <section class="admin-panel">
+      <div class="admin-panel-heading"><div><p class="section-kicker">NOVA</p><h2>Criar edição</h2></div></div>
+      <form method="post" action="{{ url_for('admin_edition_create') }}" class="schedule-form">
+        <label for="edition-name">Nome da edição</label>
+        <input id="edition-name" name="name" type="text" maxlength="80" required placeholder="Ex.: JACITEC 2026" />
+        <button type="submit" class="schedule-submit">Criar edição <span>→</span></button>
+      </form>
+      <p class="schedule-hint">Depois de criar você escolhe quais rodadas entram, ajusta nomes repetidos e publica.</p>
+    </section>
+
+    <section class="admin-panel">
+      <div class="admin-panel-heading"><div><p class="section-kicker">CADASTRADAS</p><h2>Suas edições</h2></div><span>{{ editions|length }}</span></div>
+      {% if editions %}
+        <div class="schedule-list">
+          {% for edition in editions %}
+            <article class="schedule-card {% if edition.status == 'publicada' %}is-live{% endif %}">
+              <header>
+                <strong>{{ edition.name }}</strong>
+                {% if edition.status == 'publicada' %}<span class="schedule-state is-live">PUBLICADA</span>
+                {% else %}<span class="schedule-state">RASCUNHO</span>{% endif %}
+              </header>
+              <dl class="schedule-facts">
+                <div><dt>Rodadas</dt><dd>{{ edition.ctf_count }}</dd></div>
+                <div><dt>Na classificação</dt><dd>{{ edition.ranking_size }} participantes</dd></div>
+                <div><dt>Feedbacks</dt><dd>{{ edition.feedback_count }}</dd></div>
+              </dl>
+              <div class="schedule-actions">
+                <a class="schedule-edit" href="{{ url_for('admin_edition_detail', edition_id=edition.id) }}">Montar edição</a>
+                {% if edition.status == 'publicada' %}<a class="schedule-edit" href="{{ url_for('public_edition_page', edition_id=edition.id) }}" target="_blank" rel="noopener">Ver no site ↗</a>{% endif %}
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="admin-empty"><span>◎</span><strong>Nenhuma edição montada.</strong><p>Crie uma edição ao lado para consolidar os resultados das rodadas já realizadas.</p></div>
+      {% endif %}
+    </section>
+  </div>
+
+  <footer class="admin-footer"><span>JACITEC CTF · PAINEL ADMINISTRATIVO</span><a href="{{ url_for('public_editions_page') }}">Ver edições públicas ↗</a></footer>
+</main>
+{% endblock %}

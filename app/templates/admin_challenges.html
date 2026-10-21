@@ -27,6 +27,13 @@
     <section class="admin-panel admin-challenge-list">
       <div class="admin-panel-heading">
         <div><p class="section-kicker">{{ data.label }}</p><h2>{{ data.description }}</h2></div>
+          <form method="post" action="{{ url_for('admin_toggle_training') }}" class="training-toggle-form">
+            <input type="hidden" name="list_id" value="{{ list_id }}" />
+            <button type="submit" class="training-toggle {% if data.training %}is-on{% endif %}"
+                    title="Deixa estes desafios abertos em /treino, sem tempo e sem pontuação">
+              {{ 'No treino livre ✓' if data.training else 'Liberar para treino' }}
+            </button>
+          </form>
         {% if ctf_active %}
           <button type="button" class="sandbox-run-btn" disabled title="Encerre o CTF ativo para testar">▶ Executar</button>
         {% else %}

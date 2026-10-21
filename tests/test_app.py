@@ -26,7 +26,8 @@ def test_finished_ctf_redirect_and_history_are_exposed(monkeypatch, tmp_path):
 
     dashboard_redirect = client.get('/dashboard', follow_redirects=False)
     assert dashboard_redirect.status_code == 302
-    assert dashboard_redirect.headers['Location'].endswith('/ranking')
+    # Com feedback pendente, o fim do evento leva ao feedback antes do ranking.
+    assert dashboard_redirect.headers['Location'].endswith('/feedback')
     lab_redirect = client.get('/lab/1', follow_redirects=False)
     assert lab_redirect.status_code == 302
     assert lab_redirect.headers['Location'].endswith('/ranking')
@@ -104,35 +105,21 @@ def test_single_workspace_and_local_challenge_sites_work(monkeypatch, tmp_path):
     assert client.get('/challenge/1').status_code == 404
     assert client.post('/dashboard/flag').status_code == 404
 
-    for challenge_id in range(1, 9):
+    for challenge_id in app_module.FIXED_CHALLENGE_LISTS['ctf-1']:
         response = client.get(f'/lab/{challenge_id}')
-        assert response.status_code == 200
+        assert response.status_code == 200, challenge_id
     assert client.get('/lab/5').headers['X-Campus-Notice'] == 'JACITEC{cookies_and_headers_tell_all}'
     assert client.get('/lab/2/sitemap.xml').status_code == 200
 
 
 def test_challenge_12_receipt_is_discoverable_and_has_no_robots_dependency(monkeypatch, tmp_path):
-    isolate_database(monkeypatch, tmp_path)
-    monkeypatch.setattr(
-        app_module.random,
-        'sample',
-        lambda population, count: (
-            [next(challenge for challenge in population if challenge['id'] == 12)]
-            if count
-            else []
-        ),
-    )
+    database_path = isolate_database(monkeypatch, tmp_path)
     app = create_app(testing=True)
     client = app.test_client()
 
     client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
-    client.post('/admin/generate', data={
-        'challenge_list': 'lista-1',
-        'easy_count': '1',
-        'medium_count': '0',
-        'hard_count': '0',
-    })
-    ctf_code = client.get('/api/ctf-status').get_json()['code']
+    # O desafio 12 está fora da seleção fixa, então a edição é montada direto.
+    ctf_code = _start_ctf_with_challenge(client, database_path, app_module.CHALLENGE_BY_ID[12])
     client.post('/join', data={'name': 'Riley', 'code': ctf_code})
 
     lab_response = client.get('/lab/12')
@@ -186,7 +173,7 @@ def test_participant_can_confirm_finish_without_ending_global_ctf(monkeypatch, t
     assert response.status_code == 302
     assert response.headers['Location'].endswith('/feedback')
     assert client.get('/api/ctf-status').get_json()['status'] == 'ATIVO'
-    assert client.get('/dashboard', follow_redirects=False).headers['Location'].endswith('/ranking')
+    assert client.get('/dashboard', follow_redirects=False).headers['Location'].endswith('/feedback')
     ranking = client.get('/api/ranking').get_json()['ranking']
     jordan = next(row for row in ranking if row['name'] == 'Jordan')
     assert jordan['participation_status'] == 'Finalizou antes do encerramento'
@@ -316,6 +303,332 @@ def test_admin_reads_feedbacks_one_by_one_grouped_by_edition(monkeypatch, tmp_pa
     assert f"/admin/feedbacks/{rows['Cora']['id']}".encode() not in detail.data
 
     assert client.get('/admin/feedbacks/9999', follow_redirects=False).headers['Location'].endswith('/admin/feedbacks')
+
+
+def _run_ctf_with_results(client, database_path, results, duration=600):
+    """Roda um CTF e grava desafios resolvidos: {nome: [challenge_id, ...]}."""
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/generate', data={'max_duration_minutes': str(duration)})
+    code = client.get('/api/ctf-status').get_json()['code']
+    with sqlite3.connect(database_path) as conn:
+        ctf_id = conn.execute("SELECT id FROM ctfs WHERE code = ?", (code,)).fetchone()[0]
+        points = dict(conn.execute(
+            "SELECT challenge_id, base_points FROM ctf_challenges WHERE ctf_id = ?", (ctf_id,)).fetchall())
+        for name, solved in results.items():
+            conn.execute("INSERT INTO participants (ctf_id, name, entered_at, finished_at) VALUES (?,?,?,?)",
+                         (ctf_id, name, '2026-10-01 10:00:00', '2026-10-01 10:30:00'))
+            participant_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            for challenge_id in solved:
+                conn.execute(
+                    """INSERT INTO participant_challenges
+                       (participant_id, challenge_id, status, hints_used, score_earned, solved_at)
+                       VALUES (?,?, 'solved', 0, ?, ?)""",
+                    (participant_id, challenge_id, points[challenge_id], '2026-10-01 10:20:00'))
+    client.post('/admin/finalize')
+    return ctf_id
+
+
+def _merge(client, edition_id, participant_ids, name, **overrides):
+    """Fluxo real da tela: prévia → confirmação da fusão."""
+    preview = client.post(f'/admin/edicoes/{edition_id}/fusao/previa',
+                          json={'participant_ids': participant_ids}).get_json()
+    body = {
+        'participant_ids': participant_ids,
+        'display_name': name,
+        'challenge_ids': [c['id'] for c in preview['challenges']],
+        'points': preview['points'],
+        'elapsed': preview['elapsed'],
+    }
+    body.update(overrides)
+    return preview, client.post(f'/admin/edicoes/{edition_id}/fusao', json=body).get_json()
+
+
+def _new_edition(client, database_path, name='JACITEC 2026'):
+    client.post('/admin/edicoes', data={'name': name})
+    with sqlite3.connect(database_path) as conn:
+        edition_id = conn.execute('SELECT id FROM editions ORDER BY id DESC').fetchone()[0]
+        ctf_ids = [row[0] for row in conn.execute('SELECT id FROM ctfs ORDER BY id')]
+        ids = {n: pid for pid, n in conn.execute('SELECT id, name FROM participants')}
+    for ctf_id in ctf_ids:
+        client.post(f'/admin/edicoes/{edition_id}/rodadas', json={'ctf_id': ctf_id, 'included': True})
+    return edition_id, ids
+
+
+def test_merge_preview_dedupes_challenges_and_merges_time(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    fixed = app_module.FIXED_CHALLENGE_LISTS['ctf-1']
+    # Ana jogou as duas rodadas: um desafio repetido e dois novos.
+    _run_ctf_with_results(client, database_path, {'Ana': list(fixed[:2]), 'Bruno': list(fixed[:1])})
+    _run_ctf_with_results(client, database_path, {'Ana': list(fixed[1:4])})
+    edition_id, ids = _new_edition(client, database_path)
+
+    # Sem fundir, as duas participações da Ana aparecem separadas.
+    state = client.get(f'/admin/edicoes/{edition_id}/estado').get_json()
+    assert sum(1 for row in state['ranking'] if row['name'] == 'Ana') == 2
+    assert [r['ctf_code'] for r in state['round_rankings']] == sorted(state['rounds'])
+
+    anas = [pid for pid, name in ids.items() if name == 'Ana'] if False else \
+        [e['participant_id'] for e in state['entries'] if e['original_name'] == 'Ana']
+    preview, after = _merge(client, edition_id, anas, 'Ana')
+    # 4 desafios distintos; o repetido aparece marcado como duplicado.
+    assert len(preview['challenges']) == 4
+    assert sum(1 for c in preview['challenges'] if c['duplicated']) == 1
+    assert preview['elapsed'] == 30 * 60 * 2
+
+    ana = next(row for row in after['ranking'] if row['name'] == 'Ana')
+    assert ana['kind'] == 'merge' and ana['solved'] == 4 and len(ana['sources']) == 2
+    assert sum(1 for row in after['ranking'] if row['name'] == 'Ana') == 1
+    assert next(r for r in after['ranking'] if r['name'] == 'Bruno')['kind'] == 'single'
+
+
+def test_duplicated_challenge_keeps_the_lowest_score(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    ctf_a = _run_ctf_with_results(client, database_path, {'Nina': [1]})
+    ctf_b = _run_ctf_with_results(client, database_path, {'Nina 2': [1]})
+
+    # O mesmo desafio resolvido duas vezes, com pontuações diferentes.
+    with sqlite3.connect(database_path) as conn:
+        ids = {name: pid for pid, name in conn.execute('SELECT id, name FROM participants')}
+        conn.execute('UPDATE participant_challenges SET score_earned = 100 WHERE participant_id = ?', (ids['Nina'],))
+        conn.execute('UPDATE participant_challenges SET score_earned = 40 WHERE participant_id = ?', (ids['Nina 2'],))
+    edition_id, _ = _new_edition(client, database_path)
+
+    preview = client.post(f'/admin/edicoes/{edition_id}/fusao/previa',
+                          json={'participant_ids': [ids['Nina'], ids['Nina 2']]}).get_json()
+    assert len(preview['challenges']) == 1
+    assert preview['challenges'][0]['duplicated'] is True
+    # Vale a menor: quem repetiu não ganha a melhor nota das duas tentativas.
+    assert preview['challenges'][0]['points'] == 40
+    assert preview['points'] == 40
+
+    # Cada participação traz seus horários para o admin conferir o tempo.
+    for source in preview['sources']:
+        assert source['entered_at'] and source['ended_at'] and source['ctf_code']
+    assert {source['ctf_id'] for source in preview['sources']} == {ctf_a, ctf_b}
+    assert all(source['counted'] for source in preview['sources'])
+
+
+def test_two_entries_in_the_same_round_count_only_the_longest_time(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    ctf_a = _run_ctf_with_results(client, database_path, {'Duda': [1]})
+    _run_ctf_with_results(client, database_path, {'Duda B': [2]})
+
+    # Entrada duplicada por engano na primeira rodada, com tempo menor.
+    with sqlite3.connect(database_path) as conn:
+        conn.execute("INSERT INTO participants (ctf_id, name, entered_at, finished_at) VALUES (?,?,?,?)",
+                     (ctf_a, 'Duda (2)', '2026-10-01 10:00:00', '2026-10-01 10:10:00'))
+    edition_id, ids = _new_edition(client, database_path)
+
+    preview = client.post(f'/admin/edicoes/{edition_id}/fusao/previa', json={
+        'participant_ids': [ids['Duda'], ids['Duda (2)'], ids['Duda B']]}).get_json()
+    # Rodada A: 30 min e 10 min valem só os 30. Rodada B: +30 min.
+    assert preview['elapsed'] == 30 * 60 + 30 * 60
+    ignored = [s for s in preview['sources'] if not s['counted']]
+    assert [s['name'] for s in ignored] == ['Duda (2)']
+
+
+def test_merge_lets_the_admin_drop_a_challenge_and_fix_the_score(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    fixed = app_module.FIXED_CHALLENGE_LISTS['ctf-1']
+    _run_ctf_with_results(client, database_path, {'Carla': list(fixed[:2]), 'Carla 2': list(fixed[2:4])})
+    edition_id, ids = _new_edition(client, database_path)
+
+    preview, after = _merge(
+        client, edition_id, [ids['Carla'], ids['Carla 2']], 'Carla',
+        challenge_ids=[fixed[0], fixed[1], fixed[2]], points=123, elapsed=600,
+    )
+    assert len(preview['challenges']) == 4
+    row = after['ranking'][0]
+    # Vale o que o admin confirmou, não a prévia.
+    assert (row['solved'], row['points'], row['elapsed']) == (3, 123, 600)
+    assert len(after['ranking']) == 1
+
+    # A fusão some do ranking ao esconder, e os dados originais continuam lá.
+    client.post(f'/admin/edicoes/{edition_id}/entrada', json={'kind': 'merge', 'key': row['key'], 'hidden': True})
+    assert client.get(f'/admin/edicoes/{edition_id}/estado').get_json()['ranking'] == []
+    with sqlite3.connect(database_path) as conn:
+        assert conn.execute('SELECT COUNT(*) FROM participants').fetchone()[0] == 2
+
+    # Apagar a fusão devolve as participações originais ao ranking.
+    client.post(f'/admin/edicoes/{edition_id}/entrada', json={'kind': 'merge', 'key': row['key'], 'action': 'remover'})
+    assert len(client.get(f'/admin/edicoes/{edition_id}/estado').get_json()['ranking']) == 2
+
+
+def test_only_merged_entries_can_be_deleted(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    _run_ctf_with_results(client, database_path, {'Ivo': [1], 'Lia': [2]})
+    edition_id, ids = _new_edition(client, database_path)
+
+    # Participação real só pode ser escondida; continua no banco.
+    client.post(f'/admin/edicoes/{edition_id}/entrada', json={'kind': 'single', 'key': ids['Ivo'], 'hidden': True})
+    state = client.get(f'/admin/edicoes/{edition_id}/estado').get_json()
+    assert [r['name'] for r in state['ranking']] == ['Lia']
+    with sqlite3.connect(database_path) as conn:
+        assert conn.execute('SELECT COUNT(*) FROM participants').fetchone()[0] == 2
+    # E volta quando o admin desfaz.
+    client.post(f'/admin/edicoes/{edition_id}/entrada', json={'kind': 'single', 'key': ids['Ivo'], 'hidden': False})
+    assert len(client.get(f'/admin/edicoes/{edition_id}/estado').get_json()['ranking']) == 2
+
+    assert client.post(f'/admin/edicoes/{edition_id}/entrada',
+                       json={'kind': 'merge', 'key': 999, 'action': 'remover'}).status_code == 404
+    assert client.post(f'/admin/edicoes/{edition_id}/fusao/previa',
+                       json={'participant_ids': [ids['Ivo']]}).status_code == 400
+
+
+def test_edition_publishes_rounds_and_final_ranking(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    _run_ctf_with_results(client, database_path, {'Dani': [1, 2]})
+    edition_id, _ = _new_edition(client, database_path)
+
+    assert b'JACITEC 2026' not in client.get('/edicoes').data
+    assert client.get(f'/edicoes/{edition_id}', follow_redirects=False).status_code == 302
+    client.post(f'/admin/edicoes/{edition_id}/publicar')
+    page = client.get(f'/edicoes/{edition_id}')
+    assert page.status_code == 200
+    assert b'Dani' in page.data
+    # A página explica nomes repetidos, ausências e fusões.
+    assert 'por que alguns nomes'.encode() in page.data.lower()
+    # Gabaritos só saem quando o admin liberar.
+    assert b'Ver solu' not in page.data
+    client.post(f'/admin/edicoes/{edition_id}', data={'name': 'JACITEC 2026', 'show_challenges': 'on'})
+    assert b'Ver solu' in client.get(f'/edicoes/{edition_id}').data
+
+
+def test_training_mode_opens_labs_only_after_the_admin_enables_a_list(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+
+    # Desligado por padrão: nada em /treino e laboratórios fechados.
+    assert 'Nenhuma lista liberada'.encode() in client.get('/treino').data
+    assert client.get('/treino/ctf-1', follow_redirects=False).headers['Location'].endswith('/treino')
+    assert client.get('/lab/1', follow_redirects=False).status_code == 302
+
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    library = client.get('/admin/desafios')
+    assert b'Liberar para treino' in library.data
+    client.post('/admin/desafios/treino', data={'list_id': 'ctf-1'})
+    assert b'No treino livre' in client.get('/admin/desafios').data
+
+    # Agora os laboratórios abrem para qualquer visitante, sem CTF nem sessão.
+    public = create_app(testing=True).test_client()
+    page = public.get('/treino')
+    assert b'CTF 1' in page.data
+    listing = public.get('/treino/ctf-1')
+    assert listing.status_code == 200
+    assert b'Abrir laborat' in listing.data
+    assert public.get('/lab/1').status_code == 200
+
+    # A flag é conferida sem gravar pontuação nem participação.
+    wrong = public.post('/treino/flag', json={'challenge_id': 1, 'flag': 'JACITEC{errada}'})
+    assert wrong.get_json() == {'correct': False}
+    right = public.post('/treino/flag', json={'challenge_id': 1, 'flag': 'JACITEC{source_hidden_01}'})
+    assert right.get_json() == {'correct': True}
+    with sqlite3.connect(tmp_path / 'ctf.db') as conn:
+        assert conn.execute('SELECT COUNT(*) FROM participants').fetchone()[0] == 0
+
+    # Desligar fecha tudo de novo.
+    client.post('/admin/desafios/treino', data={'list_id': 'ctf-1'})
+    assert public.get('/lab/1', follow_redirects=False).status_code == 302
+    assert public.post('/treino/flag', json={'challenge_id': 1, 'flag': 'x'}).status_code == 404
+
+
+def test_published_edition_with_gabarito_opens_its_labs(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    _run_ctf_with_results(client, database_path, {'Rafa': [1]})
+    client.post('/admin/edicoes', data={'name': 'Edição aberta'})
+    with sqlite3.connect(database_path) as conn:
+        edition_id = conn.execute('SELECT id FROM editions').fetchone()[0]
+        ctf_id = conn.execute('SELECT id FROM ctfs').fetchone()[0]
+    client.post(f'/admin/edicoes/{edition_id}/rodadas', json={'ctf_id': ctf_id, 'included': True})
+    client.post(f'/admin/edicoes/{edition_id}/publicar')
+
+    public = create_app(testing=True).test_client()
+    # Sem gabarito liberado o laboratório continua fechado.
+    assert public.get('/lab/1', follow_redirects=False).status_code == 302
+    client.post(f'/admin/edicoes/{edition_id}', data={'name': 'Edição aberta', 'show_challenges': 'on'})
+    assert public.get('/lab/1').status_code == 200
+    assert b'Abrir laborat' in public.get(f'/edicoes/{edition_id}').data
+
+
+def test_edition_admin_pages_require_login(monkeypatch, tmp_path):
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    for method, path in (('get', '/admin/edicoes'), ('post', '/admin/edicoes'),
+                         ('get', '/admin/edicoes/1'), ('post', '/admin/edicoes/1/publicar'),
+                         ('post', '/admin/edicoes/1/remover')):
+        response = getattr(client, method)(path, follow_redirects=False)
+        assert response.status_code == 302, path
+        assert response.headers['Location'].endswith('/admin/login'), path
+    # Os endpoints de autosave são API: respondem 401 em vez de redirecionar.
+    for path in ('/admin/edicoes/1/estado', '/admin/edicoes/1/rodadas',
+                 '/admin/edicoes/1/participantes', '/admin/edicoes/1/feedbacks'):
+        method = client.get if path.endswith('estado') else client.post
+        assert method(path, json={}).status_code == 401, path
+
+
+def test_admin_can_add_extra_time_to_a_running_ctf(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/generate', data={'max_duration_minutes': '60'})
+
+    panel = client.get('/admin')
+    assert b'Tempo extra' in panel.data
+    assert b'/admin/tempo-extra' in panel.data
+
+    client.post('/admin/tempo-extra', data={'extra_minutes': '15'})
+    with sqlite3.connect(database_path) as conn:
+        assert conn.execute("SELECT max_duration_minutes FROM ctfs WHERE status='ATIVO'").fetchone()[0] == 75
+    assert client.get('/api/ctf-status').get_json()['max_duration_minutes'] == 75
+
+    # Valores fora da faixa não mexem no evento.
+    for invalid in ('0', '999', 'abc'):
+        client.post('/admin/tempo-extra', data={'extra_minutes': invalid})
+    with sqlite3.connect(database_path) as conn:
+        assert conn.execute("SELECT max_duration_minutes FROM ctfs WHERE status='ATIVO'").fetchone()[0] == 75
+
+    # Sem CTF ativo não há o que prorrogar.
+    client.post('/admin/finalize')
+    assert b'Tempo extra' not in client.get('/admin').data
+    client.post('/admin/tempo-extra', data={'extra_minutes': '10'})
+    with sqlite3.connect(database_path) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM ctfs WHERE status='ATIVO'").fetchone()[0] == 0
+
+
+def test_feedback_also_appears_when_the_ctf_runs_out_of_time(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/generate', data={'max_duration_minutes': '1'})
+    ctf_code = client.get('/api/ctf-status').get_json()['code']
+    client.post('/join', data={'name': 'Val', 'code': ctf_code})
+
+    # Durante o evento ainda não há feedback para responder.
+    assert client.get('/feedback', follow_redirects=False).headers['Location'].endswith('/ranking')
+
+    # O tempo acaba sem a pessoa clicar em "finalizar": o finished_at dela fica
+    # vazio, mas a tela de feedback precisa aparecer mesmo assim. Em vez de
+    # mexer no relógio, o início do evento é empurrado para trás.
+    with sqlite3.connect(database_path) as conn:
+        conn.execute("UPDATE ctfs SET created_at = datetime('now', '-30 minutes') WHERE status = 'ATIVO'")
+    assert client.get('/api/ctf-status').get_json()['status'] != 'ATIVO'
+    with sqlite3.connect(database_path) as conn:
+        assert conn.execute('SELECT finished_at FROM participants').fetchone()[0] is None
+
+    assert client.get('/dashboard', follow_redirects=False).headers['Location'].endswith('/feedback')
+    form = client.get('/feedback')
+    assert form.status_code == 200
+    assert b'Val' in form.data
+
+    client.post('/feedback', data={'name': 'Val', 'difficulty': 'Ideal'})
+    assert client.get('/feedback', follow_redirects=False).headers['Location'].endswith('/ranking')
 
 
 def test_admin_schedules_an_event_and_banner_respects_its_window(monkeypatch, tmp_path):
@@ -579,13 +892,22 @@ def test_scenario_subpages_are_available(monkeypatch, tmp_path):
         '/lab/5/shop': 'Second Story',
         '/lab/6/files': 'CloudVault',
         '/lab/7/events': 'Night Owl',
-        '/lab/8/calendar': 'ReservaF',
     }
     for path, brand in scenarios.items():
         response = client.get(path)
         assert response.status_code == 200, path
         assert brand.encode('utf-8').lower() in response.data.lower(), path
+    assert client.get('/lab/17/guide').status_code == 200
 
+
+def test_audit_challenge_8_still_works_outside_the_fixed_selection(monkeypatch, tmp_path):
+    database_path = isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    code = _start_ctf_with_challenge(client, database_path, app_module.CHALLENGE_BY_ID[8])
+    client.post('/join', data={'name': 'Taylor', 'code': code})
+
+    assert b'reservaf' in client.get('/lab/8/calendar').data.lower()
     audit_response = client.get('/lab/8/audit-log')
     assert audit_response.status_code == 200
     assert b'JACITEC{final_layer_unlocked}' in audit_response.data
@@ -671,15 +993,22 @@ def test_catalog_has_10_5_3_per_list_and_event_is_ordered_by_difficulty(monkeypa
         assert counts[(list_id, 'Médio')] == 5
         assert counts[(list_id, 'Difícil')] == 3
 
+    # Só a seleção fixa pode gerar eventos; as listas 1/2/3 continuam no
+    # catálogo, mas saíram das opções do admin.
+    assert list(app_module.CHALLENGE_LISTS) == ['ctf-1']
+
     app = create_app(testing=True)
     client = app.test_client()
     client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
-    client.post('/admin/generate', data={'challenge_list': 'lista-2', 'easy_count': '5', 'medium_count': '2', 'hard_count': '1'})
+    client.post('/admin/generate', data={'challenge_list': 'lista-2'})
+    with sqlite3.connect(database_path) as conn:
+        assert conn.execute('SELECT COUNT(*) FROM ctfs').fetchone()[0] == 0
+
+    client.post('/admin/generate')
     with sqlite3.connect(database_path) as conn:
         ids = [row[0] for row in conn.execute('SELECT challenge_id FROM ctf_challenges ORDER BY position')]
     difficulties = [app_module.CHALLENGE_BY_ID[challenge_id]['difficulty'] for challenge_id in ids]
     assert difficulties == ['Fácil'] * 5 + ['Médio'] * 2 + ['Difícil']
-    assert all(app_module.CHALLENGE_BY_ID[challenge_id]['list_id'] == 'lista-2' for challenge_id in ids)
 
 
 def test_ctf_1_preset_uses_the_fixed_eight_challenges(monkeypatch, tmp_path):
@@ -694,9 +1023,6 @@ def test_ctf_1_preset_uses_the_fixed_eight_challenges(monkeypatch, tmp_path):
 
     client.post('/admin/generate', data={
         'challenge_list': 'ctf-1',
-        'easy_count': '0',
-        'medium_count': '0',
-        'hard_count': '0',
     })
     with sqlite3.connect(database_path) as conn:
         ids = [row[0] for row in conn.execute('SELECT challenge_id FROM ctf_challenges ORDER BY position')]
@@ -819,9 +1145,10 @@ def test_generic_catalog_search_mechanism_matches_challenge_7_behaviour(monkeypa
     isolate_database(monkeypatch, tmp_path)
     client = create_app(testing=True).test_client()
     client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
-    client.post('/admin/desafios/executar', data={'list_id': 'lista-1'})
     challenge = app_module.CHALLENGE_BY_ID[14]
     flag = challenge['flags'][0]
+    code = _start_ctf_with_challenge(client, tmp_path / 'ctf.db', challenge)
+    client.post('/join', data={'name': 'Nina', 'code': code})
 
     no_match = client.get('/lab/14/api/search', query_string={'q': 'xyz'}).get_json()
     assert no_match['results'] == []

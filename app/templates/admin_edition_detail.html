@@ -1,0 +1,596 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ edition.name }} · Edições · JACITEC CTF{% endblock %}
+
+{% block content %}
+<main class="admin-page">
+  <header class="admin-topbar">
+    <a href="{{ url_for('admin_dashboard') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
+    <div class="admin-topbar-right"><a class="back-button" href="{{ url_for('admin_editions_page') }}">Todas as edições</a></div>
+  </header>
+
+  <section class="admin-welcome">
+    <div>
+      <p class="section-kicker">MONTANDO A EDIÇÃO</p>
+      <h1>{{ edition.name }}</h1>
+      <p>Tudo aqui salva sozinho. <span id="edition-save-state" class="edition-save-state">Alterações salvas automaticamente</span></p>
+    </div>
+    <div class="admin-event-state {% if edition.status == 'publicada' %}active{% endif %}"><span class="state-pulse"></span><div><small>SITUAÇÃO</small><strong>{{ 'PUBLICADA' if edition.status == 'publicada' else 'RASCUNHO' }}</strong></div></div>
+  </section>
+
+  {% if notice %}<div class="notice admin-notice">{{ notice }}</div>{% endif %}
+  {% if error %}<div class="notice error admin-notice">{{ error }}</div>{% endif %}
+
+  <div class="edition-grid">
+    <div class="edition-column">
+      <section class="admin-panel">
+        <div class="admin-panel-heading"><div><p class="section-kicker">PASSO 1</p><h2>Rodadas desta edição</h2></div><span id="rounds-count">{{ available_ctfs|selectattr('selected')|list|length }} marcadas</span></div>
+        <p class="edition-help">Uma edição pode ter mais de uma rodada — foi o caso da primeira, que rodou duas vezes. Marque todas que contam.</p>
+        <div class="edition-check-list">
+          {% for item in available_ctfs %}
+            <label class="edition-check">
+              <input type="checkbox" data-round="{{ item.id }}" {% if item.selected %}checked{% endif %} />
+              <span>
+                <strong>{{ item.code }}</strong>
+                <small><time data-datetime="{{ item.created_at }}">{{ item.created_at }}</time> · {{ item.participants }} participantes · {{ item.status }}</small>
+              </span>
+            </label>
+          {% else %}
+            <p class="edition-help">Nenhum CTF realizado ainda.</p>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="admin-panel">
+        <div class="admin-panel-heading">
+          <div><p class="section-kicker">PASSO 2</p><h2>Quem entra na classificação</h2></div>
+          <span id="participants-count"></span>
+        </div>
+        <p class="edition-help">Filtre por rodada e marque quem conta. Quem jogou nas duas rodadas aparece em cada uma — fundir os dois é o passo 3.</p>
+        <div class="edition-filter" id="participants-filter"></div>
+        <div class="edition-entry-list" id="participants-list"></div>
+      </section>
+
+      <section class="admin-panel">
+        <div class="admin-panel-heading"><div><p class="section-kicker">PASSO 3</p><h2>Fundir participantes</h2></div><span id="merge-pool-count"></span></div>
+        <p class="edition-help">
+          Aparecem aqui só as participações marcadas no passo 2. Escolha duas ou mais da mesma pessoa e confira os números
+          antes de confirmar — a fusão cria um participante novo, sem apagar as participações originais.
+        </p>
+        <div class="edition-merge-pool" id="merge-pool"></div>
+        <button type="button" id="merge-button" class="edition-save" disabled>Conferir e fundir</button>
+
+        <div class="edition-merge-review" id="merge-review" hidden>
+          <h3>Confira antes de confirmar</h3>
+          <label class="edition-review-field">
+            <span>Nome do participante final</span>
+            <input id="merge-name" type="text" maxlength="30" />
+          </label>
+          <p class="edition-help" id="merge-sources"></p>
+
+          <h4 class="edition-review-title">Tempo de cada participação</h4>
+          <div class="edition-review-times" id="merge-times"></div>
+
+          <h4 class="edition-review-title">Desafios que vão contar</h4>
+          <div class="edition-review-challenges" id="merge-challenges"></div>
+
+          <div class="edition-review-totals">
+            <label><span>Pontuação</span><input id="merge-points" type="number" min="0" /></label>
+            <div class="edition-review-clock">
+              <span>Tempo total</span>
+              <div>
+                <input id="merge-hours" type="number" min="0" max="99" aria-label="Horas" /><i>h</i>
+                <input id="merge-mins" type="number" min="0" max="59" aria-label="Minutos" /><i>m</i>
+                <input id="merge-secs" type="number" min="0" max="59" aria-label="Segundos" /><i>s</i>
+              </div>
+            </div>
+          </div>
+          <p class="edition-review-error" id="merge-error"></p>
+          <div class="edition-review-actions">
+            <button type="button" id="merge-cancel" class="edition-save">Cancelar</button>
+            <button type="button" id="merge-confirm" class="schedule-submit">Confirmar fusão <span>→</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-panel">
+        <div class="admin-panel-heading"><div><p class="section-kicker">PASSO 4</p><h2>Feedbacks da edição</h2></div><span id="feedback-count"></span></div>
+        <p class="edition-help">Filtre por rodada e desmarque respostas de teste que não devem entrar no resumo.</p>
+        <div class="edition-filter" id="feedback-filter"></div>
+        <div class="edition-check-list" id="feedback-list"></div>
+      </section>
+    </div>
+
+    <aside class="edition-column">
+      <section class="admin-panel">
+        <div class="admin-panel-heading"><div><p class="section-kicker">RESULTADO</p><h2>Classificação final</h2></div><span id="ranking-count"></span></div>
+        <p class="edition-help">É esta a lista que vai para o site. Esconder tira da classificação sem apagar nada; só participantes criados por fusão podem ser excluídos.</p>
+        <div id="ranking-preview"></div>
+      </section>
+
+      <section class="admin-panel">
+        <div class="admin-panel-heading"><div><p class="section-kicker">CONFERÊNCIA</p><h2>Rodada a rodada</h2></div></div>
+        <div id="round-rankings"></div>
+      </section>
+
+      <section class="admin-panel">
+        <div class="admin-panel-heading"><div><p class="section-kicker">PASSO 5</p><h2>Publicação</h2></div></div>
+        <form method="post" action="{{ url_for('admin_edition_save', edition_id=edition.id) }}" class="schedule-form">
+          <label for="edition-name">Nome</label>
+          <input id="edition-name" name="name" type="text" maxlength="80" required value="{{ edition.name }}" />
+          <label for="edition-summary">Resumo <span class="field-optional">opcional</span></label>
+          <textarea id="edition-summary" name="summary" rows="3" maxlength="400" placeholder="Como foi a edição, quantas rodadas, destaques…">{{ edition.summary or '' }}</textarea>
+          <label class="edition-switch">
+            <input type="checkbox" name="show_challenges" {% if edition.show_challenges %}checked{% endif %} />
+            <span>Publicar os desafios e gabaritos desta edição</span>
+          </label>
+          <p class="schedule-hint">Com isso ligado, qualquer visitante vê os {{ challenges|length }} desafios e como resolvê-los. Deixe desligado enquanto os mesmos desafios ainda forem usados.</p>
+          <button type="submit" class="edition-save">Salvar dados</button>
+        </form>
+
+        <form method="post" action="{{ url_for('admin_edition_publish', edition_id=edition.id) }}" class="edition-publish-form">
+          <button type="submit" class="schedule-submit">{{ 'Despublicar edição' if edition.status == 'publicada' else 'Publicar no site' }} <span>→</span></button>
+        </form>
+        {% if edition.status == 'publicada' %}
+          <a class="schedule-edit" href="{{ url_for('public_edition_page', edition_id=edition.id) }}" target="_blank" rel="noopener">Abrir página pública ↗</a>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('admin_edition_delete', edition_id=edition.id) }}" class="edition-delete-form">
+          <button type="submit" class="schedule-remove">Remover edição</button>
+        </form>
+      </section>
+    </aside>
+  </div>
+
+  <footer class="admin-footer"><span>JACITEC CTF · PAINEL ADMINISTRATIVO</span><a href="{{ url_for('admin_editions_page') }}">Todas as edições ↗</a></footer>
+</main>
+
+<script>
+  (() => {
+    const editionId = {{ edition.id }};
+    const saveState = document.getElementById('edition-save-state');
+    const selection = new Set();          // participações marcadas para fundir
+    let participantRound = 'todas';
+    let feedbackRound = 'todas';
+    let state = { entries: [], ranking: [], rounds: [], feedbacks: [] };
+
+    const pad = (n) => String(n).padStart(2, '0');
+    const fmtMoment = (value) => {
+      if (!value) return '—';
+      const date = new Date(`${value.replace(' ', 'T')}Z`);
+      return Number.isNaN(date.getTime())
+        ? value
+        : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'medium' }).format(date);
+    };
+    const setClock = (seconds) => {
+      document.getElementById('merge-hours').value = Math.floor(seconds / 3600);
+      document.getElementById('merge-mins').value = Math.floor((seconds % 3600) / 60);
+      document.getElementById('merge-secs').value = seconds % 60;
+    };
+    const readClock = () => {
+      const part = (id) => Math.max(0, Number(document.getElementById(id).value) || 0);
+      return part('merge-hours') * 3600 + part('merge-mins') * 60 + part('merge-secs');
+    };
+    const duration = (s) => `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+
+    async function send(path, body) {
+      saveState.textContent = 'Salvando…';
+      saveState.classList.remove('is-error');
+      try {
+        const response = await fetch(`/admin/edicoes/${editionId}/${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!response.ok) throw new Error('falhou');
+        state = await response.json();
+        render();
+        saveState.textContent = 'Alterações salvas automaticamente';
+      } catch (_) {
+        saveState.textContent = 'Não foi possível salvar. Verifique a conexão.';
+        saveState.classList.add('is-error');
+      }
+    }
+
+    function renderFilter(container, rounds, active, onPick) {
+      container.replaceChildren();
+      if (rounds.length < 2) return;
+      ['todas', ...rounds].forEach((round) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `edition-filter-tab${round === active ? ' is-active' : ''}`;
+        button.textContent = round === 'todas' ? 'Todas as rodadas' : round;
+        button.addEventListener('click', () => onPick(round));
+        container.appendChild(button);
+      });
+    }
+
+    function renderParticipants() {
+      const list = document.getElementById('participants-list');
+      renderFilter(document.getElementById('participants-filter'), state.rounds, participantRound, (round) => {
+        participantRound = round;
+        renderParticipants();
+      });
+      const visible = state.entries.filter((e) => participantRound === 'todas' || e.ctf_code === participantRound);
+      const included = state.entries.filter((e) => e.included).length;
+      document.getElementById('participants-count').textContent = `${included} de ${state.entries.length} participações`;
+
+      list.replaceChildren();
+      if (!visible.length) {
+        const empty = document.createElement('p');
+        empty.className = 'edition-help';
+        empty.textContent = 'Marque ao menos uma rodada no passo 1.';
+        list.appendChild(empty);
+        return;
+      }
+      visible.forEach((entry) => {
+        const row = document.createElement('label');
+        row.className = 'edition-entry';
+        const toggle = document.createElement('input');
+        toggle.type = 'checkbox';
+        toggle.checked = Boolean(entry.included);
+        toggle.addEventListener('change', () => send('participantes', {
+          participant_ids: [entry.participant_id], included: toggle.checked,
+        }));
+        const origin = document.createElement('div');
+        origin.className = 'edition-entry-origin';
+        const name = document.createElement('strong');
+        name.textContent = entry.original_name;
+        const where = document.createElement('small');
+        where.textContent = entry.ctf_code;
+        origin.append(name, where);
+        const shown = document.createElement('span');
+        shown.className = 'edition-entry-shown';
+        shown.textContent = entry.display_name !== entry.original_name ? `→ ${entry.display_name}` : '';
+        row.append(toggle, origin, shown);
+        list.appendChild(row);
+      });
+    }
+
+    function renderMergePool() {
+      const pool = document.getElementById('merge-pool');
+      // Só participações que estão na classificação e ainda não foram fundidas.
+      const merged = new Set(state.merged_participant_ids || []);
+      const available = state.entries.filter((e) => e.included && !merged.has(e.participant_id));
+      document.getElementById('merge-pool-count').textContent = `${available.length} disponíveis`;
+
+      pool.replaceChildren();
+      if (!available.length) {
+        const empty = document.createElement('p');
+        empty.className = 'edition-help';
+        empty.textContent = 'Marque participações no passo 2 para poder fundir.';
+        pool.appendChild(empty);
+        updateMergeButton();
+        return;
+      }
+      available.forEach((entry) => {
+        const row = document.createElement('label');
+        row.className = 'edition-merge-option';
+        const pick = document.createElement('input');
+        pick.type = 'checkbox';
+        pick.checked = selection.has(entry.participant_id);
+        pick.addEventListener('change', () => {
+          pick.checked ? selection.add(entry.participant_id) : selection.delete(entry.participant_id);
+          updateMergeButton();
+        });
+        const label = document.createElement('span');
+        const name = document.createElement('strong');
+        name.textContent = entry.original_name;
+        const where = document.createElement('small');
+        where.textContent = entry.ctf_code;
+        label.append(name, where);
+        row.append(pick, label);
+        pool.appendChild(row);
+      });
+      updateMergeButton();
+    }
+
+    function updateMergeButton() {
+      const button = document.getElementById('merge-button');
+      button.disabled = selection.size < 2;
+      button.textContent = selection.size < 2
+        ? 'Conferir e fundir'
+        : `Conferir e fundir ${selection.size} participações`;
+    }
+
+    let reviewPreview = null;
+
+    function recalcPoints() {
+      if (!reviewPreview) return;
+      const checked = [...document.querySelectorAll('#merge-challenges input:checked')];
+      const total = checked.reduce((sum, input) => sum + Number(input.dataset.points), 0);
+      document.getElementById('merge-points').value = total;
+    }
+
+    async function openReview() {
+      const ids = [...selection];
+      const response = await fetch(`/admin/edicoes/${editionId}/fusao/previa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participant_ids: ids }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        document.getElementById('merge-error').textContent = data.error || 'Não foi possível montar a prévia.';
+        return;
+      }
+      reviewPreview = data;
+      document.getElementById('merge-error').textContent = '';
+      document.getElementById('merge-name').value = data.suggested_name;
+      document.getElementById('merge-sources').textContent =
+        `Unindo: ${data.sources.map((s) => s.name).join(' + ')}`;
+      document.getElementById('merge-points').value = data.points;
+      setClock(data.elapsed);
+
+      // Horários de cada participação, para o admin conferir o tempo somado.
+      const times = document.getElementById('merge-times');
+      times.replaceChildren();
+      data.sources.forEach((source) => {
+        const row = document.createElement('div');
+        row.className = `edition-review-time${source.counted ? '' : ' is-ignored'}`;
+        const who = document.createElement('strong');
+        who.textContent = `${source.name} · ${source.ctf_code}`;
+        const when = document.createElement('small');
+        when.textContent = `${fmtMoment(source.entered_at)} → ${fmtMoment(source.ended_at)}`;
+        const total = document.createElement('span');
+        total.textContent = duration(source.elapsed);
+        if (!source.counted) {
+          const note = document.createElement('em');
+          note.textContent = 'mesma rodada: vale só o maior tempo';
+          when.appendChild(note);
+        }
+        row.append(who, when, total);
+        times.appendChild(row);
+      });
+
+      const list = document.getElementById('merge-challenges');
+      list.replaceChildren();
+      data.challenges.forEach((challenge) => {
+        const row = document.createElement('label');
+        row.className = `edition-review-challenge${challenge.duplicated ? ' is-duplicated' : ''}`;
+        const pick = document.createElement('input');
+        pick.type = 'checkbox';
+        pick.checked = true;
+        pick.value = challenge.id;
+        pick.dataset.points = challenge.points;
+        pick.addEventListener('change', recalcPoints);
+        const label = document.createElement('span');
+        label.textContent = `${challenge.name} · ${challenge.difficulty} · ${challenge.points} pts`;
+        if (challenge.duplicated) {
+          const tag = document.createElement('em');
+          tag.textContent = `resolvido em ${challenge.origins.length} participações — conta uma vez`;
+          label.appendChild(tag);
+        }
+        row.append(pick, label);
+        list.appendChild(row);
+      });
+      document.getElementById('merge-review').hidden = false;
+    }
+
+    function closeReview() {
+      document.getElementById('merge-review').hidden = true;
+      reviewPreview = null;
+    }
+
+    async function confirmMerge() {
+      const ids = [...selection];
+      const challengeIds = [...document.querySelectorAll('#merge-challenges input:checked')].map((i) => Number(i.value));
+      const body = {
+        participant_ids: ids,
+        display_name: document.getElementById('merge-name').value,
+        challenge_ids: challengeIds,
+        points: Number(document.getElementById('merge-points').value),
+        elapsed: readClock(),
+      };
+      const response = await fetch(`/admin/edicoes/${editionId}/fusao`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        document.getElementById('merge-error').textContent = data.error || 'Não foi possível fundir.';
+        return;
+      }
+      selection.clear();
+      closeReview();
+      state = data;
+      render();
+    }
+
+    function renderRoundRankings() {
+      const container = document.getElementById('round-rankings');
+      container.replaceChildren();
+      (state.round_rankings || []).forEach((round) => {
+        const card = document.createElement('article');
+        card.className = 'edition-round';
+        const header = document.createElement('header');
+        const code = document.createElement('strong');
+        code.textContent = round.ctf_code;
+        const count = document.createElement('span');
+        count.textContent = `${round.rows.length} participantes`;
+        header.append(code, count);
+        card.appendChild(header);
+        const list = document.createElement('ol');
+        round.rows.forEach((row) => {
+          const item = document.createElement('li');
+          const pos = document.createElement('span');
+          pos.className = 'edition-round-pos';
+          pos.textContent = pad(row.position);
+          const name = document.createElement('span');
+          name.className = 'edition-round-name';
+          name.textContent = row.name;
+          const points = document.createElement('span');
+          points.className = 'edition-round-points';
+          points.textContent = row.points;
+          const solved = document.createElement('small');
+          solved.textContent = `${row.solved} desafios`;
+          points.appendChild(solved);
+          const time = document.createElement('time');
+          time.textContent = duration(row.elapsed);
+          item.append(pos, name, points, time);
+          list.appendChild(item);
+        });
+        card.appendChild(list);
+        container.appendChild(card);
+      });
+    }
+
+    function renderFeedbacks() {
+      const list = document.getElementById('feedback-list');
+      const rounds = [...new Set(state.feedbacks.map((f) => f.ctf_code))].sort();
+      renderFilter(document.getElementById('feedback-filter'), rounds, feedbackRound, (round) => {
+        feedbackRound = round;
+        renderFeedbacks();
+      });
+      const visible = state.feedbacks.filter((f) => feedbackRound === 'todas' || f.ctf_code === feedbackRound);
+      document.getElementById('feedback-count').textContent =
+        `${state.feedbacks.filter((f) => f.included).length} de ${state.feedbacks.length} incluídos`;
+
+      list.replaceChildren();
+      if (!visible.length) {
+        const empty = document.createElement('p');
+        empty.className = 'edition-help';
+        empty.textContent = 'Nenhum feedback nas rodadas escolhidas.';
+        list.appendChild(empty);
+        return;
+      }
+      visible.forEach((item) => {
+        const row = document.createElement('label');
+        row.className = 'edition-check';
+        const toggle = document.createElement('input');
+        toggle.type = 'checkbox';
+        toggle.checked = item.included;
+        toggle.addEventListener('change', () => send('feedbacks', {
+          feedback_id: item.id, included: toggle.checked,
+        }));
+        const text = document.createElement('span');
+        const name = document.createElement('strong');
+        name.textContent = `${item.name}${item.turma ? ' · ' + item.turma : ''} · ${item.ctf_code}`;
+        const note = document.createElement('small');
+        note.textContent = item.improvements ? `“${item.improvements.slice(0, 90)}”` : 'sem comentário';
+        text.append(name, note);
+        row.append(toggle, text);
+        list.appendChild(row);
+      });
+    }
+
+    function renderRanking() {
+      const container = document.getElementById('ranking-preview');
+      document.getElementById('ranking-count').textContent = state.ranking.length;
+      container.replaceChildren();
+      if (!state.ranking.length) {
+        const empty = document.createElement('div');
+        empty.className = 'admin-empty';
+        empty.innerHTML = '<span>◎</span><strong>Sem classificação ainda.</strong><p>Escolha as rodadas para ver o resultado consolidado.</p>';
+        container.appendChild(empty);
+        return;
+      }
+      const list = document.createElement('ol');
+      list.className = 'edition-ranking';
+      state.ranking.forEach((row) => {
+        const item = document.createElement('li');
+        item.className = row.kind === 'merge' ? 'is-merge' : '';
+
+        const position = document.createElement('span');
+        position.className = 'edition-rank-pos';
+        position.textContent = pad(row.position);
+
+        const name = document.createElement('span');
+        name.className = 'edition-rank-name';
+        name.textContent = row.name;
+        if (row.kind === 'merge') {
+          const merged = document.createElement('small');
+          merged.textContent = `fusão de ${row.sources.map((s) => s.original_name).join(' + ')}`;
+          name.appendChild(merged);
+        }
+        const solved = document.createElement('details');
+        solved.className = 'edition-rank-solved';
+        const summary = document.createElement('summary');
+        summary.textContent = `${row.solved} desafios`;
+        solved.appendChild(summary);
+        const solvedList = document.createElement('ul');
+        row.challenges.forEach((challenge) => {
+          const entry = document.createElement('li');
+          const label = document.createElement('span');
+          label.textContent = challenge.name;
+          const tag = document.createElement('em');
+          tag.textContent = challenge.difficulty;
+          const pts = document.createElement('b');
+          pts.textContent = `${challenge.points} pts`;
+          entry.append(tag, label, pts);
+          solvedList.appendChild(entry);
+        });
+        solved.appendChild(solvedList);
+        name.appendChild(solved);
+
+        const points = document.createElement('span');
+        points.className = 'edition-rank-points';
+        points.textContent = row.points;
+        const time = document.createElement('time');
+        time.textContent = duration(row.elapsed);
+
+        const actions = document.createElement('span');
+        actions.className = 'edition-rank-actions';
+        const hide = document.createElement('button');
+        hide.type = 'button';
+        hide.textContent = 'Esconder';
+        hide.title = 'Tira da classificação sem apagar os dados';
+        hide.addEventListener('click', () => send('entrada', { kind: row.kind, key: row.key, hidden: true }));
+        actions.appendChild(hide);
+        if (row.kind === 'merge') {
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'is-danger';
+          remove.textContent = 'Excluir fusão';
+          remove.title = 'Apaga o participante fundido e devolve as participações originais';
+          remove.addEventListener('click', () => send('entrada', { kind: 'merge', key: row.key, action: 'remover' }));
+          actions.appendChild(remove);
+        }
+
+        item.append(position, name, points, time, actions);
+        list.appendChild(item);
+      });
+      container.appendChild(list);
+    }
+
+    function render() {
+      document.getElementById('rounds-count').textContent =
+        `${document.querySelectorAll('[data-round]:checked').length} marcadas`;
+      const merged = new Set(state.merged_participant_ids || []);
+      [...selection].forEach((id) => {
+        const entry = state.entries.find((e) => e.participant_id === id);
+        if (!entry || !entry.included || merged.has(id)) selection.delete(id);
+      });
+      renderParticipants();
+      renderMergePool();
+      renderFeedbacks();
+      renderRanking();
+      renderRoundRankings();
+    }
+
+    document.querySelectorAll('[data-round]').forEach((input) => {
+      input.addEventListener('change', () => send('rodadas', {
+        ctf_id: Number(input.dataset.round), included: input.checked,
+      }));
+    });
+
+    document.getElementById('merge-button').addEventListener('click', openReview);
+    document.getElementById('merge-cancel').addEventListener('click', closeReview);
+    document.getElementById('merge-confirm').addEventListener('click', confirmMerge);
+
+    async function load() {
+      try {
+        const response = await fetch(`/admin/edicoes/${editionId}/estado`, { cache: 'no-store' });
+        if (!response.ok) throw new Error('falhou');
+        state = await response.json();
+        render();
+      } catch (_) {
+        saveState.textContent = 'Não foi possível carregar os dados da edição.';
+        saveState.classList.add('is-error');
+      }
+    }
+    load();
+  })();
+</script>
+{% endblock %}

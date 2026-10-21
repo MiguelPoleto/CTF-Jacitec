@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ meta.label }} · Treino · JACITEC CTF{% endblock %}
+
+{% block content %}
+<main class="ranking-page">
+  <header class="ranking-nav">
+    <a href="{{ url_for('ctf_home') }}" class="landing-brand"><img src="{{ url_for('static', filename='img/jacitec-logo.svg') }}" alt="JACITEC" class="brand-symbol" /><span>JACITEC <small>CTF</small></span></a>
+    <a href="{{ url_for('training_index') }}" class="back-button on-dark">Todas as listas</a>
+  </header>
+
+  <section class="ranking-hero">
+    <div>
+      <p class="eyebrow-line"><span>TREINO LIVRE</span> · JACITEC CTF</p>
+      <h1>{{ meta.label }}</h1>
+      <p>{{ meta.description }} Abra o laboratório em outra aba, investigue e cole aqui a flag que encontrar. Nada é pontuado nem cronometrado.</p>
+    </div>
+    <div class="ranking-event-card">
+      <span class="event-card-label">DESAFIOS</span>
+      <strong>{{ challenges|length }}</strong>
+      <span class="status-pill">Sem tempo limite</span>
+    </div>
+  </section>
+
+  <section class="ranking-board">
+    <div class="board-heading">
+      <div><span class="section-kicker">LABORATÓRIOS</span><h2>Escolha por onde começar</h2></div>
+      <button type="button" id="training-clear" class="training-clear">Limpar todas as flags</button>
+    </div>
+    <div class="training-list">
+      {% for challenge in challenges %}
+        <article class="training-card" data-challenge="{{ challenge.id }}">
+          <header>
+            <span class="level-tag level-{{ 'F' if challenge.difficulty == 'Fácil' else 'M' if challenge.difficulty == 'Médio' else 'D' }}">{{ challenge.difficulty }}</span>
+            <strong>{{ challenge.name }}</strong>
+          </header>
+          <p class="training-brief">{{ challenge.description }}</p>
+
+          <div class="training-actions">
+            <a class="training-open" href="{{ url_for('lab_page', challenge_id=challenge.id) }}" target="_blank" rel="noopener">Abrir laboratório ↗</a>
+            <details class="training-hints">
+              <summary>Ver dicas ({{ challenge.hints|length }})</summary>
+              <ol>{% for hint in challenge.hints %}<li>{{ hint }}</li>{% endfor %}</ol>
+            </details>
+          </div>
+
+          <form class="training-flag-form" data-challenge="{{ challenge.id }}">
+            <input type="text" name="flag" placeholder="JACITEC{...}" autocomplete="off" aria-label="Flag do desafio {{ challenge.name }}" />
+            <button type="submit">Conferir</button>
+          </form>
+          <p class="training-result" role="status"></p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <footer class="participation-footer"><span>JACITEC CTF · Treino</span><a href="{{ url_for('training_index') }}">Todas as listas →</a></footer>
+</main>
+
+<script>
+  document.getElementById('training-clear').addEventListener('click', () => {
+    document.querySelectorAll('.training-flag-form input[name="flag"]').forEach((input) => { input.value = ''; });
+    document.querySelectorAll('.training-result').forEach((result) => {
+      result.textContent = '';
+      result.className = 'training-result';
+    });
+  });
+
+  document.querySelectorAll('.training-flag-form').forEach((form) => {
+    const result = form.parentElement.querySelector('.training-result');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const flag = form.querySelector('input[name="flag"]').value.trim();
+      if (!flag) return;
+      result.textContent = 'Conferindo…';
+      result.className = 'training-result';
+      try {
+        const response = await fetch('/treino/flag', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ challenge_id: Number(form.dataset.challenge), flag }),
+        });
+        const data = await response.json();
+        result.textContent = data.correct ? '✓ É essa! Flag correta.' : '✗ Ainda não é essa. Continue investigando.';
+        result.className = `training-result ${data.correct ? 'is-correct' : 'is-wrong'}`;
+      } catch (_) {
+        result.textContent = 'Não foi possível conferir agora.';
+        result.className = 'training-result is-wrong';
+      }
+    });
+  });
+</script>
+{% endblock %}
