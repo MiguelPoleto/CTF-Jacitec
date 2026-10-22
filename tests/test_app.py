@@ -64,7 +64,7 @@ def test_three_hints_still_award_a_point(monkeypatch, tmp_path):
     client = app.test_client()
 
     client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'}, follow_redirects=False)
-    client.post('/admin/generate', follow_redirects=False)
+    client.post('/admin/generate', data={'challenge_list': 'ctf-1'}, follow_redirects=False)
     ctf_code = client.get('/api/ctf-status').get_json()['code']
     client.post('/join', data={'name': 'Bob', 'code': ctf_code}, follow_redirects=False)
 
@@ -89,7 +89,7 @@ def test_single_workspace_and_local_challenge_sites_work(monkeypatch, tmp_path):
     app = create_app(testing=True)
     client = app.test_client()
     client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
-    client.post('/admin/generate')
+    client.post('/admin/generate', data={'challenge_list': 'ctf-1'})
     ctf_code = client.get('/api/ctf-status').get_json()['code']
     client.post('/join', data={'name': 'Casey', 'code': ctf_code})
 
@@ -111,33 +111,12 @@ def test_single_workspace_and_local_challenge_sites_work(monkeypatch, tmp_path):
     assert client.get('/lab/5').headers['X-Campus-Notice'] == 'JACITEC{cookies_and_headers_tell_all}'
     assert client.get('/lab/2/sitemap.xml').status_code == 200
 
-
-def test_challenge_12_receipt_is_discoverable_and_has_no_robots_dependency(monkeypatch, tmp_path):
-    database_path = isolate_database(monkeypatch, tmp_path)
-    app = create_app(testing=True)
-    client = app.test_client()
-
-    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
-    # O desafio 12 está fora da seleção fixa, então a edição é montada direto.
-    ctf_code = _start_ctf_with_challenge(client, database_path, app_module.CHALLENGE_BY_ID[12])
-    client.post('/join', data={'name': 'Riley', 'code': ctf_code})
-
-    lab_response = client.get('/lab/12')
-    assert lab_response.status_code == 200
-    assert b'href="/lab/12/receipt">Baixar recibo</a>' in lab_response.data
-    assert client.get('/lab/12/robots.txt').status_code == 404
-
-    receipt_response = client.get('/lab/12/receipt')
-    assert receipt_response.status_code == 200
-    assert receipt_response.headers['X-Receipt-Note'] == 'JACITEC{catalog_12_receipt}'
-
-
 def test_live_hint_and_flag_endpoints_update_participant_state(monkeypatch, tmp_path):
     isolate_database(monkeypatch, tmp_path)
     app = create_app(testing=True)
     client = app.test_client()
     client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
-    client.post('/admin/generate')
+    client.post('/admin/generate', data={'challenge_list': 'ctf-1'})
     ctf_code = client.get('/api/ctf-status').get_json()['code']
     client.post('/join', data={'name': 'Dana', 'code': ctf_code})
 
@@ -306,9 +285,9 @@ def test_admin_reads_feedbacks_one_by_one_grouped_by_edition(monkeypatch, tmp_pa
 
 
 def _run_ctf_with_results(client, database_path, results, duration=600):
-    """Roda um CTF e grava desafios resolvidos: {nome: [challenge_id, ...]}."""
+    """Roda um CTF (lista CTF 1) e grava desafios resolvidos: {nome: [challenge_id, ...]}."""
     client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
-    client.post('/admin/generate', data={'max_duration_minutes': str(duration)})
+    client.post('/admin/generate', data={'challenge_list': 'ctf-1', 'max_duration_minutes': str(duration)})
     code = client.get('/api/ctf-status').get_json()['code']
     with sqlite3.connect(database_path) as conn:
         ctf_id = conn.execute("SELECT id FROM ctfs WHERE code = ?", (code,)).fetchone()[0]
@@ -880,7 +859,7 @@ def test_scenario_subpages_are_available(monkeypatch, tmp_path):
     app = create_app(testing=True)
     client = app.test_client()
     client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
-    client.post('/admin/generate')
+    client.post('/admin/generate', data={'challenge_list': 'ctf-1'})
     ctf_code = client.get('/api/ctf-status').get_json()['code']
     client.post('/join', data={'name': 'Taylor', 'code': ctf_code})
 
@@ -898,20 +877,6 @@ def test_scenario_subpages_are_available(monkeypatch, tmp_path):
         assert response.status_code == 200, path
         assert brand.encode('utf-8').lower() in response.data.lower(), path
     assert client.get('/lab/17/guide').status_code == 200
-
-
-def test_audit_challenge_8_still_works_outside_the_fixed_selection(monkeypatch, tmp_path):
-    database_path = isolate_database(monkeypatch, tmp_path)
-    client = create_app(testing=True).test_client()
-    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
-    code = _start_ctf_with_challenge(client, database_path, app_module.CHALLENGE_BY_ID[8])
-    client.post('/join', data={'name': 'Taylor', 'code': code})
-
-    assert b'reservaf' in client.get('/lab/8/calendar').data.lower()
-    audit_response = client.get('/lab/8/audit-log')
-    assert audit_response.status_code == 200
-    assert b'JACITEC{final_layer_unlocked}' in audit_response.data
-
 
 def test_app_status_and_join_flow_work(monkeypatch, tmp_path):
     isolate_database(monkeypatch, tmp_path)
@@ -981,34 +946,81 @@ def test_admin_entry_is_discreet_but_linked_from_landing(monkeypatch, tmp_path):
     assert b'Equipe' in response.data
 
 
-def test_catalog_has_10_5_3_per_list_and_event_is_ordered_by_difficulty(monkeypatch, tmp_path):
+def test_catalog_has_two_fixed_editions_ordered_by_difficulty(monkeypatch, tmp_path):
     database_path = isolate_database(monkeypatch, tmp_path)
     counts = {}
     for challenge in app_module.CHALLENGES:
         key = (challenge['list_id'], challenge['difficulty'])
         counts[key] = counts.get(key, 0) + 1
-    assert len(app_module.CHALLENGES) == 54
-    for list_id in ('lista-1', 'lista-2', 'lista-3'):
-        assert counts[(list_id, 'Fácil')] == 10
-        assert counts[(list_id, 'Médio')] == 5
-        assert counts[(list_id, 'Difícil')] == 3
-
-    # Só a seleção fixa pode gerar eventos; as listas 1/2/3 continuam no
-    # catálogo, mas saíram das opções do admin.
-    assert list(app_module.CHALLENGE_LISTS) == ['ctf-1']
+    # Duas edições fixas, cada uma 5 fáceis / 2 médios / 1 difícil.
+    assert len(app_module.CHALLENGES) == 16
+    for list_id in ('lista-1', 'lista-2'):
+        assert counts[(list_id, 'Fácil')] == 5
+        assert counts[(list_id, 'Médio')] == 2
+        assert counts[(list_id, 'Difícil')] == 1
+    assert list(app_module.CHALLENGE_LISTS) == ['ctf-1', 'ctf-2']
 
     app = create_app(testing=True)
     client = app.test_client()
     client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+
+    # Uma lista inexistente não gera nada.
     client.post('/admin/generate', data={'challenge_list': 'lista-2'})
     with sqlite3.connect(database_path) as conn:
         assert conn.execute('SELECT COUNT(*) FROM ctfs').fetchone()[0] == 0
 
-    client.post('/admin/generate')
-    with sqlite3.connect(database_path) as conn:
-        ids = [row[0] for row in conn.execute('SELECT challenge_id FROM ctf_challenges ORDER BY position')]
-    difficulties = [app_module.CHALLENGE_BY_ID[challenge_id]['difficulty'] for challenge_id in ids]
-    assert difficulties == ['Fácil'] * 5 + ['Médio'] * 2 + ['Difícil']
+    # Cada edição sai sempre ordenada fáceis → médios → difícil.
+    for list_id in ('ctf-1', 'ctf-2'):
+        client.post('/admin/generate', data={'challenge_list': list_id})
+        with sqlite3.connect(database_path) as conn:
+            ids = [row[0] for row in conn.execute(
+                "SELECT challenge_id FROM ctf_challenges WHERE ctf_id = (SELECT id FROM ctfs WHERE status='ATIVO') ORDER BY position")]
+        difficulties = [app_module.CHALLENGE_BY_ID[cid]['difficulty'] for cid in ids]
+        assert difficulties == ['Fácil'] * 5 + ['Médio'] * 2 + ['Difícil']
+        assert set(ids) == set(app_module.FIXED_CHALLENGE_LISTS[list_id])
+
+
+def test_every_ctf2_challenge_is_solvable(monkeypatch, tmp_path):
+    import base64, re
+    isolate_database(monkeypatch, tmp_path)
+    client = create_app(testing=True).test_client()
+    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
+    client.post('/admin/generate', data={'challenge_list': 'ctf-2', 'max_duration_minutes': '600'})
+    code = client.get('/api/ctf-status').get_json()['code']
+    client.post('/join', data={'name': 'Solver', 'code': code})
+    flag = lambda cid: app_module.CHALLENGE_BY_ID[cid]['flags'][0]
+
+    # 18 caesar: decodificar o texto cifrado mostrado na página.
+    s = app_module.CHALLENGE_BY_ID[18]['site2']
+    assert app_module._caesar_shift(s['caesar'], -s['shift']) == flag(18)
+    # 19 backup: a cópia .bak traz o campo interno.
+    assert client.get('/lab/19/catalogo.json.bak').get_json()['_nota_marceneiro'] == flag(19)
+    # 20 cookie: Set-Cookie na home.
+    assert flag(20) in client.get('/lab/20').headers.get('Set-Cookie', '')  # preferencia_padaria
+    # 21 svg: anotação dentro do arquivo vetorial.
+    assert flag(21) in client.get('/lab/21/assets/cobre.svg').get_data(as_text=True)
+    assert flag(21) not in client.get('/lab/21/assets/mare.svg').get_data(as_text=True)
+    # 22 debug: ?debug=1 revela o diagnóstico.
+    assert client.get('/lab/22/rastreio?debug=1').get_json()['interno']['chave_operacao'] == flag(22)
+    assert 'interno' not in client.get('/lab/22/rastreio').get_json()
+    # 23 login_sqli: tautologia no login.
+    assert client.post('/lab/23/entrar', data={'user': "' OR '1'='1' --", 'password': 'x'}).get_json()['mural_interno'] == flag(23)
+    assert client.post('/lab/23/entrar', data={'user': 'ana', 'password': '123'}).get_json()['ok'] is False
+    assert client.post('/lab/23/entrar', data={'user': '', 'password': ''}).status_code == 400
+    # credenciais reais tambem entram (login de verdade), mas sem a flag
+    assert client.post('/lab/23/entrar', data={'user': 'mariana', 'password': 'cafe-2024'}).get_json()['ok'] is True
+    # 24 token: trocar role para admin no cookie Base64.
+    raw = re.search(r'cracha=([^;]+)', client.get('/lab/24').headers['Set-Cookie']).group(1)
+    forged = base64.b64encode(base64.b64decode(raw).decode().replace('papel=visitante', 'papel=admin').encode()).decode()
+    client.set_cookie('cracha', forged, path='/lab/24')
+    assert client.get('/lab/24/restrito').get_json()['chave_mestra'] == flag(24)
+    # 25 recovery: robots → debug → usuarios → redefinir (só curl/base64, sem Burp).
+    assert '/lab/25/interno/gerador-token' in client.get('/lab/25/robots.txt').get_data(as_text=True)
+    assert 'base64' in client.get('/lab/25/interno/gerador-token').get_json()['algoritmo']
+    email = client.get('/lab/25/equipe.json').get_json()['equipe'][0]['email']
+    token = base64.b64encode(email.encode()).decode()
+    assert client.get(f'/lab/25/redefinir?user={email}&token={token}').get_json()['codigo_confirmacao'] == flag(25)
+    assert client.get(f'/lab/25/redefinir?user={email}&token=errado').get_json()['ok'] is False
 
 
 def test_ctf_1_preset_uses_the_fixed_eight_challenges(monkeypatch, tmp_path):
@@ -1140,25 +1152,6 @@ def test_search_challenge_requires_a_real_tautology_not_just_the_word_or(monkeyp
     assert any(flag in note for note in notes)
     assert all(flag not in title for title in titles)
 
-
-def test_generic_catalog_search_mechanism_matches_challenge_7_behaviour(monkeypatch, tmp_path):
-    isolate_database(monkeypatch, tmp_path)
-    client = create_app(testing=True).test_client()
-    client.post('/admin/login', data={'username': 'admin', 'password': 'adm2026'})
-    challenge = app_module.CHALLENGE_BY_ID[14]
-    flag = challenge['flags'][0]
-    code = _start_ctf_with_challenge(client, tmp_path / 'ctf.db', challenge)
-    client.post('/join', data={'name': 'Nina', 'code': code})
-
-    no_match = client.get('/lab/14/api/search', query_string={'q': 'xyz'}).get_json()
-    assert no_match['results'] == []
-    assert 'message' in no_match
-
-    bypass = client.get('/lab/14/api/search', query_string={'q': "' OR 1=1 --"}).get_json()
-    notes = [result.get('nota', '') for result in bypass['results']]
-    assert any(flag in note for note in notes)
-
-
 def test_admin_challenge_library_is_protected_and_guides_to_flag(monkeypatch, tmp_path):
     isolate_database(monkeypatch, tmp_path)
     app = create_app(testing=True)
@@ -1216,15 +1209,3 @@ def test_sitemap_challenge_2_report_page_exposes_flag(monkeypatch, tmp_path):
     assert report.status_code == 200
     assert challenge['flags'][0].encode('utf-8') in report.data
 
-
-def test_manifest_challenge_endpoint_and_reference_present(monkeypatch, tmp_path):
-    database_path = isolate_database(monkeypatch, tmp_path)
-    app = create_app(testing=True)
-    client = app.test_client()
-    challenge = next(c for c in app_module.CHALLENGES if c['mechanism'] == 'manifest')
-    code = _start_ctf_with_challenge(client, database_path, challenge)
-    client.post('/join', data={'name': 'Rev', 'code': code})
-    home = client.get(f"/lab/{challenge['id']}")
-    assert f"/lab/{challenge['id']}/app.webmanifest".encode('utf-8') in home.data
-    manifest = client.get(f"/lab/{challenge['id']}/app.webmanifest")
-    assert manifest.get_json()['maintenance_note'] == challenge['flags'][0]

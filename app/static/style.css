@@ -1268,6 +1268,172 @@ th {
   font-size: 0.78rem;
   white-space: pre-wrap;
 }
+
+/* ===== Lista 2 — cada laboratorio com seu proprio visual ===== */
+
+/* 18 · Festa Meia-Noite — poster noturno */
+.scenario-18 { background: radial-gradient(ellipse at 50% -10%, #3a1d6e, #140a24 60%, #0b0616); color: #efe8ff; font-family: "Segoe UI", system-ui, sans-serif; }
+.festa-header { background: transparent; border-bottom: 1px solid rgba(255,255,255,.08); color: #efe8ff; }
+.festa-header .scenario-logo { color: #fff; font-weight: 900; letter-spacing: .02em; } .festa-header .scenario-logo span { color: #c879ff; }
+.festa-header nav a { color: #c9bce6; text-decoration: none; font-size: .82rem; }
+.festa-cta { padding: 9px 16px; border-radius: 99px; background: linear-gradient(90deg,#ff5f9e,#c879ff); color: #140a24; font-weight: 800; text-decoration: none; font-size: .78rem; }
+.festa-main { width: min(1000px, calc(100% - 44px)); margin: auto; padding: 20px 0 60px; }
+.festa-hero { text-align: center; padding: 56px 20px 40px; }
+.festa-eyebrow { color: #c879ff; font-size: .74rem; font-weight: 800; letter-spacing: .3em; }
+.festa-hero h1 { margin: 16px 0; font-size: clamp(3rem, 9vw, 6rem); line-height: .92; letter-spacing: -.04em; }
+.festa-hero h1 em { font-style: normal; background: linear-gradient(90deg,#ff5f9e,#c879ff,#5fd3ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.festa-sub { color: #b6a9d6; font-size: 1.05rem; }
+.festa-meta { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+.festa-meta span { display: grid; gap: 3px; padding: 14px 22px; border: 1px solid rgba(255,255,255,.12); border-radius: 14px; background: rgba(255,255,255,.04); color: #b6a9d6; font-size: .66rem; letter-spacing: .14em; }
+.festa-meta b { color: #fff; font-size: .9rem; letter-spacing: 0; }
+.festa-band { display: grid; grid-template-columns: 1.4fr 1fr; gap: 28px; margin: 40px 0; padding: 30px; border: 1px solid rgba(255,255,255,.1); border-radius: 20px; background: rgba(255,255,255,.03); }
+.festa-tag { color: #ff5f9e; font-size: .68rem; font-weight: 800; letter-spacing: .18em; } .festa-tag.center { text-align: center; }
+.festa-about h2 { margin: 8px 0 14px; font-size: 1.5rem; } .festa-about p { color: #c2b6df; line-height: 1.75; margin: 0 0 12px; }
+.festa-lineup { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; align-content: start; }
+.festa-lineup li { display: flex; gap: 12px; padding: 11px 14px; border-radius: 11px; background: rgba(255,255,255,.05); }
+.festa-lineup b { color: #c879ff; } .festa-lineup span { color: #d8cfee; font-size: .86rem; }
+.festa-guests { margin: 40px 0; text-align: center; } .festa-guests h2.center { font-size: 1.6rem; margin: 6px 0 20px; }
+.guest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px,1fr)); gap: 8px; }
+.guest-grid span { padding: 11px 8px; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; background: rgba(255,255,255,.03); color: #d8cfee; font-size: .8rem; }
+.guest-grid span:last-child { background: linear-gradient(90deg,rgba(255,95,158,.25),rgba(200,121,255,.25)); color: #fff; font-weight: 700; }
+.festa-address { margin: 40px 0 10px; }
+.address-card { padding: 34px; border: 1px solid rgba(255,255,255,.14); border-radius: 20px; background: linear-gradient(135deg, rgba(255,95,158,.12), rgba(95,211,255,.06) 70%, transparent); text-align: center; }
+.address-card h2 { font-size: 1.8rem; margin: 8px 0 10px; } .address-flavor { color: #b6a9d6; margin: 0 0 18px; }
+.festa-cipher { display: inline-block; margin: 0 auto; padding: 18px 26px; border-radius: 12px; background: #0b0616; color: #ffd6ea; font-family: ui-monospace, monospace; font-size: 1.1rem; letter-spacing: .04em; border: 1px solid rgba(255,95,158,.4); }
+.address-rsvp { display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; margin-top: 22px; color: #b6a9d6; font-size: .85rem; }
+.festa-footer { display: flex; justify-content: space-between; gap: 14px; padding: 20px clamp(20px,6vw,60px); border-top: 1px solid rgba(255,255,255,.08); color: #8a7fae; font-size: .66rem; }
+@media (max-width: 720px) { .festa-band { grid-template-columns: 1fr; } }
+
+/* 19 · Marcenaria Raiz — editorial de madeira, claro e quente */
+.scenario-19 { background: #f4ede1; color: #33261a; font-family: "Iowan Old Style", Georgia, serif; }
+.marc-header { background: #efe6d6; color: #33261a; } .marc-header .scenario-logo { color: #4a3118; font-weight: 700; } .marc-header .scenario-logo em { color: #a9743f; font-style: normal; }
+.marc-header nav a { color: #6b543a; font-family: Arial, sans-serif; font-size: .82rem; text-decoration: none; }
+.marc-content h1 { font-weight: 600; letter-spacing: -.02em; }
+.marc-content .scenario-kicker { color: #a9743f; font-family: Arial, sans-serif; }
+.marc-lead { max-width: 620px; color: #6b543a; font-size: 1rem; line-height: 1.7; }
+.marc-btn, .marc-header + * .marc-btn { display: inline-block; margin-top: 18px; padding: 12px 20px; border-radius: 8px; background: #6b4423; color: #f4ede1; font-family: Arial, sans-serif; font-weight: 700; text-decoration: none; font-size: .82rem; }
+.marc-hero { display: grid; grid-template-columns: 1.3fr 1fr; gap: 30px; align-items: center; margin-bottom: 36px; }
+.marc-hero-art { display: grid; gap: 8px; height: 220px; grid-template-rows: repeat(3,1fr); }
+.marc-hero-art span { border-radius: 10px; background: linear-gradient(90deg,#8a5a2b,#a9743f); }
+.marc-hero-art span:nth-child(2){ background: linear-gradient(90deg,#6b4423,#8a5a2b);} .marc-hero-art span:nth-child(3){ background: linear-gradient(90deg,#4a3118,#6b4423);}
+.marc-steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin: 10px 0 26px; }
+.marc-steps article { padding: 20px; border-radius: 12px; background: #ece2d0; } .marc-steps b { font-family: Arial, sans-serif; color: #4a3118; } .marc-steps p { color: #6b543a; font-size: .86rem; margin: 6px 0 0; }
+.marc-quote { padding: 24px; border-left: 3px solid #a9743f; background: #ece2d0; border-radius: 0 12px 12px 0; font-size: 1.15rem; font-style: italic; color: #4a3118; }
+.marc-catalog { display: grid; gap: 9px; margin-top: 18px; }
+.marc-item { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 15px 18px; border-radius: 11px; background: #ece2d0; }
+.marc-item b { font-family: Arial, sans-serif; } .marc-item small { display: block; color: #917452; font-size: .74rem; } .marc-item strong { color: #6b4423; font-size: 1.05rem; }
+.marc-woods { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 14px; margin-top: 18px; }
+.marc-woods article { padding: 16px; border-radius: 12px; background: #ece2d0; } .wood-chip { display: block; height: 52px; border-radius: 8px; margin-bottom: 11px; } .marc-woods b { font-family: Arial, sans-serif; } .marc-woods p { color: #6b543a; font-size: .82rem; margin: 5px 0 0; }
+.marc-muted { color: #917452; } .marc-footer { background: #efe6d6; border-color: #ddceb6; }
+@media (max-width: 720px){ .marc-hero, .marc-steps { grid-template-columns: 1fr; } }
+
+/* 20 · Padaria Pão & Grão — aconchego claro */
+.scenario-20 { background: #fdf6ea; color: #4a3626; font-family: "Segoe UI", system-ui, sans-serif; }
+.pad-header { background: #fbeedb; color: #4a3626; } .pad-header .scenario-logo { color: #b9772a; font-weight: 800; }
+.pad-header nav a { color: #7a5a3c; text-decoration: none; font-size: .82rem; } .pad-badge { padding: 5px 11px; border-radius: 99px; background: #f0d9b8; color: #9a6a2a; font-size: .6rem; font-weight: 800; letter-spacing: .1em; }
+.pad-content .scenario-kicker { color: #c58a2e; }
+.pad-hero { display: grid; grid-template-columns: 1.4fr .6fr; gap: 24px; align-items: center; margin-bottom: 24px; }
+.pad-hero h1 { font-size: clamp(2.2rem,5vw,3.4rem); letter-spacing: -.03em; } .pad-lead { color: #7a5a3c; font-size: 1rem; line-height: 1.7; }
+.pad-hero-art { font-size: 6rem; text-align: center; }
+.pad-btn { display: inline-block; margin-top: 16px; padding: 12px 20px; border-radius: 99px; background: #e0962f; color: #fff; font-weight: 800; text-decoration: none; font-size: .82rem; }
+.pad-strip { display: flex; flex-wrap: wrap; gap: 16px; margin: 6px 0 26px; padding: 14px 18px; border-radius: 14px; background: #fbeedb; color: #8a6238; font-size: .84rem; }
+.pad-cols article { background: #fbeedb; } .pad-cols b { color: #4a3626; } .pad-cols p { color: #7a5a3c; }
+.pad-menu { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 12px; margin-top: 18px; }
+.pad-menu article { display: flex; align-items: center; gap: 13px; padding: 14px; border-radius: 14px; background: #fff; box-shadow: 0 8px 20px rgba(120,80,30,.06); }
+.pad-menu b { color: #4a3626; } .pad-menu small { display: block; color: #9a7a56; font-size: .74rem; } .pad-menu strong { margin-left: auto; color: #c17a24; }
+.pad-art { width: 52px; height: 52px; border-radius: 50%; flex: 0 0 auto; background: radial-gradient(circle at 35% 30%,#f6d9a0,#c98a3c); }
+.pad-art.croi { border-radius: 42% 58% 54% 46%; background: linear-gradient(135deg,#e6b968,#b97e30); } .pad-art.sonho { background: radial-gradient(circle at 40% 35%,#fde4c4,#e0a35a); } .pad-art.cafe { background: radial-gradient(circle at 50% 40%,#6f4a2d,#3a2416); } .pad-art.bolo { background: linear-gradient(135deg,#e8c37a,#b8863c); border-radius: 10px; } .pad-art.suco { background: radial-gradient(circle at 40% 35%,#ffd27a,#f0962f); }
+.pad-note { margin-top: 18px; padding: 16px 18px; border-left: 3px solid #e0962f; background: #fbeedb; border-radius: 0 12px 12px 0; color: #7a5a3c; }
+.pad-footer { background: #fbeedb; border-color: #efdcc0; }
+@media (max-width: 720px){ .pad-hero { grid-template-columns: 1fr; } }
+
+/* 21 · Ateliê Lumen — galeria clara, cubo branco */
+.scenario-21 { background: #fafafa; color: #18181b; font-family: "Helvetica Neue", Arial, sans-serif; }
+.atel-header { background: #fff; color: #18181b; border-bottom: 1px solid #eee; } .atel-header .scenario-logo { color: #18181b; font-weight: 800; letter-spacing: .06em; } .atel-header .scenario-logo span { color: #999; font-weight: 400; }
+.atel-header nav a { color: #555; text-decoration: none; font-size: .82rem; }
+.atel-content .scenario-kicker { color: #aa0088; }
+.atel-content h1 { font-weight: 800; letter-spacing: -.03em; } .atel-lead { max-width: 560px; color: #555; line-height: 1.7; }
+.atel-btn { display: inline-block; margin-top: 16px; padding: 12px 22px; border-radius: 0; background: #18181b; color: #fff; font-weight: 700; text-decoration: none; font-size: .82rem; }
+.atel-hero { padding: 30px 0 18px; }
+.atel-preview { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-top: 10px; }
+.atel-preview img { width: 100%; border-radius: 4px; border: 1px solid #eee; }
+.atel-gallery { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 18px; margin-top: 22px; }
+.atel-gallery figure { margin: 0; } .atel-gallery img { width: 100%; display: block; border: 1px solid #eee; border-radius: 4px; transition: transform .2s; } .atel-gallery a:hover img { transform: scale(1.02); }
+.atel-gallery figcaption { margin-top: 9px; color: #18181b; font-size: .82rem; font-weight: 600; } .atel-gallery figcaption span { color: #999; font-weight: 400; margin-left: 6px; }
+.atel-footer { background: #fff; border-color: #eee; }
+
+/* 22 · Rota Log — logistica corporativa, clara */
+.scenario-22 { background: #eef3f8; color: #1b2a3a; font-family: "Segoe UI", system-ui, sans-serif; }
+.rota-header { background: #fff; color: #1b2a3a; box-shadow: 0 1px 0 rgba(0,0,0,.05); } .rota-header .scenario-logo { color: #1b2a3a; font-weight: 800; } .rota-header .scenario-logo span { color: #2f7ad6; }
+.rota-header nav a { color: #4a5e74; text-decoration: none; font-size: .82rem; } .rota-pill { padding: 5px 11px; border-radius: 99px; background: #e4f3ea; color: #2f8a52; font-size: .62rem; font-weight: 700; }
+.rota-content .scenario-kicker { color: #2f7ad6; }
+.rota-hero { display: grid; grid-template-columns: 1.3fr 1fr; gap: 26px; align-items: center; }
+.rota-hero h1 { font-size: clamp(2rem,4.6vw,3.2rem); letter-spacing: -.03em; } .rota-lead { color: #4a5e74; line-height: 1.7; }
+.rota-btn { display: inline-block; margin-top: 16px; padding: 12px 20px; border-radius: 8px; background: #2f7ad6; color: #fff; font-weight: 700; text-decoration: none; font-size: .82rem; }
+.rota-map { position: relative; height: 180px; border-radius: 16px; background: linear-gradient(135deg,#dbe8f6,#c3dbf0); display: grid; place-items: center; overflow: hidden; }
+.rota-map i { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: #2f7ad6; } .rota-map i:nth-child(1){top:30%;left:25%} .rota-map i:nth-child(2){top:60%;left:50%} .rota-map i:nth-child(3){top:40%;left:72%}
+.rota-map b { color: #1b4d8a; font-size: .72rem; letter-spacing: .12em; background: rgba(255,255,255,.7); padding: 4px 10px; border-radius: 99px; }
+.rota-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-top: 28px; }
+.rota-stats div { padding: 20px; border-radius: 14px; background: #fff; box-shadow: 0 8px 22px rgba(27,42,58,.05); } .rota-stats b { display: block; color: #2f7ad6; font-size: 1.7rem; letter-spacing: -.03em; } .rota-stats span { color: #4a5e74; font-size: .76rem; }
+.rota-track .scenario-inline input { min-height: 46px; border-radius: 9px; border: 1px solid #c5d6e8; background: #fff; color: #1b2a3a; padding: 0 14px; }
+.scenario-22 .lab-output { background: #0f1b2a; color: #bfe0ff; border-radius: 10px; }
+.rota-footer { background: #fff; border-color: #dbe6f0; }
+@media (max-width: 720px){ .rota-hero { grid-template-columns: 1fr; } .rota-stats { grid-template-columns: repeat(2,1fr); } }
+
+/* 23 · Balcão Interno — app utilitario, escuro */
+.scenario-23 { background: #10141c; color: #dbe3ee; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.balc-header { background: #161c26; color: #dbe3ee; border-bottom: 1px solid #222a37; } .balc-header .scenario-logo { color: #ff8f5e; font-weight: 700; } .balc-header .scenario-logo span { color: #6b7688; }
+.balc-header nav a { color: #9aa6b6; text-decoration: none; font-size: .78rem; } .balc-user { color: #5f8a63; font-size: .66rem; }
+.balc-content .scenario-kicker { color: #ff8f5e; }
+.balc-hero h1 { font-size: clamp(1.9rem,4vw,2.8rem); } .balc-lead { color: #9aa6b6; max-width: 560px; line-height: 1.7; }
+.balc-btn { display: inline-block; margin-top: 16px; padding: 11px 18px; border-radius: 7px; background: #ff8f5e; color: #10141c; font-family: inherit; font-weight: 800; text-decoration: none; font-size: .8rem; cursor: pointer; border: 0; }
+.balc-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 26px; }
+.balc-grid article { padding: 18px; border: 1px solid #222a37; border-radius: 10px; background: #161c26; } .balc-grid span { color: #576174; font-size: 1.3rem; font-weight: 800; } .balc-grid b { display: block; margin-top: 6px; color: #dbe3ee; } .balc-grid p { color: #8591a2; font-size: .78rem; margin: 5px 0 0; }
+.balc-login { max-width: 460px; }
+.scenario-23 .scenario-form label { display: grid; gap: 6px; margin: 12px 0; color: #9aa6b6; font-size: .78rem; }
+.scenario-23 .scenario-form input { min-height: 44px; padding: 10px 12px; border-radius: 7px; border: 1px solid #2a3340; background: #0b0f16; color: #dbe3ee; font: inherit; }
+.scenario-23 .lab-output { background: #0b0f16; color: #c7f0d6; border: 1px solid #222a37; border-radius: 8px; }
+.balc-footer { background: #161c26; border-color: #222a37; }
+@media (max-width: 720px){ .balc-grid { grid-template-columns: 1fr; } }
+
+/* 24 · Núcleo Hub — coworking claro e arejado */
+.scenario-24 { background: #f3f6fb; color: #1c2a3a; font-family: "Segoe UI", system-ui, sans-serif; }
+.nuc-header { background: #fff; color: #1c2a3a; box-shadow: 0 1px 0 rgba(0,0,0,.05); } .nuc-header .scenario-logo { color: #1c2a3a; font-weight: 800; } .nuc-header .scenario-logo em { color: #3b6ef0; font-style: normal; }
+.nuc-header nav a { color: #51607a; text-decoration: none; font-size: .82rem; } .nuc-cta { padding: 9px 16px; border-radius: 99px; background: #3b6ef0; color: #fff; font-weight: 700; text-decoration: none; font-size: .78rem; }
+.nuc-content .scenario-kicker { color: #3b6ef0; }
+.nuc-hero h1 { font-size: clamp(2rem,4.6vw,3.2rem); letter-spacing: -.03em; } .nuc-lead { color: #51607a; max-width: 600px; line-height: 1.7; }
+.nuc-btn { display: inline-block; margin-top: 16px; padding: 12px 20px; border-radius: 10px; background: #3b6ef0; color: #fff; font-weight: 700; text-decoration: none; font-size: .82rem; cursor: pointer; border: 0; }
+.nuc-amen { display: flex; flex-wrap: wrap; gap: 16px; margin: 18px 0 26px; color: #51607a; font-size: .86rem; }
+.nuc-spaces { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 14px; margin-top: 18px; }
+.nuc-spaces article { padding: 22px; border-radius: 16px; color: #fff; } .nuc-spaces b { font-size: 1.1rem; } .nuc-spaces p { opacity: .9; font-size: .84rem; margin: 6px 0 12px; } .nuc-spaces strong { font-size: .9rem; }
+.sp-flex { background: linear-gradient(135deg,#3b6ef0,#5a8bff); } .sp-focus { background: linear-gradient(135deg,#1aa5a0,#3dc2bd); } .sp-aud { background: linear-gradient(135deg,#8458e6,#a87cff); }
+.nuc-account { display: grid; grid-template-columns: .8fr 1.2fr; gap: 16px; margin-top: 18px; }
+.nuc-badge { padding: 22px; border-radius: 16px; background: linear-gradient(135deg,#1c2a3a,#2b3f57); color: #fff; } .nuc-badge span { font-size: .6rem; letter-spacing: .2em; opacity: .7; } .nuc-badge b { display: block; font-size: 1.6rem; margin: 6px 0; } .nuc-badge small { opacity: .8; }
+.scenario-24 .scenario-card { background: #fff; box-shadow: 0 8px 22px rgba(28,42,58,.06); }
+.scenario-24 .lab-output { background: #0f1b2a; color: #bfe0ff; border-radius: 10px; }
+.nuc-footer { background: #fff; border-color: #dbe4f0; }
+@media (max-width: 720px){ .nuc-account { grid-template-columns: 1fr; } }
+
+/* 25 · Central ID — SaaS de seguranca, escuro navy */
+.scenario-25 { background: #0e1726; color: #d6e0ee; font-family: "Segoe UI", system-ui, sans-serif; }
+.cid-header { background: #101c2e; color: #d6e0ee; border-bottom: 1px solid #1e2c42; } .cid-header .scenario-logo { color: #fff; font-weight: 800; } .cid-header .scenario-logo span { color: #35d0b5; }
+.cid-header nav a { color: #9fb0c6; text-decoration: none; font-size: .82rem; }
+.cid-content .scenario-kicker { color: #35d0b5; }
+.cid-hero { display: grid; grid-template-columns: 1.4fr .6fr; gap: 26px; align-items: center; }
+.cid-hero h1 { font-size: clamp(2rem,4.6vw,3.3rem); letter-spacing: -.03em; color: #fff; } .cid-lead { color: #9fb0c6; line-height: 1.7; }
+.cid-lock { font-size: 6rem; text-align: center; }
+.cid-btn { display: inline-block; margin-top: 16px; padding: 12px 20px; border-radius: 10px; background: #35d0b5; color: #0e1726; font-weight: 800; text-decoration: none; font-size: .82rem; cursor: pointer; border: 0; }
+.cid-cols article { background: #16233a; border: 1px solid #1e2c42; } .cid-cols b { color: #fff; } .cid-cols p { color: #9fb0c6; }
+.cid-lead + .cid-card, .cid-card { margin-top: 18px; padding: 22px; border: 1px solid #1e2c42; border-radius: 14px; background: #16233a; max-width: 520px; }
+.scenario-25 .scenario-form label { display: grid; gap: 6px; color: #9fb0c6; font-size: .8rem; }
+.scenario-25 .scenario-form input { min-height: 44px; padding: 10px 12px; border-radius: 8px; border: 1px solid #27374f; background: #0b1420; color: #d6e0ee; font: inherit; }
+.cid-note { color: #7f93ab; font-size: .78rem; margin-top: 12px; }
+.cid-team { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 12px; margin-top: 18px; }
+.cid-person { padding: 18px; border: 1px solid #1e2c42; border-radius: 14px; background: #16233a; } .cid-person b { display: block; color: #fff; } .cid-person span { color: #35d0b5; font-size: .72rem; } .cid-person small { display: block; margin-top: 7px; color: #9fb0c6; font-size: .74rem; }
+.cid-footer { background: #101c2e; border-color: #1e2c42; }
+@media (max-width: 720px){ .cid-hero { grid-template-columns: 1fr; } }
+
+
 .scenario-1 { background: #f5f2eb; color: #2b302c; font-family: Georgia, serif; }
 .blog-header { background: #f9f7f2; }
 .blog-header .scenario-logo span { color: #c66b4e; font-family: Georgia, serif; }

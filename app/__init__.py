@@ -121,155 +121,115 @@ CHALLENGES = [
         ],
         "hint_deductions": [0, 5, 10, 15],
     },
-    {
-        "id": 8,
-        "title": "Desafio 8",
-        "name": "Camadas finais",
-        "points": 15,
-        "difficulty": "Médio/Difícil",
-        "flags": ["JACITEC{final_layer_unlocked}"],
-        "description": "Combine os conceitos anteriores para encontrar o último segredo.",
-        "hints": [
-            "Relembre os desafios anteriores e como cada um escondia uma pista.",
-            "A resposta final combina observação do código e análise do comportamento.",
-            "Uma sequência de pistas geralmente revela a chave final."
-        ],
-        "hint_deductions": [0, 5, 10, 15],
-    },
 ]
 
-# Três listas independentes, cada uma com exatamente 10 fáceis, 5 médios e 3
-# difíceis (18 por lista, 54 no total). Cada desafio pertence a uma única lista
-# e tem dificuldade fixa — nada é reatribuído depois por faixa de id.
-# Os oito laboratórios originais (id 1-8) ficam na lista 1.
+# Cada lista é uma edição fechada: 5 fáceis, 2 médios e 1 difícil. Um desafio
+# pertence a uma única lista e tem dificuldade fixa.
 for _challenge_id, _mechanism, _difficulty in (
     (1, "source", "Fácil"), (2, "sitemap", "Fácil"), (3, "base64", "Fácil"), (4, "js", "Fácil"),
-    (5, "header", "Fácil"), (6, "idor", "Difícil"), (7, "search", "Médio"), (8, "audit", "Difícil"),
+    (5, "header", "Fácil"), (6, "idor", "Difícil"), (7, "search", "Médio"),
 ):
     CHALLENGES[_challenge_id - 1].update({"list_id": "lista-1", "mechanism": _mechanism, "difficulty": _difficulty})
 
 # (id, lista, dificuldade, mecanismo, nome, descrição — esta só aparece para a organização)
+# Lista 1 = edição CTF 1 (ids 1-7 no literal acima + o 17 aqui).
+# Lista 2 = edição CTF 2, com temas e mecanismos novos.
 _EXTRA_CHALLENGES = [
-    # Lista 1 — completa os 8 originais
-    (9, "lista-1", "Fácil", "manifest", "Manifesto público", "Um arquivo de configuração do navegador contém uma pista."),
-    (10, "lista-1", "Fácil", "metadata", "Metadados da galeria", "A ficha de uma imagem tem mais dados que a tela mostra."),
-    (11, "lista-1", "Fácil", "source", "Rascunho esquecido", "O portal editorial deixou um rascunho no HTML."),
-    (12, "lista-1", "Fácil", "receipt", "Recibo de atendimento", "O recibo da solicitação contém uma nota técnica nos cabeçalhos HTTP."),
-    (13, "lista-1", "Fácil", "base64", "Texto transportado", "Uma mensagem foi codificada, mas não protegida."),
-    (14, "lista-1", "Médio", "search", "Filtro de inventário", "A busca foi implementada sem tratar corretamente a entrada."),
-    (15, "lista-1", "Médio", "header", "Resposta temporária", "Um serviço devolve uma pista apenas nos cabeçalhos HTTP."),
-    (16, "lista-1", "Médio", "js", "Console de manutenção", "O painel frontend carrega uma configuração que não deveria ser pública."),
     (17, "lista-1", "Médio", "redirect", "Cadeia de redirecionamento", "Siga as respostas HTTP para encontrar a evidência correta."),
-    (18, "lista-1", "Difícil", "idor", "Documento com acesso cruzado", "A validação de acesso depende de mais que trocar um número."),
-    # Lista 2
-    (19, "lista-2", "Fácil", "source", "Comentário de implantação", "Uma página institucional publicou uma nota interna."),
-    (20, "lista-2", "Fácil", "robots", "Descoberta responsável", "Leia os arquivos de descoberta antes de enumerar caminhos."),
-    (21, "lista-2", "Fácil", "base64", "Token de migração", "Uma aplicação antiga ainda publica um token codificado."),
-    (22, "lista-2", "Fácil", "js", "Versão em cache", "O bundle do frontend contém uma anotação útil."),
-    (23, "lista-2", "Fácil", "header", "Cookie de ambiente", "A resposta possui um metadado que o HTML não revela."),
-    (24, "lista-2", "Fácil", "manifest", "Preferências públicas", "As preferências web expõem uma pista de configuração."),
-    (25, "lista-2", "Fácil", "metadata", "Biblioteca de imagens", "Uma imagem de acervo foi entregue com metadados úteis."),
-    (26, "lista-2", "Fácil", "source", "Fonte da newsletter", "O código-fonte de uma newsletter tem uma observação interna."),
-    (27, "lista-2", "Fácil", "robots", "Backup previsível", "Um arquivo de descoberta aponta para material esquecido."),
-    (28, "lista-2", "Fácil", "base64", "Mensagem serializada", "Uma sequência codificada precisa ser decifrada."),
-    (29, "lista-2", "Médio", "search", "Pesquisa de acervo", "A busca deve ser analisada com um interceptador ou DevTools."),
-    (30, "lista-2", "Médio", "header", "Cabeçalho de diagnóstico", "Use as ferramentas HTTP para enxergar a resposta inteira."),
-    (31, "lista-2", "Médio", "js", "Bundle de homologação", "Uma variável de ambiente ficou publicada no JavaScript."),
-    (32, "lista-2", "Médio", "metadata", "Ficha técnica da foto", "Os metadados de uma prévia trazem mais do que a legenda."),
-    (33, "lista-2", "Médio", "search", "Catálogo interno", "Observe e repita a requisição antes de alterar a entrada."),
-    (34, "lista-2", "Difícil", "idor", "Consulta de pedidos", "Um recurso sequencial exige testar autorização, não adivinhação."),
-    (35, "lista-2", "Difícil", "audit", "Relatório de incidente", "Correlacione uma rota descoberta e o retorno estruturado."),
-    (36, "lista-2", "Difícil", "redirect", "Entrega contínua", "Inspecione cada etapa de uma resposta redirecionada."),
-    # Lista 3
-    (37, "lista-3", "Fácil", "source", "Rascunho editorial", "Uma página de conteúdo manteve uma anotação fora da interface."),
-    (38, "lista-3", "Fácil", "robots", "Serviço de catálogo", "Um arquivo de descoberta lista uma rota que não está no menu."),
-    (39, "lista-3", "Fácil", "base64", "Registro legível", "Uma mensagem codificada precisa ser interpretada."),
-    (40, "lista-3", "Fácil", "js", "Relatório de interface", "O frontend ainda traz uma variável de manutenção."),
-    (41, "lista-3", "Fácil", "header", "Canal de suporte", "A resposta técnica contém uma informação fora do corpo HTML."),
-    (42, "lista-3", "Fácil", "manifest", "Nota de navegador", "A configuração do navegador aponta para uma pista publicada."),
-    (43, "lista-3", "Fácil", "metadata", "Acervo fotográfico", "Uma foto do acervo foi entregue com metadados extras."),
-    (44, "lista-3", "Fácil", "source", "Página institucional", "Uma página institucional guarda uma anotação no HTML."),
-    (45, "lista-3", "Fácil", "js", "Variável esquecida", "Uma variável de depuração ficou no JavaScript publicado."),
-    (46, "lista-3", "Fácil", "robots", "Rotas fora do menu", "O arquivo de descoberta revela um caminho não divulgado."),
-    (47, "lista-3", "Médio", "search", "Busca avançada", "A evidência aparece somente após manipular a requisição de busca."),
-    (48, "lista-3", "Médio", "search", "Consulta composta", "Use uma ferramenta de repetição de requisições para validar a hipótese."),
-    (49, "lista-3", "Médio", "header", "Dupla verificação", "A informação está em uma resposta que exige inspecionar HTTP."),
-    (50, "lista-3", "Médio", "manifest", "Arquivo de manutenção", "Uma configuração exposta aponta para uma rota operacional."),
-    (51, "lista-3", "Médio", "metadata", "Prévia silenciosa", "Uma prévia carregada em segundo plano tem metadados úteis."),
-    (52, "lista-3", "Difícil", "audit", "Trilha de auditoria", "O endpoint é intencionalmente pouco visível, mas está no fluxo."),
-    (53, "lista-3", "Difícil", "idor", "Perfil de fornecedor", "Teste a autorização do recurso, em vez de somente o endereço."),
-    (54, "lista-3", "Difícil", "redirect", "Protocolo de entrega", "Os cabeçalhos e códigos de status formam a pista final."),
+
+    (18, "lista-2", "Fácil", "caesar", "Convite cifrado", "O convite do clube vem com as letras deslocadas; a própria página diz quanto."),
+    (19, "lista-2", "Fácil", "backup", "Cópia esquecida", "A rotina de backup da oficina deixou uma cópia do catálogo acessível."),
+    (20, "lista-2", "Fácil", "cookie", "Lembrete do balcão", "A padaria guarda a preferência do cliente em um cookie."),
+    (21, "lista-2", "Fácil", "svg", "Assinatura do ateliê", "O logo é um SVG e carrega uma anotação da ilustradora no código."),
+    (22, "lista-2", "Fácil", "debug", "Modo de diagnóstico", "O painel da transportadora abre um diagnóstico quando recebe o parâmetro certo."),
+    (23, "lista-2", "Médio", "login_sqli", "Entrada de serviço", "O login do balcão monta a consulta concatenando o que o usuário digita."),
+    (24, "lista-2", "Médio", "token", "Crachá digital", "O crachá do coworking é um token legível que o próprio visitante pode reescrever."),
+    (25, "lista-2", "Difícil", "recovery", "Central de recuperação", "Uma rota não divulgada expõe a regra usada para gerar tokens de recuperação."),
 ]
-# A dica 1 de cada mecanismo sempre nomeia a ferramenta específica necessária
-# para resolver o laboratório, conforme pedido: quem precisa de DevTools, de um
-# decodificador Base64, de um interceptador de requisições etc. deve descobrir
-# isso já na primeira dica, sem precisar gastar uma dica só para "adivinhar" a
-# ferramenta certa.
+
 HINTS_BY_MECHANISM = {
+    # --- Lista 1 (edicao CTF 1) ---
     "source": [
-        "Ferramenta necessária: o código-fonte da página (botão direito → \"Ver/Exibir código-fonte\", ou Ctrl+U / Cmd+Option+U).",
-        "Nem tudo que existe no HTML aparece renderizado na tela — procure por comentários e trechos ocultos.",
+        "Ferramenta necessaria: o codigo-fonte da pagina (botao direito -> \"Ver/Exibir codigo-fonte\", ou Ctrl+U).",
+        "Nem tudo que existe no HTML aparece renderizado na tela - procure por comentarios e trechos ocultos.",
         "Percorra o documento inteiro, incluindo o que vem antes do <body> e depois do </body>.",
     ],
-    "robots": [
-        "Ferramenta necessária: o arquivo robots.txt do site (acesse diretamente pela URL, ex.: /robots.txt).",
-        "Esse arquivo lista caminhos que os buscadores não devem indexar — mas o navegador consegue acessá-los normalmente.",
-        "Abra manualmente qualquer rota listada como \"Disallow\" para ver o que ela entrega.",
-    ],
     "sitemap": [
-        "Procure no site um mapa com a lista de páginas e rotas disponíveis.",
-        "Um mapa do site pode mostrar páginas que não aparecem na navegação principal.",
+        "Procure no site um mapa com a lista de paginas e rotas disponiveis.",
+        "Um mapa do site pode mostrar paginas que nao aparecem na navegacao principal.",
         "Acesse uma das rotas auxiliares listadas no mapa.",
     ],
     "base64": [
-        "Ferramenta necessária: um decodificador Base64 (ex.: CyberChef, ou o terminal com `base64 -d`).",
-        "O texto codificado não é criptografia — qualquer decodificador Base64 revela o conteúdo original.",
-        "Copie exatamente a string codificada, sem espaços extras, antes de decodificar.",
+        "Ferramenta necessaria: um decodificador Base64 (no terminal, `base64 -d`; ou o CyberChef no navegador).",
+        "O texto codificado nao e criptografia - qualquer decodificador Base64 revela o conteudo original.",
+        "Copie exatamente a string codificada, sem espacos extras, antes de decodificar.",
     ],
     "js": [
-        "Ferramenta necessária: DevTools do navegador (abas Console e Sources) para inspecionar o JavaScript carregado.",
-        "Variáveis globais definidas em scripts ficam acessíveis digitando o nome delas no Console.",
-        "Procure por arquivos .js carregados pela página e leia o conteúdo na aba Sources.",
+        "Ferramenta necessaria: DevTools do navegador (abas Console e Sources) para inspecionar o JavaScript carregado.",
+        "Variaveis globais definidas em scripts ficam acessiveis digitando o nome delas no Console.",
+        "Procure pelo script carregado pela pagina e leia o conteudo na aba Sources.",
     ],
     "header": [
-        "Ferramenta necessária: DevTools (aba Network) ou `curl -I` para inspecionar os cabeçalhos completos da resposta HTTP.",
-        "A interface visual não mostra tudo — os metadados podem estar apenas no cabeçalho da resposta.",
-        "Repita a requisição da página principal e leia cada cabeçalho de resposta, um por um.",
-    ],
-    "receipt": [
-        "Ferramenta necessária: DevTools do navegador (aba Network/Rede) para inspecionar a resposta de uma requisição.",
-        "Clique no botão 'Baixar recibo' que aparece na página e selecione essa requisição na lista.",
-        "Na seção Response Headers/Cabeçalhos de resposta, procure por X-Receipt-Note.",
+        "Ferramenta necessaria: `curl -i` no terminal (ou DevTools -> Network) para ver os cabecalhos completos da resposta HTTP.",
+        "A interface visual nao mostra tudo - os metadados podem estar apenas no cabecalho da resposta.",
+        "Repita a requisicao da pagina principal e leia cada cabecalho de resposta, um por um.",
     ],
     "idor": [
-        "Ferramenta necessária: Burp Suite (ou outro interceptador de requisições) — o DevTools não permite adicionar ou alterar cabeçalhos na requisição antes de reenviá-la.",
-        "Depois de ver a requisição original, tente trocar o identificador do recurso e observe a resposta.",
-        "A autorização pode depender de um cabeçalho que a primeira resposta já revelou — reenvie a requisição incluindo-o.",
+        "Ferramenta necessaria: `curl` no terminal, porque e preciso reenviar a requisicao com um cabecalho a mais - o DevTools sozinho nao faz isso. (Burp Suite tambem serve, se voce tiver.)",
+        "Depois de ver a requisicao original, tente trocar o identificador do recurso e observe a resposta.",
+        "A autorizacao pode depender de um cabecalho que a primeira resposta ja revelou - reenvie a requisicao incluindo-o com `curl -H`.",
     ],
     "search": [
-        "Ferramenta necessária: DevTools (aba Network) ou Burp Suite para observar e reenviar a requisição feita pelo formulário de busca.",
-        "A busca normal só retorna registros públicos cujo título contém o termo pesquisado — procurar palavras do senso comum não revela nada escondido.",
-        "O filtro quebra diante de uma condição de comparação sempre verdadeira dentro de um valor com aspas (ex.: fechar a aspa e encadear um OR com algo que sempre bate), não apenas pela palavra \"or\" estar na busca.",
-    ],
-    "audit": [
-        "Ferramenta necessária: DevTools (aba Network) ou `curl` para inspecionar a resposta completa e os cabeçalhos do endpoint de status.",
-        "O cabeçalho da resposta pode apontar diretamente para a rota de auditoria que você precisa visitar.",
-        "Depois de descobrir a rota, acesse-a diretamente e leia o corpo da resposta com atenção.",
-    ],
-    "manifest": [
-        "Ferramenta necessária: DevTools (aba Network) para ver os arquivos que a página carrega ao abrir.",
-        "Ao carregar, a página busca um arquivo de configuração próprio — procure por um pedido a app.webmanifest (aba Network, filtro Fetch/XHR).",
-        "Abra o conteúdo do app.webmanifest diretamente pela URL e leia todos os campos.",
-    ],
-    "metadata": [
-        "Ferramenta necessária: DevTools (aba Network) para inspecionar os cabeçalhos de resposta do recurso de imagem/prévia.",
-        "O elemento pode estar oculto na página, mas a requisição dele ainda aparece na aba Network.",
-        "Leia os cabeçalhos customizados da resposta, não apenas o corpo retornado.",
+        "Ferramenta necessaria: o proprio formulario de busca, ou `curl` para repetir a requisicao com outro valor.",
+        "A busca normal so retorna registros publicos cujo titulo contem o termo pesquisado - procurar palavras do senso comum nao revela nada escondido.",
+        "O filtro quebra diante de uma condicao sempre verdadeira dentro de um valor com aspas (fechar a aspa e encadear um OR com algo que sempre bate), nao apenas pela palavra \"or\" estar na busca.",
     ],
     "redirect": [
-        "Ferramenta necessária: DevTools (aba Network) para observar a cadeia, e Burp Suite ou `curl` para repetir uma das etapas manualmente — o DevTools sozinho não deixa adicionar cabeçalhos a uma requisição. Se usar `curl`/Burp fora do navegador, a requisição precisa levar o cookie da sua sessão ativa; o jeito mais simples é clicar com o botão direito na requisição, no Network, e usar \"Copy as cURL\" — isso já inclui o cookie certo.",
-        "Clicar e seguir a cadeia normalmente (302 → 302 → 200) nunca mostra a flag, nem olhando o Network: a primeira etapa só devolve um token num cabeçalho, que precisa ser usado em outra requisição.",
-        "Reenvie a segunda etapa manualmente (fora do navegador), incluindo o token obtido na primeira resposta como cabeçalho.",
+        "Ferramenta necessaria: `curl` no terminal - e preciso repetir uma das etapas com um cabecalho a mais, e o DevTools nao permite isso. Se for digitar o `curl` do zero, lembre que a requisicao precisa levar o cookie da sua sessao; o atalho e copiar a requisicao no DevTools (botao direito -> \"Copy as cURL\").",
+        "Clicar e seguir a cadeia normalmente (302 -> 302 -> 200) nunca mostra a flag, nem olhando o Network: a primeira etapa so devolve um token num cabecalho, que precisa ser usado em outra requisicao.",
+        "Reenvie a segunda etapa manualmente com `curl -i -H`, incluindo o token obtido na primeira resposta - so assim a flag aparece.",
+    ],
+
+    # --- Lista 2 (edicao CTF 2) ---
+    "caesar": [
+        "Ferramenta necessaria: nenhuma alem de paciencia - ou um decodificador de cifra de Cesar na internet.",
+        "As letras do codigo foram deslocadas no alfabeto. A propria pagina diz de quanto foi o deslocamento; procure um numero que pareca fora de lugar.",
+        "Volte cada letra o numero de casas indicado. Numeros e pontuacao nao mudam, so as letras.",
+    ],
+    "backup": [
+        "Ferramenta necessaria: o navegador ou `curl` para abrir um arquivo direto pela URL.",
+        "A pagina explica como a oficina nomeia as copias de seguranca dos arquivos. Repare na extensao que a rotina acrescenta.",
+        "Pegue o endereco do arquivo que ja esta publicado e peca a copia dele acrescentando essa extensao no fim da URL.",
+    ],
+    "cookie": [
+        "Ferramenta necessaria: `curl -i` no terminal, ou DevTools -> aba Application/Armazenamento -> Cookies.",
+        "Ao abrir a pagina, o servidor pede ao navegador para guardar uma preferencia. Isso viaja num cabecalho Set-Cookie.",
+        "Leia o valor do cookie que a pagina inicial grava - a flag esta ali, nao na tela.",
+    ],
+    "svg": [
+        "Ferramenta necessaria: o navegador ou `curl` para abrir o arquivo da imagem direto pela URL.",
+        "O logo nao e uma foto: e um SVG, que por dentro e texto. Descubra o endereco do arquivo no HTML da pagina.",
+        "Abra o .svg pela URL e leia o codigo dele - ha uma anotacao escrita entre as formas do desenho.",
+    ],
+    "debug": [
+        "Ferramenta necessaria: `curl` no terminal, ou a barra de endereco do navegador.",
+        "A pagina avisa que tem um modo de diagnostico ligado por um parametro na URL. Veja no texto como ele se chama.",
+        "Adicione esse parametro a URL (por exemplo ?debug=1) e leia a resposta: o diagnostico imprime dados internos, flag inclusa.",
+    ],
+    "login_sqli": [
+        "Ferramenta necessaria: o proprio formulario de login, ou `curl` para enviar os campos.",
+        "O servidor monta a consulta juntando texto com o que voce digita no usuario e na senha, sem tratar aspas.",
+        "Encerre a parte do usuario com uma aspa e faca a condicao de senha sempre verdadeira comentando o resto - um classico `' OR '1'='1' --`.",
+    ],
+    "token": [
+        "Ferramenta necessaria: um decodificador Base64 e `curl` para reenviar o cookie alterado (ou DevTools -> Application -> Cookies para edita-lo).",
+        "O cracha e um cookie em Base64. Decodifique e veja que por dentro ha um texto legivel com o seu papel (role).",
+        "Troque o papel para o de administrador, recodifique em Base64 e reenvie o cookie: a area restrita passa a mostrar a flag.",
+    ],
+    "recovery": [
+        "Ferramenta necessaria: `curl` no terminal. Nenhum Burp e necessario - tudo se resolve lendo respostas e refazendo pedidos.",
+        "Ha uma rota de diagnostico nao divulgada (o robots.txt ou um comentario aponta para ela) que revela como o token de recuperacao e formado.",
+        "O token nao e aleatorio: ele vem de um dado publico do usuario passado por um processo simples. Reproduza esse processo para o usuario-alvo e use o token na rota de redefinicao.",
     ],
 }
 
@@ -337,8 +297,12 @@ for _challenge in sorted(CHALLENGES, key=lambda item: item["id"]):
     _challenge["list_number"] = int(_challenge["list_id"].split("-")[1])
     _challenge["code"] = f"L{_challenge['list_number']}-{DIFFICULTY_LETTERS[_challenge['difficulty']]}{_ordinals[_key]:02d}"
 
-assert all(count == {"F": 10, "M": 5, "D": 3}[DIFFICULTY_LETTERS[difficulty]] for (_, difficulty), count in _ordinals.items()) and len(_ordinals) == 9, \
-    "Cada lista deve ter exatamente 10 fáceis, 5 médios e 3 difíceis."
+EDITION_SHAPE = {"F": 5, "M": 2, "D": 1}
+assert all(
+    count == EDITION_SHAPE[DIFFICULTY_LETTERS[difficulty]]
+    for (_, difficulty), count in _ordinals.items()
+) and len(_ordinals) == 3 * len({list_id for list_id, _ in _ordinals}), \
+    "Cada lista deve ter exatamente 5 fáceis, 2 médios e 1 difícil."
 
 # Os oito laboratórios originais (id 1-8) têm cada um seu próprio site
 # artesanal em lab_site.html. Os 46 laboratórios extra reaproveitam essas
@@ -421,20 +385,52 @@ for _challenge in CHALLENGES:
     }
 
 CHALLENGE_BY_ID = {challenge["id"]: challenge for challenge in CHALLENGES}
+
+def _caesar_shift(text, shift):
+    out = []
+    for ch in text:
+        if "a" <= ch <= "z":
+            out.append(chr((ord(ch) - 97 + shift) % 26 + 97))
+        elif "A" <= ch <= "Z":
+            out.append(chr((ord(ch) - 65 + shift) % 26 + 65))
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+# Sites dedicados da lista 2. O conteúdo de cada site mora no template
+# (lab_site.html); aqui ficam só o tema de cor, a marca e o que é calculado.
+_CAESAR_SHIFT = 5
+SITE2 = {
+    18: {"theme": "club", "brand_main": "FESTA", "brand_accent": "MEIA-NOITE",
+         "caesar": _caesar_shift("JACITEC{catalog_18_caesar}", _CAESAR_SHIFT), "shift": _CAESAR_SHIFT},
+    19: {"theme": "wood", "brand_main": "MARCENARIA", "brand_accent": "RAIZ"},
+    20: {"theme": "bakery", "brand_main": "PÃO", "brand_accent": "GRÃO"},
+    21: {"theme": "atelier", "brand_main": "ATELIÊ", "brand_accent": "LUMEN"},
+    22: {"theme": "freight", "brand_main": "ROTA", "brand_accent": "LOG"},
+    23: {"theme": "desk", "brand_main": "BALCÃO", "brand_accent": "INTERNO"},
+    24: {"theme": "cowork", "brand_main": "NÚCLEO", "brand_accent": "HUB"},
+    25: {"theme": "central", "brand_main": "CENTRAL", "brand_accent": "ID"},
+}
+for _cid, _data in SITE2.items():
+    CHALLENGE_BY_ID[_cid]["site2"] = _data
+
 # Só a seleção fixa fica disponível para gerar eventos. O catálogo completo
 # (lista-1/2/3) continua existindo por trás, porque os desafios são
 # referenciados por id nos eventos já realizados.
 CHALLENGE_LISTS = {
     "ctf-1": {"label": "CTF 1", "description": "Seleção fixa: 5 fáceis, 2 médios e 1 difícil."},
+    "ctf-2": {"label": "CTF 2", "description": "Seleção fixa: 5 fáceis, 2 médios e 1 difícil."},
 }
 FIXED_CHALLENGE_LISTS = {
     "ctf-1": (1, 2, 3, 4, 5, 6, 7, 17),
+    "ctf-2": (18, 19, 20, 21, 22, 23, 24, 25),
 }
-DEFAULT_CHALLENGE_LIST = "ctf-1"
+DEFAULT_CHALLENGE_LIST = "ctf-2"
 
 # Versão da plataforma (semver). Suba a cada entrega: patch para correções,
 # minor para funcionalidades novas, major para mudanças incompatíveis.
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.2"
 
 
 def timestamp_now():
@@ -1565,34 +1561,54 @@ def score_breakdown(participant_id):
 # usa {root} = /lab/<id>. Para os 8 laboratórios originais (endpoints próprios)
 # há sobrescritas por id em _WALKTHROUGH_OVERRIDES.
 _WALKTHROUGH_BY_MECHANISM = {
-    "source": {"tool": "Código-fonte da página (Ctrl+U / clique direito → Ver código-fonte)", "where": "Comentário HTML oculto na página inicial do laboratório.",
-        "steps": ["Abra {root}.", "Veja o código-fonte da página (Ctrl+U).", "Procure por um comentário HTML (<!-- ... -->): a flag está escrita nele."]},
-    "robots": {"tool": "Navegador (acesso direto por URL)", "where": "Rota em Disallow no robots.txt → endpoint de auditoria.",
-        "steps": ["Acesse {root}/robots.txt.", "Leia o caminho em 'Disallow:' — {root}/operations/audit.", "Abra {root}/operations/audit; a flag vem no campo 'reference'."]},
-    "base64": {"tool": "Decodificador Base64 (CyberChef ou `base64 -d`)", "where": "Token codificado exibido na própria página.",
-        "steps": ["Abra {root} e localize o token codificado em destaque.", "Decodifique de Base64 (ex.: `echo '<token>' | base64 -d`).", "O texto decodificado é a flag."]},
-    "js": {"tool": "DevTools → Console/Sources", "where": "Variável global no JavaScript da página.",
-        "steps": ["Abra {root} e o DevTools (F12).", "No Console, digite: window.__labRelease", "O valor retornado é a flag."]},
-    "header": {"tool": "DevTools → Network ou `curl -I`", "where": "Cabeçalho de resposta X-Campus-Notice.",
-        "steps": ["Faça uma requisição a {root} (ex.: `curl -I http://<host>{root}`).", "Leia os cabeçalhos da resposta.", "A flag está no cabeçalho 'X-Campus-Notice'."]},
-    "receipt": {"tool": "DevTools → Network", "where": "Cabeçalho X-Receipt-Note da resposta do recibo.",
-        "steps": ["Abra {root} e clique em 'Baixar recibo'.", "No Network, selecione a requisição /receipt.", "Leia o cabeçalho de resposta 'X-Receipt-Note'."]},
-    "manifest": {"tool": "DevTools → Network/Application ou acesso direto", "where": "Campo maintenance_note do app.webmanifest.",
-        "steps": ["Abra {root}/app.webmanifest.", "Leia o JSON retornado.", "A flag está no campo 'maintenance_note'."]},
-    "metadata": {"tool": "DevTools → Network ou `curl -I`", "where": "Cabeçalho X-Image-Description do recurso de prévia.",
-        "steps": ["Requisite {root}/asset-preview (ex.: `curl -I http://<host>{root}/asset-preview`).", "Leia os cabeçalhos da resposta.", "A flag está no cabeçalho 'X-Image-Description'."]},
-    "idor": {"tool": "Burp Suite (ou `curl`) — o DevTools não permite adicionar cabeçalhos a uma requisição", "where": "Registro 701 autorizado pelo cabeçalho vindo do 700.",
-        "steps": ["Requisite {root}/api/record/700 e anote o cabeçalho 'X-Lab-Delegation' da resposta.", "Requisite {root}/api/record/701 incluindo esse cabeçalho (ex.: `curl -H 'X-Lab-Delegation: <valor>' http://<host>{root}/api/record/701`).", "A flag vem no campo 'reference'."]},
-    "search": {"tool": "DevTools → Network ou Burp Suite (manipular o parâmetro de busca)", "where": "Resposta da busca com uma tautologia que burla o filtro de registros públicos.",
-        "steps": ["Use a busca de {root} e observe a requisição a {root}/api/search?q=...", "Reenvie com um payload de tautologia real, ex.: {root}/api/search?q=' OR '1'='1", "O registro restrito aparece junto dos demais, com a flag no campo 'nota'."]},
-    "audit": {"tool": "DevTools → Network ou `curl -I`", "where": "Cabeçalho X-Audit-Path → endpoint de auditoria.",
-        "steps": ["Requisite {root}/operations/ping e leia o cabeçalho 'X-Audit-Path'.", "Abra o caminho indicado ({root}/operations/audit).", "A flag vem no campo 'reference'."]},
-    "redirect": {"tool": "Burp Suite (ou `curl`) — o DevTools mostra a cadeia mas não permite reenviar com um cabeçalho novo", "where": "Cabeçalho X-Delivery-Receipt no segundo salto (/delivery/processing), só quando reenviado com o token de /start.",
+    # --- Lista 1 ---
+    "source": {"tool": "Codigo-fonte da pagina (Ctrl+U)", "where": "Comentario HTML oculto na pagina inicial.",
+        "steps": ["Abra {root}.", "Veja o codigo-fonte da pagina (Ctrl+U).", "Procure por um comentario HTML (<!-- ... -->): a flag esta nele."]},
+    "sitemap": {"tool": "Navegador (sitemap XML)", "where": "Rota auxiliar listada no mapa do site.",
+        "steps": ["Abra o site e encontre o link para o mapa do portal.", "No sitemap, localize a URL auxiliar.", "Acesse essa rota; a flag esta no conteudo."]},
+    "base64": {"tool": "Decodificador Base64 (`base64 -d` ou CyberChef)", "where": "Token codificado exibido na propria pagina.",
+        "steps": ["Abra {root} e localize o token em destaque.", "Decodifique de Base64 (`echo '<token>' | base64 -d`).", "O texto decodificado e a flag."]},
+    "js": {"tool": "DevTools -> Console/Sources", "where": "Variavel global no JavaScript da pagina.",
+        "steps": ["Abra {root} e o DevTools (F12).", "No Console, digite a constante exposta no script.", "O valor retornado e a flag."]},
+    "header": {"tool": "`curl -i` ou DevTools -> Network", "where": "Cabecalho de resposta X-Campus-Notice.",
+        "steps": ["Faca uma requisicao a {root} (`curl -i http://<host>{root}`).", "Leia os cabecalhos da resposta.", "A flag esta no cabecalho 'X-Campus-Notice'."]},
+    "idor": {"tool": "`curl` (ou Burp) - o DevTools nao adiciona cabecalhos a uma requisicao", "where": "Registro 701 autorizado pelo cabecalho vindo do 700.",
+        "steps": ["Requisite {root}/api/record/700 e anote o cabecalho 'X-Lab-Delegation'.", "Requisite {root}/api/record/701 incluindo-o (`curl -H 'X-Lab-Delegation: <valor>' http://<host>{root}/api/record/701`).", "A flag vem no campo 'reference'."]},
+    "search": {"tool": "Formulario de busca ou `curl`", "where": "Resposta da busca com tautologia que burla o filtro.",
+        "steps": ["Use a busca de {root} e observe a requisicao a {root}/api/search?q=...", "Reenvie com uma tautologia real: {root}/api/search?q=' OR '1'='1", "O registro restrito aparece com a flag no campo 'nota'."]},
+    "redirect": {"tool": "`curl` (sem Burp) - repita uma etapa com um cabecalho novo", "where": "Cabecalho X-Delivery-Receipt no 2o salto, so com o token de /start.",
         "steps": [
-            "No DevTools → Network, clique com o botão direito na requisição de {root}/delivery/start e use \"Copy as cURL\" (isso já inclui o cookie da sessão ativa — sem ele, qualquer requisição a /lab/* é redirecionada para a home e nada funciona).",
-            "Rode esse comando colado no terminal; a resposta (302) traz o cabeçalho 'X-Delivery-Token'.",
-            "Repita o \"Copy as cURL\" na requisição de {root}/delivery/processing e adicione `-H 'X-Delivery-Token: <valor copiado>'` antes de rodar; só com esse cabeçalho a resposta traz 'X-Delivery-Receipt' com a flag.",
-            "Clicar o link normalmente (sem repassar o token manualmente) nunca expõe a flag, mesmo seguindo toda a cadeia pelo Network.",
+            "No DevTools -> Network, botao direito na requisicao de {root}/delivery/start -> 'Copy as cURL' (inclui o cookie da sessao).",
+            "Rode esse comando; a resposta 302 traz o cabecalho 'X-Delivery-Token'.",
+            "Repita em {root}/delivery/processing com `-H 'X-Delivery-Token: <valor>'`; so assim vem 'X-Delivery-Receipt' com a flag.",
+        ]},
+
+    # --- Lista 2 ---
+    "caesar": {"tool": "Decodificador de cifra de Cesar (ou papel)", "where": "Endereco da festa cifrado na pagina 'Como chegar'; o deslocamento esta escrito na propria pagina.",
+        "steps": ["Navegue pelo site da festa ate a secao do endereco/como chegar.", "O endereco aparece embaralhado, e a pagina diz quantas casas o alfabeto girou.", "Gire cada letra de volta esse tanto (ex.: CyberChef -> ROT, ou a mao). O endereco decifrado e a flag."]},
+    "backup": {"tool": "Navegador (Network) ou `curl`", "where": "Copia .bak do catalogo em JSON que a pagina carrega.",
+        "steps": ["No {root}, a pagina de catalogo carrega os itens de um JSON — veja {root}/catalogo.json na aba Network.", "O codigo da pagina comenta que o backup de cada arquivo recebe o sufixo .bak.", "Peca a copia: `curl http://<host>{root}/catalogo.json.bak`. O backup traz um campo interno com a flag."]},
+    "cookie": {"tool": "`curl -i` (ou DevTools -> Application -> Cookies)", "where": "Cookie 'preferencia_padaria' gravado na resposta da pagina inicial.",
+        "steps": ["Requisite a home: `curl -i http://<host>{root}`.", "Leia o cabecalho 'Set-Cookie' da resposta.", "O valor de 'preferencia_padaria' e a flag (nao aparece na tela)."]},
+    "svg": {"tool": "Navegador ou `curl`", "where": "Comentario dentro de um dos SVGs da galeria.",
+        "steps": ["A galeria mostra varias ilustracoes; todas sao arquivos .svg (vetor = texto).", "Abra cada SVG pela URL (ex.: `curl http://<host>{root}/assets/cobre.svg`) e leia o codigo.", "Uma das artes tem um comentario <!-- ... --> com a assinatura da artista: essa e a flag."]},
+    "debug": {"tool": "`curl` ou barra de endereco", "where": "Campo interno da resposta de rastreio, so com o modo de diagnostico ligado.",
+        "steps": ["O rastreio consulta {root}/rastreio. Um comentario esquecido no codigo da pagina cita um parametro interno de diagnostico.", "Chame `curl 'http://<host>{root}/rastreio?debug=1'`.", "A resposta ganha o bloco 'interno' com 'chave_operacao' — a flag."]},
+    "login_sqli": {"tool": "Formulario de login ou `curl`", "where": "Bypass de autenticacao por SQL injection no login.",
+        "steps": ["A consulta e: SELECT ... WHERE usuario='<u>' AND senha='<p>' (concatenada).", "No usuario, feche a aspa e torne a condicao sempre verdadeira, comentando o resto: `' OR '1'='1' --`. Senha: qualquer coisa.", "Ex.: `curl -d \"user=' OR '1'='1' --&password=x\" http://<host>{root}/entrar`. A resposta logada traz 'mural_interno' com a flag."]},
+    "token": {"tool": "`curl` + Base64 (ou DevTools -> Application -> Cookies)", "where": "Cookie 'cracha' em Base64 com o campo papel.",
+        "steps": [
+            "Pegue o cookie: `curl -i http://<host>{root}` -> copie o valor de 'cracha'.",
+            "Decodifique: `echo '<cracha>' | base64 -d` -> algo como 'uid=8821|nome=Visitante|papel=visitante'.",
+            "Troque papel=visitante por papel=admin e recodifique: `echo -n 'uid=8821|nome=Visitante|papel=admin' | base64`.",
+            "Reenvie com o cookie forjado: `curl -b 'cracha=<novo-base64>' http://<host>{root}/restrito`. A resposta traz 'chave_mestra' com a flag.",
+        ]},
+    "recovery": {"tool": "`curl` + Base64 (sem Burp)", "where": "Token de recuperacao deduzivel do e-mail publico do usuario.",
+        "steps": [
+            "O {root}/robots.txt revela uma rota fora da navegacao: {root}/interno/gerador-token.",
+            "Essa rota explica o algoritmo: token = base64(email do usuario).",
+            "Os e-mails estao na pagina de equipe ({root}/equipe.json). Monte o token do alvo: `echo -n 'ana.prado@central.local' | base64`.",
+            "Chame `curl 'http://<host>{root}/redefinir?user=ana.prado@central.local&token=<base64>'`. A resposta traz 'codigo_confirmacao' com a flag.",
         ]},
 }
 _WALKTHROUGH_OVERRIDES = {
@@ -1602,8 +1618,6 @@ _WALKTHROUGH_OVERRIDES = {
         "steps": ["Requisite /lab/6/profile/101 e anote o cabeçalho 'X-Workspace-Access'.", "Requisite /lab/6/profile/102 incluindo esse cabeçalho.", "A flag vem no campo 'note'."]},
     7: {"tool": "DevTools → Network ou Burp Suite (manipular o parâmetro de busca)", "where": "Resposta da busca com uma tautologia que burla o filtro de eventos públicos.",
         "steps": ["Use a busca de /lab/7 e observe /lab/7/search?q=...", "Reenvie com um payload de tautologia real, ex.: /lab/7/search?q=' OR '1'='1", "O evento restrito da Night Owl aparece junto dos demais, com a flag no campo 'nota'."]},
-    8: {"tool": "DevTools → Network ou acesso direto", "where": "Exportação de auditoria referenciada pela agenda.",
-        "steps": ["Na agenda de /lab/8, observe a requisição a /lab/8/audit-log.", "Abra /lab/8/audit-log.", "A flag está no campo 'reference' da entrada de migração."]},
 }
 
 
@@ -1987,6 +2001,16 @@ def create_app(testing=False):
         response = make_response(render_template("lab_site.html", challenge=challenge, ctf=current_ctf(), page="home"))
         if challenge.get("mechanism") == "header":
             response.headers["X-Campus-Notice"] = challenge["flags"][0]
+        elif challenge.get("mechanism") == "cookie":
+            # A preferência do balcão é gravada num cookie — a flag viaja no
+            # cabeçalho Set-Cookie. path=/lab/20 evita que o cookie seja
+            # reenviado para os outros laboratórios e confunda quem inspeciona.
+            response.set_cookie("preferencia_padaria", challenge["flags"][0], path=f"/lab/{challenge_id}")
+        elif challenge.get("mechanism") == "token":
+            # O crachá é um cookie em Base64 com o papel do visitante; trocar o
+            # papel para admin desbloqueia a área restrita.
+            visitor = base64.b64encode(b"uid=8821|nome=Visitante|papel=visitante").decode("ascii")
+            response.set_cookie("cracha", visitor, path=f"/lab/{challenge_id}")
         return response
 
     @app.get("/lab/<int:challenge_id>/<path:page>")
@@ -2047,6 +2071,169 @@ def create_app(testing=False):
         if not results:
             return jsonify({"results": [], "message": "Nenhum evento encontrado no arquivo."})
         return jsonify({"results": results})
+
+
+
+    # ----- Lista 2 (CTF 2) -----
+
+    # 19 backup: o catalogo publico e carregado por JS; a copia .bak (convencao
+    # citada num comentario no codigo) guarda um rascunho interno.
+    _MARCENARIA_ITENS = [
+        {"sku": "CE-18", "nome": "Mesa de jantar Cedro", "madeira": "Cedro", "preco": 2480},
+        {"sku": "CA-07", "nome": "Estante Carvalho", "madeira": "Carvalho", "preco": 1890},
+        {"sku": "FR-02", "nome": "Banco Freijo", "madeira": "Freijo", "preco": 640},
+        {"sku": "IM-11", "nome": "Aparador Imbuia", "madeira": "Imbuia", "preco": 1320},
+    ]
+
+    @app.get("/lab/19/catalogo.json")
+    def lab19_catalogo():
+        if not playable_challenge(19):
+            return jsonify({"error": "Indisponivel"}), 404
+        return jsonify({"oficina": "Marcenaria Raiz", "atualizado": "2026-02-10", "itens": _MARCENARIA_ITENS})
+
+    @app.get("/lab/19/catalogo.json.bak")
+    def lab19_catalogo_bak():
+        if not playable_challenge(19):
+            return jsonify({"error": "Indisponivel"}), 404
+        return jsonify({"oficina": "Marcenaria Raiz", "atualizado": "2026-02-09",
+                        "itens": _MARCENARIA_ITENS,
+                        "_nota_marceneiro": CHALLENGE_BY_ID[19]["flags"][0]})
+
+    # 21 svg: galeria com varias ilustracoes vetoriais; uma delas esconde a
+    # assinatura da artista (a flag) entre as formas.
+    _ATELIE_ARTES = [
+        ("alvorada", "#f6b45f", "Alvorada", False),
+        ("mare", "#5fd3ff", "Maré", False),
+        ("bosque", "#6fcf7f", "Bosque", False),
+        ("cobre", "#e07a5f", "Cobre", True),
+        ("violeta", "#c879ff", "Violeta", False),
+        ("carvao", "#8a94a6", "Carvão", False),
+    ]
+
+    @app.get("/lab/21/assets/<name>.svg")
+    def lab21_art(name):
+        if not playable_challenge(21):
+            return "", 404
+        art = next((a for a in _ATELIE_ARTES if a[0] == name), None)
+        if not art:
+            return "", 404
+        _, color, title, has_flag = art
+        signature = f"<!-- {CHALLENGE_BY_ID[21]['flags'][0]} -->" if has_flag else "<!-- Ateliê Lumen -->"
+        svg = (
+            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 220'>"
+            f"<rect width='300' height='220' fill='#11121a'/>"
+            f"<circle cx='150' cy='110' r='70' fill='{color}' opacity='0.85'/>"
+            f"<path d='M40 180 Q150 60 260 180' stroke='{color}' stroke-width='6' fill='none'/>"
+            f"<text x='20' y='34' fill='#e8ecf3' font-size='18' font-family='sans-serif'>{title}</text>"
+            f"{signature}"
+            "</svg>"
+        )
+        return svg, 200, {"Content-Type": "image/svg+xml; charset=utf-8"}
+
+    # 22 debug: o painel de rastreio tem um modo interno (descoberto por um
+    # comentario esquecido no codigo da pagina).
+    @app.get("/lab/22/rastreio")
+    def lab22_rastreio():
+        if not playable_challenge(22):
+            return jsonify({"error": "Indisponivel"}), 404
+        base = {"codigo": "RL-20268841", "status": "em transito", "etapas": [
+            {"em": "2026-02-08 09:12", "evento": "Objeto postado"},
+            {"em": "2026-02-09 14:40", "evento": "Em trânsito para o centro de distribuição"},
+        ]}
+        if request.args.get("debug") == "1":
+            base["interno"] = {"no": "cd-sudeste-3", "build": "2026.2", "chave_operacao": CHALLENGE_BY_ID[22]["flags"][0]}
+        return jsonify(base)
+
+    # 23 login_sqli: login de verdade. A consulta e montada concatenando a
+    # entrada e executada num banco em memoria (dados ficticios e isolados),
+    # entao uma injecao real derruba a autenticacao e credenciais erradas
+    # ou campos vazios falham naturalmente, com mensagens proprias.
+    @app.post("/lab/23/entrar")
+    @app.get("/lab/23/entrar")
+    def lab23_entrar():
+        if not playable_challenge(23):
+            return jsonify({"error": "Indisponivel"}), 404
+        source = request.form if request.method == "POST" else request.args
+        user = (source.get("user") or "").strip()
+        password = source.get("password") or ""
+        if not user or not password:
+            return jsonify({"ok": False, "erro": "Preencha usuário e senha."}), 400
+        mem = sqlite3.connect(":memory:")
+        mem.execute("CREATE TABLE operadores (usuario TEXT, senha TEXT, setor TEXT)")
+        mem.executemany("INSERT INTO operadores VALUES (?,?,?)", [
+            ("mariana", "cafe-2024", "atendimento"),
+            ("joel", "balcao!77", "estoque"),
+        ])
+        # Consulta vulnavel de proposito (concatena a entrada sem tratar aspas).
+        query = f"SELECT usuario, setor FROM operadores WHERE usuario = '{user}' AND senha = '{password}'"
+        try:
+            row = mem.execute(query).fetchone()
+        except sqlite3.Error:
+            mem.close()
+            return jsonify({"ok": False, "erro": "Erro ao validar o acesso. Tente novamente."}), 400
+        mem.close()
+        if not row:
+            return jsonify({"ok": False, "erro": "Usuário ou senha inválidos."}), 401
+        return jsonify({"ok": True, "operador": row[0], "setor": row[1],
+                        "mural_interno": CHALLENGE_BY_ID[23]["flags"][0]})
+
+    # 24 token: o cracha e um cookie Base64 com o papel do visitante.
+    @app.get("/lab/24/restrito")
+    def lab24_restrito():
+        if not playable_challenge(24):
+            return jsonify({"error": "Indisponivel"}), 404
+        raw = request.cookies.get("cracha", "")
+        try:
+            decoded = base64.b64decode(raw).decode("utf-8", "ignore")
+        except Exception:
+            decoded = ""
+        campos = dict(part.split("=", 1) for part in decoded.split("|") if "=" in part)
+        if campos.get("papel") == "admin":
+            return jsonify({"acesso": "administrador", "painel": "Reservas e chaves mestras",
+                            "chave_mestra": CHALLENGE_BY_ID[24]["flags"][0]})
+        return jsonify({"acesso": campos.get("papel", "desconhecido"),
+                        "aviso": "Esta área é exclusiva da administração do prédio."})
+
+    # 25 recovery (dificil, sem Burp): o token de recuperacao e deduzivel de um
+    # dado publico do usuario. A rota de diagnostico fica fora da navegacao
+    # (aparece so no robots.txt); os e-mails vem da pagina de equipe.
+    @app.get("/lab/25/robots.txt")
+    def lab25_robots():
+        if not playable_challenge(25):
+            return "", 404
+        body = "User-agent: *\nDisallow: /lab/25/interno/gerador-token\n"
+        return body, 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+    @app.get("/lab/25/equipe.json")
+    def lab25_equipe():
+        if not playable_challenge(25):
+            return jsonify({"error": "Indisponivel"}), 404
+        return jsonify({"equipe": [
+            {"nome": "Ana Prado", "cargo": "Coordenação", "email": "ana.prado@central.local"},
+            {"nome": "Beto Lima", "cargo": "Suporte", "email": "beto.lima@central.local"},
+        ]})
+
+    @app.get("/lab/25/interno/gerador-token")
+    def lab25_gerador():
+        if not playable_challenge(25):
+            return jsonify({"error": "Indisponivel"}), 404
+        return jsonify({
+            "servico": "gerador de token de recuperação (interno)",
+            "algoritmo": "token = base64(email_do_usuario)",
+            "endpoint": "/lab/25/redefinir?user=<email>&token=<token>",
+        })
+
+    @app.get("/lab/25/redefinir")
+    def lab25_redefinir():
+        if not playable_challenge(25):
+            return jsonify({"error": "Indisponivel"}), 404
+        user = request.args.get("user", "")
+        token = request.args.get("token", "")
+        expected = base64.b64encode(user.encode("utf-8")).decode("ascii") if user else None
+        if user and token and token == expected:
+            return jsonify({"ok": True, "mensagem": f"Senha de {user} redefinida.",
+                            "codigo_confirmacao": CHALLENGE_BY_ID[25]["flags"][0]})
+        return jsonify({"ok": False, "erro": "Token inválido para este usuário."}), 403
 
     @app.post("/join")
     def join_ctf():

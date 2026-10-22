@@ -2,7 +2,8 @@
 
 {% block content %}
 {% set root = '/lab/' ~ challenge.id %}
-<div class="scenario scenario-{{ challenge.site.theme if challenge.id > 8 else challenge.id }}">
+{% set has_site2 = challenge.id >= 18 %}
+<div class="scenario {{ 'scenario-' ~ challenge.id if has_site2 else 'scenario-' ~ (challenge.site.theme if challenge.id > 8 else challenge.id) }}">
   {% if challenge.id == 1 %}
     <!-- JACITEC{source_hidden_01} -->
     <header class="scenario-header blog-header"><a href="{{ root }}" class="scenario-logo">NORTH<span>STAR</span></a><nav><a href="{{ root }}/journal">Diário</a><a href="{{ root }}/about">Sobre</a><a href="{{ root }}/contact">Contato</a></nav><a class="scenario-cta" href="{{ root }}/contact">Vamos conversar</a></header>
@@ -219,6 +220,330 @@
       {% elif page == 'calendar' %}<p class="scenario-kicker">SEU ESPAÇO DE TRABALHO</p><h1>Agenda de salas</h1><div class="scenario-card"><b>Hoje · Salas disponíveis</b><p>09h · Sala de reunião 2</p><p>11h · Sala de foco</p><p>14h · Sala de oficina</p></div><div class="scenario-card"><h2>Aviso de migração</h2><p>O serviço clássico de reservas mantém uma exportação de auditoria legível por máquinas. Confira as requisições feitas por esta página da agenda.</p><a href="{{ root }}/audit-log">Status do serviço de agenda</a></div>
       {% else %}<section class="booking-hero"><p class="scenario-kicker">ESPAÇOS QUE FUNCIONAM PARA VOCÊ</p><h1>Reserve uma sala e volte ao que importa.</h1><p>Espaços de reunião simples e flexíveis para equipes que fazem acontecer.</p><a class="booking-button" href="{{ root }}/rooms">Conhecer as salas</a></section><div class="scenario-card"><h2>Precisa de uma sala esta semana?</h2><p>Veja a disponibilidade em todos os locais.</p><a href="{{ root }}/calendar">Abrir agenda →</a></div>{% endif %}
     </main>
+  {% elif challenge.id == 18 %}
+    {% set s = challenge.site2 %}
+    <header class="scenario-header festa-header">
+      <a href="{{ root }}" class="scenario-logo">Meia<span>·Noite</span></a>
+      <nav><a href="{{ root }}#sobre">A festa</a><a href="{{ root }}#convidados">Convidados</a><a href="{{ root }}#endereco">Endereço</a></nav>
+      <a class="festa-cta" href="{{ root }}#endereco">Confirmar</a>
+    </header>
+    <main class="festa-main">
+      <section class="festa-hero">
+        <p class="festa-eyebrow">✦ VOCÊ ESTÁ NA LISTA ✦</p>
+        <h1>Festa<br><em>Meia-Noite</em></h1>
+        <p class="festa-sub">Uma noite de música, luz e gente boa.</p>
+        <div class="festa-meta"><span><b>SEX 21 MAR</b>abertura 23h</span><span><b>TRAJE</b>preto &amp; prata</span><span><b>SOM</b>DJ Vero + convidados</span></div>
+      </section>
+
+      <section id="sobre" class="festa-band">
+        <div class="festa-about">
+          <p class="festa-tag">O QUE ROLA</p>
+          <h2>A pista só descansa quando o sol nascer.</h2>
+          <p>Três ambientes, projeções ao vivo e um pôr do sol invertido na varanda. A Meia-Noite é a nossa festa anual — sem palco, sem fila, só quem foi convidado.</p>
+          <p>Chega cedo pra pegar o welcome drink e fica até o after. A gente cuida do resto.</p>
+        </div>
+        <ul class="festa-lineup">
+          <li><b>23h00</b><span>Abertura — set vinil</span></li>
+          <li><b>00h00</b><span>DJ Vero (house)</span></li>
+          <li><b>01h30</b><span>Convidado surpresa</span></li>
+          <li><b>03h00</b><span>After na varanda</span></li>
+        </ul>
+      </section>
+
+      <section id="convidados" class="festa-guests">
+        <p class="festa-tag center">LISTA DE CONVIDADOS · 24 CONFIRMADOS</p>
+        <h2 class="center">Quem já disse sim.</h2>
+        <div class="guest-grid">
+          <span>Ana R.</span><span>Bruno M.</span><span>Clara V.</span><span>Davi L.</span><span>Elisa P.</span><span>Fábio T.</span>
+          <span>Gi Souza</span><span>Hugo A.</span><span>Iris N.</span><span>João P.</span><span>Lia C.</span><span>Marco B.</span>
+          <span>Nina R.</span><span>Otto F.</span><span>Paula K.</span><span>Rafa D.</span><span>Sofia M.</span><span>Téo L.</span>
+          <span>Vera Q.</span><span>Will G.</span><span>Yara B.</span><span>Zeca R.</span><span>Duda S.</span><span>+ você</span>
+        </div>
+      </section>
+
+      <section id="endereco" class="festa-address">
+        <div class="address-card">
+          <p class="festa-tag">ENDEREÇO DOS CONVIDADOS</p>
+          <h2>Onde a noite acontece</h2>
+          <p class="address-flavor">Tradição da Meia-Noite: o endereço anda em código, só pra lista não vazar.</p>
+          <pre class="festa-cipher">{{ s.caesar }}</pre>
+          <div class="address-rsvp"><span>Confirmou? Nos vemos lá.</span><a class="festa-cta" href="{{ root }}#sobre">Ver programação</a></div>
+        </div>
+      </section>
+    </main>
+    <footer class="festa-footer"><span>Festa Meia-Noite · edição {{ s.shift }} · 2026</span><span>só para convidados</span></footer>
+
+  {% elif challenge.id == 19 %}
+    {% set s = challenge.site2 %}
+    <!-- deploy nota: cada arquivo publicado ganha uma copia .bak automatica. lembrar de remover antes de divulgar o site. -->
+    <header class="scenario-header marc-header">
+      <a href="{{ root }}" class="scenario-logo">Marcenaria <em>Raiz</em></a>
+      <nav><a href="{{ root }}">Início</a><a href="{{ root }}/catalogo">Catálogo</a><a href="{{ root }}/madeiras">Madeiras</a><a href="{{ root }}/contato">Contato</a></nav>
+    </header>
+    <main class="scenario-content marc-content">
+      {% if page == 'catalogo' %}
+        <p class="scenario-kicker">PEÇAS DISPONÍVEIS</p><h1>Catálogo da oficina</h1>
+        <p class="marc-lead">Cada peça é feita sob encomenda, à mão, na nossa bancada. Preços atualizados toda semana.</p>
+        <div id="catalogo-lista" class="marc-catalog"><p class="marc-muted">Carregando catálogo…</p></div>
+      {% elif page == 'madeiras' %}
+        <p class="scenario-kicker">NOSSAS MADEIRAS</p><h1>Do tronco à peça</h1>
+        <div class="marc-woods">
+          <article><span class="wood-chip" style="background:#8a5a2b"></span><b>Cedro</b><p>Leve, aromática e muito estável. Ótima para móveis grandes.</p></article>
+          <article><span class="wood-chip" style="background:#6b4423"></span><b>Carvalho</b><p>Densa e resistente, envelhece com beleza.</p></article>
+          <article><span class="wood-chip" style="background:#a9743f"></span><b>Freijó</b><p>Tom dourado e acabamento sedoso.</p></article>
+          <article><span class="wood-chip" style="background:#4a3118"></span><b>Imbuia</b><p>Escura e nobre, marca presença.</p></article>
+        </div>
+      {% elif page == 'contato' %}
+        <p class="scenario-kicker">FALE COM A OFICINA</p><h1>Vamos criar sua peça</h1>
+        <p class="marc-lead">Atendemos por hora marcada. Conte o que você imaginou — orçamos sem compromisso.</p>
+        <div class="scenario-columns"><article><b>Endereço</b><p>Rua das Tábuas, 212 · Marília–SP</p></article><article><b>Horário</b><p>Seg a sex, 8h às 17h</p></article><article><b>E-mail</b><p>oi@marcenariaraiz.local</p></article></div>
+      {% else %}
+        <section class="marc-hero">
+          <div><p class="scenario-kicker">MÓVEIS SOB MEDIDA DESDE 1998</p><h1>Madeira que dura<br>gerações.</h1>
+          <p class="marc-lead">Mesas, estantes e peças únicas feitas à mão. Do desenho ao acabamento, tudo sai da nossa oficina em Marília.</p>
+          <a class="marc-btn" href="{{ root }}/catalogo">Ver catálogo →</a></div>
+          <div class="marc-hero-art"><span></span><span></span><span></span></div>
+        </section>
+        <div class="marc-steps">
+          <article><b>01 · Projeto</b><p>Desenhamos a peça junto com você.</p></article>
+          <article><b>02 · Madeira</b><p>Escolhemos a espécie ideal para o uso.</p></article>
+          <article><b>03 · Bancada</b><p>Um marceneiro acompanha do corte ao verniz.</p></article>
+        </div>
+        <div class="marc-quote">“Pedi uma mesa e recebi uma herança de família.” — Helena, cliente desde 2019</div>
+      {% endif %}
+    </main>
+    {% if page == 'catalogo' %}<script>
+      fetch('{{ root }}/catalogo.json').then(r => r.json()).then(d => {
+        document.getElementById('catalogo-lista').innerHTML = d.itens.map(i =>
+          `<article class="marc-item"><div><b>${i.nome}</b><small>${i.madeira}</small></div><strong>R$ ${i.preco}</strong></article>`).join('');
+      }).catch(() => {});
+    </script>{% endif %}
+    <footer class="scenario-footer rich-footer marc-footer"><span>Marcenaria Raiz · Marília · desde 1998</span><nav><a href="{{ root }}/catalogo">Catálogo</a><a href="{{ root }}/madeiras">Madeiras</a><a href="{{ root }}/contato">Contato</a></nav></footer>
+
+  {% elif challenge.id == 20 %}
+    {% set s = challenge.site2 %}
+    <header class="scenario-header pad-header">
+      <a href="{{ root }}" class="scenario-logo">Pão &amp; Grão</a>
+      <nav><a href="{{ root }}">Início</a><a href="{{ root }}/cardapio">Cardápio</a><a href="{{ root }}/horarios">Horários</a></nav>
+      <span class="pad-badge">desde 1986</span>
+    </header>
+    <main class="scenario-content pad-content">
+      {% if page == 'cardapio' %}
+        <p class="scenario-kicker">SAÍDO DO FORNO</p><h1>Nosso cardápio</h1>
+        <div class="pad-menu">
+          <article><span class="pad-art pao"></span><div><b>Pão na chapa</b><small>na manteiga da casa</small></div><strong>R$ 7</strong></article>
+          <article><span class="pad-art croi"></span><div><b>Croissant</b><small>folhado na hora</small></div><strong>R$ 9</strong></article>
+          <article><span class="pad-art sonho"></span><div><b>Sonho de creme</b><small>recheio fresco</small></div><strong>R$ 8</strong></article>
+          <article><span class="pad-art cafe"></span><div><b>Café coado</b><small>grão do produtor</small></div><strong>R$ 5</strong></article>
+          <article><span class="pad-art bolo"></span><div><b>Bolo de fubá</b><small>fatia generosa</small></div><strong>R$ 6</strong></article>
+          <article><span class="pad-art suco"></span><div><b>Suco do dia</b><small>fruta da estação</small></div><strong>R$ 7</strong></article>
+        </div>
+      {% elif page == 'horarios' %}
+        <p class="scenario-kicker">TODO DIA FRESQUINHO</p><h1>Quando abrimos</h1>
+        <div class="scenario-columns"><article><b>Seg a sex</b><p>6h às 20h</p></article><article><b>Sábado</b><p>6h às 14h</p></article><article><b>Domingo</b><p>7h às 12h</p></article></div>
+        <div class="pad-note">A primeira fornada de pão francês sai às 6h15. Vale acordar cedo.</div>
+      {% else %}
+        <section class="pad-hero">
+          <div><p class="scenario-kicker">PADARIA DE BAIRRO</p><h1>Pão quentinho,<br>do jeito que você gosta.</h1>
+          <p class="pad-lead">Fornadas o dia inteiro, café do produtor e aquele atendimento que já sabe o seu de sempre.</p>
+          <a class="pad-btn" href="{{ root }}/cardapio">Ver cardápio</a></div>
+          <div class="pad-hero-art">🥖</div>
+        </section>
+        <div class="pad-strip"><span>🔥 Fornadas a cada 2h</span><span>☕ Café do produtor</span><span>🥐 Folhados na hora</span><span>🎂 Encomendas</span></div>
+        <div class="scenario-columns pad-cols">
+          <article><b>Da casa</b><p>Receitas de família e fermentação natural.</p></article>
+          <article><b>No bairro</b><p>Mesa na calçada e cliente que vira amigo.</p></article>
+          <article><b>Pra levar</b><p>Bolos e salgados para os seus eventos.</p></article>
+        </div>
+      {% endif %}
+    </main>
+    <footer class="scenario-footer rich-footer pad-footer"><span>Pão &amp; Grão · padaria de bairro</span><nav><a href="{{ root }}/cardapio">Cardápio</a><a href="{{ root }}/horarios">Horários</a></nav></footer>
+
+  {% elif challenge.id == 21 %}
+    {% set s = challenge.site2 %}
+    <header class="scenario-header atel-header">
+      <a href="{{ root }}" class="scenario-logo">LUMEN<span>·atelier</span></a>
+      <nav><a href="{{ root }}">Início</a><a href="{{ root }}/galeria">Galeria</a><a href="{{ root }}/sobre">Sobre</a></nav>
+    </header>
+    <main class="scenario-content atel-content">
+      {% if page == 'galeria' %}
+        <p class="scenario-kicker">COLEÇÃO 2026 · SÉRIE CROMA</p><h1>Galeria</h1>
+        <p class="atel-lead">Seis estudos em vetor. Clique para abrir cada arte em tamanho cheio.</p>
+        <div class="atel-gallery">
+          <figure><a href="{{ root }}/assets/alvorada.svg"><img src="{{ root }}/assets/alvorada.svg" alt="Alvorada"></a><figcaption>Alvorada <span>nº 01</span></figcaption></figure>
+          <figure><a href="{{ root }}/assets/mare.svg"><img src="{{ root }}/assets/mare.svg" alt="Maré"></a><figcaption>Maré <span>nº 02</span></figcaption></figure>
+          <figure><a href="{{ root }}/assets/bosque.svg"><img src="{{ root }}/assets/bosque.svg" alt="Bosque"></a><figcaption>Bosque <span>nº 03</span></figcaption></figure>
+          <figure><a href="{{ root }}/assets/cobre.svg"><img src="{{ root }}/assets/cobre.svg" alt="Cobre"></a><figcaption>Cobre <span>nº 04</span></figcaption></figure>
+          <figure><a href="{{ root }}/assets/violeta.svg"><img src="{{ root }}/assets/violeta.svg" alt="Violeta"></a><figcaption>Violeta <span>nº 05</span></figcaption></figure>
+          <figure><a href="{{ root }}/assets/carvao.svg"><img src="{{ root }}/assets/carvao.svg" alt="Carvão"></a><figcaption>Carvão <span>nº 06</span></figcaption></figure>
+        </div>
+      {% elif page == 'sobre' %}
+        <p class="scenario-kicker">QUEM FAZ</p><h1>Um ateliê de uma pessoa só</h1>
+        <p class="atel-lead">Lumen é o estúdio de ilustração de Clara Vidal. Cada peça nasce em vetor, no capricho — e, como toda artista, Clara costuma deixar a própria marca escondida no arquivo.</p>
+        <div class="scenario-columns"><article><b>Ilustração</b><p>Séries autorais e capas.</p></article><article><b>Identidade</b><p>Marcas feitas à mão.</p></article><article><b>Exposições</b><p>Mostras coletivas desde 2021.</p></article></div>
+      {% else %}
+        <section class="atel-hero"><p class="scenario-kicker">ILUSTRAÇÃO VETORIAL</p><h1>Formas simples,<br>cores que ficam.</h1>
+          <p class="atel-lead">Identidades e séries autorais desenhadas em vetor. Dê uma olhada na coleção deste ano.</p>
+          <a class="atel-btn" href="{{ root }}/galeria">Entrar na galeria</a></section>
+        <div class="atel-preview">
+          <img src="{{ root }}/assets/alvorada.svg" alt=""><img src="{{ root }}/assets/mare.svg" alt=""><img src="{{ root }}/assets/violeta.svg" alt="">
+        </div>
+      {% endif %}
+    </main>
+    <footer class="scenario-footer rich-footer atel-footer"><span>Ateliê Lumen · ilustração · Clara Vidal</span><nav><a href="{{ root }}/galeria">Galeria</a><a href="{{ root }}/sobre">Sobre</a></nav></footer>
+
+  {% elif challenge.id == 22 %}
+    {% set s = challenge.site2 %}
+    <header class="scenario-header rota-header">
+      <a href="{{ root }}" class="scenario-logo">Rota<span>Log</span></a>
+      <nav><a href="{{ root }}">Início</a><a href="{{ root }}/rastrear">Rastrear</a><a href="{{ root }}/suporte">Suporte</a></nav>
+      <span class="rota-pill">● operação normal</span>
+    </header>
+    <main class="scenario-content rota-content">
+      {% if page == 'rastrear' %}
+        <!-- QA interno: /rastreio aceita ?debug=1 e devolve os campos do CD. remover antes de publicar. -->
+        <p class="scenario-kicker">ONDE ESTÁ SUA ENCOMENDA</p><h1>Rastrear pedido</h1>
+        <div class="rota-track">
+          <div class="scenario-inline"><input id="track-code" value="RL-20268841"><button id="track-btn" class="rota-btn" type="button">Rastrear</button></div>
+          <pre id="track-output" class="lab-output">Informe o código e clique em rastrear.</pre>
+        </div>
+      {% elif page == 'suporte' %}
+        <p class="scenario-kicker">PRECISA DE AJUDA?</p><h1>Suporte Rota Log</h1>
+        <p class="rota-lead">Atendimento de segunda a sábado. Tenha o código de rastreio em mãos.</p>
+        <div class="scenario-columns"><article><b>Telefone</b><p>0800 555 2026</p></article><article><b>E-mail</b><p>ajuda@rotalog.local</p></article><article><b>Horário</b><p>Seg a sáb, 8h–18h</p></article></div>
+      {% else %}
+        <section class="rota-hero">
+          <div><p class="scenario-kicker">LOGÍSTICA PARA QUEM TEM PRESSA</p><h1>Sua encomenda no caminho certo.</h1>
+          <p class="rota-lead">Coleta, transporte e entrega com rastreamento em tempo real. Acompanhe cada etapa do trajeto.</p>
+          <a class="rota-btn" href="{{ root }}/rastrear">Rastrear encomenda</a></div>
+          <div class="rota-map"><i></i><i></i><i></i><b>CD-SUDESTE</b></div>
+        </section>
+        <div class="rota-stats"><div><b>98,6%</b><span>no prazo</span></div><div><b>14</b><span>centros de distribuição</span></div><div><b>24h</b><span>para capitais</span></div><div><b>+2M</b><span>entregas/ano</span></div></div>
+      {% endif %}
+    </main>
+    {% if page == 'rastrear' %}<script>
+      document.getElementById('track-btn').addEventListener('click', async () => {
+        const r = await fetch('{{ root }}/rastreio?codigo=' + encodeURIComponent(document.getElementById('track-code').value));
+        document.getElementById('track-output').textContent = JSON.stringify(await r.json(), null, 2);
+      });
+    </script>{% endif %}
+    <footer class="scenario-footer rich-footer rota-footer"><span>Rota Log · logística · 2026</span><nav><a href="{{ root }}/rastrear">Rastrear</a><a href="{{ root }}/suporte">Suporte</a></nav></footer>
+
+  {% elif challenge.id == 23 %}
+    {% set s = challenge.site2 %}
+    <header class="scenario-header balc-header">
+      <a href="{{ root }}" class="scenario-logo">balcão<span>/interno</span></a>
+      <nav><a href="{{ root }}">Painel</a><a href="{{ root }}/acesso">Acesso</a><a href="{{ root }}/ajuda">Ajuda</a></nav>
+      <span class="balc-user">● sistema v1.2</span>
+    </header>
+    <main class="scenario-content balc-content">
+      {% if page == 'acesso' %}
+        <p class="scenario-kicker">ACESSO DOS OPERADORES</p><h1>Entrar no sistema</h1>
+        <div class="balc-login">
+          <form id="login-form" class="scenario-form">
+            <label>Usuário<input name="user" autocomplete="off" placeholder="usuário do balcão"></label>
+            <label>Senha<input name="password" type="password" autocomplete="off" placeholder="senha"></label>
+            <button class="balc-btn" type="submit">Abrir turno</button>
+          </form>
+          <pre id="login-output" class="lab-output">Faça login para ver o mural interno.</pre>
+        </div>
+      {% elif page == 'ajuda' %}
+        <p class="scenario-kicker">AJUDA</p><h1>Dúvidas do balcão</h1>
+        <div class="scenario-columns"><article><b>Esqueci a senha</b><p>Procure o supervisor do turno.</p></article><article><b>Novo operador</b><p>Cadastro pela coordenação.</p></article><article><b>Sistema fora</b><p>Use a planilha de contingência.</p></article></div>
+      {% else %}
+        <section class="balc-hero"><p class="scenario-kicker">FERRAMENTA INTERNA</p><h1>Balcão de atendimento</h1>
+          <p class="balc-lead">O painel que a equipe usa no dia a dia: fila, pedidos e o mural de avisos internos. Acesso restrito aos operadores.</p>
+          <a class="balc-btn" href="{{ root }}/acesso">Ir para o acesso →</a></section>
+        <div class="balc-grid">
+          <article><span>01</span><b>Fila</b><p>Organize o atendimento por senha.</p></article>
+          <article><span>02</span><b>Pedidos</b><p>Registre e acompanhe cada solicitação.</p></article>
+          <article><span>03</span><b>Mural</b><p>Avisos internos da equipe.</p></article>
+        </div>
+      {% endif %}
+    </main>
+    {% if page == 'acesso' %}<script>
+      document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const r = await fetch('{{ root }}/entrar', { method: 'POST', body: new URLSearchParams(new FormData(e.currentTarget)) });
+        document.getElementById('login-output').textContent = JSON.stringify(await r.json(), null, 2);
+      });
+    </script>{% endif %}
+    <footer class="scenario-footer rich-footer balc-footer"><span>Balcão · ferramenta da equipe · v1.2</span><nav><a href="{{ root }}/acesso">Acesso</a><a href="{{ root }}/ajuda">Ajuda</a></nav></footer>
+
+  {% elif challenge.id == 24 %}
+    {% set s = challenge.site2 %}
+    <header class="scenario-header nuc-header">
+      <a href="{{ root }}" class="scenario-logo">Núcleo <em>Hub</em></a>
+      <nav><a href="{{ root }}">Início</a><a href="{{ root }}/espacos">Espaços</a><a href="{{ root }}/minha-conta">Minha conta</a></nav>
+      <a class="nuc-cta" href="{{ root }}/espacos">Agendar visita</a>
+    </header>
+    <main class="scenario-content nuc-content">
+      {% if page == 'espacos' %}
+        <p class="scenario-kicker">NOSSOS AMBIENTES</p><h1>Espaços para cada ritmo</h1>
+        <div class="nuc-spaces">
+          <article class="sp-flex"><b>Mesa flex</b><p>Qualquer lugar livre, o dia todo.</p><strong>R$ 49/dia</strong></article>
+          <article class="sp-focus"><b>Sala focada</b><p>Reserve por hora para chamadas.</p><strong>R$ 30/h</strong></article>
+          <article class="sp-aud"><b>Auditório</b><p>Eventos de até 40 pessoas.</p><strong>sob consulta</strong></article>
+        </div>
+      {% elif page == 'minha-conta' %}
+        <p class="scenario-kicker">SUA CONTA NO PRÉDIO</p><h1>Minha conta</h1>
+        <p class="nuc-lead">Seu crachá digital libera as portas conforme o seu plano. A administração acessa também reservas e chaves mestras.</p>
+        <div class="nuc-account">
+          <div class="nuc-badge"><span>CRACHÁ</span><b>Visitante</b><small>Núcleo Hub · acesso básico</small></div>
+          <div class="scenario-card"><h2>Área da administração</h2><p>Restrito à equipe do prédio.</p><button id="token-check" class="nuc-btn" type="button">Abrir área da administração</button><pre id="token-output" class="lab-output">Validando seu crachá…</pre></div>
+        </div>
+      {% else %}
+        <section class="nuc-hero"><p class="scenario-kicker">COWORKING · CENTRO</p><h1>Um lugar bom pra trabalhar<br>e pra encontrar gente.</h1>
+          <p class="nuc-lead">Mesas, salas e café à vontade. Entrou, o crachá digital já fica salvo e libera os ambientes do seu plano.</p>
+          <a class="nuc-btn" href="{{ root }}/minha-conta">Ver minha conta</a></section>
+        <div class="nuc-amen"><span>☕ Café ilimitado</span><span>🔑 Acesso 24/7</span><span>🖨 Impressão</span><span>📅 Eventos semanais</span></div>
+        <div class="scenario-columns"><article><b>Flexível</b><p>Do passe diário ao plano fixo.</p></article><article><b>Comunidade</b><p>Encontros e mentorias toda semana.</p></article><article><b>No centro</b><p>A dois minutos do metrô.</p></article></div>
+      {% endif %}
+    </main>
+    {% if page == 'minha-conta' %}<script>
+      document.getElementById('token-check').addEventListener('click', async () => {
+        const r = await fetch('{{ root }}/restrito');
+        document.getElementById('token-output').textContent = JSON.stringify(await r.json(), null, 2);
+      });
+    </script>{% endif %}
+    <footer class="scenario-footer rich-footer nuc-footer"><span>Núcleo Hub · coworking · centro</span><nav><a href="{{ root }}/espacos">Espaços</a><a href="{{ root }}/minha-conta">Minha conta</a></nav></footer>
+
+  {% elif challenge.id == 25 %}
+    {% set s = challenge.site2 %}
+    <header class="scenario-header cid-header">
+      <a href="{{ root }}" class="scenario-logo">Central<span>ID</span></a>
+      <nav><a href="{{ root }}">Início</a><a href="{{ root }}/recuperar">Recuperar acesso</a><a href="{{ root }}/equipe">Equipe</a></nav>
+    </header>
+    <main class="scenario-content cid-content">
+      {% if page == 'recuperar' %}
+        <p class="scenario-kicker">AUTOATENDIMENTO</p><h1>Recuperar acesso</h1>
+        <p class="cid-lead">Informe o seu e-mail corporativo e enviaremos um token de recuperação para redefinir a senha.</p>
+        <div class="cid-card">
+          <form class="scenario-form" onsubmit="return false">
+            <label>E-mail corporativo<input placeholder="nome.sobrenome@central.local"></label>
+            <button class="cid-btn" type="submit">Enviar token</button>
+          </form>
+          <p class="cid-note">Não recebeu? Procure a coordenação da sua área.</p>
+        </div>
+      {% elif page == 'equipe' %}
+        <p class="scenario-kicker">QUEM CUIDA DA CENTRAL</p><h1>Nossa equipe</h1>
+        <div id="equipe-lista" class="cid-team"><p class="cid-note">Carregando equipe…</p></div>
+      {% else %}
+        <section class="cid-hero"><div><p class="scenario-kicker">GESTÃO DE IDENTIDADE</p><h1>Uma conta para<br>todos os sistemas.</h1>
+          <p class="cid-lead">Login único, trilha de auditoria e recuperação por autoatendimento. Segurança corporativa sem complicar a vida de quem usa.</p>
+          <a class="cid-btn" href="{{ root }}/recuperar">Recuperar meu acesso</a></div>
+          <div class="cid-lock">🔐</div></section>
+        <div class="scenario-columns cid-cols"><article><b>Conta única</b><p>Um login para tudo.</p></article><article><b>Autoatendimento</b><p>Recupere o acesso sem abrir chamado.</p></article><article><b>Auditável</b><p>Tokens temporários e trilha completa.</p></article></div>
+      {% endif %}
+    </main>
+    {% if page == 'equipe' %}<script>
+      fetch('{{ root }}/equipe.json').then(r => r.json()).then(d => {
+        document.getElementById('equipe-lista').innerHTML = d.equipe.map(p =>
+          `<article class="cid-person"><b>${p.nome}</b><span>${p.cargo}</span><small>${p.email}</small></article>`).join('');
+      }).catch(() => {});
+    </script>{% endif %}
+    <footer class="scenario-footer rich-footer cid-footer"><span>Central ID · gestão de identidade</span><nav><a href="{{ root }}/recuperar">Recuperar acesso</a><a href="{{ root }}/equipe">Equipe</a></nav></footer>
+
   {% else %}
     <!-- {{ challenge.flags[0] if challenge.mechanism == 'source' else 'laboratorio de treinamento' }} -->
     {% set site = challenge.site %}
@@ -323,6 +648,6 @@
       {% if challenge.mechanism == 'audit' %}<script>document.getElementById('audit-ping').addEventListener('click', async () => { const r = await fetch('{{ root }}/operations/ping'); document.getElementById('lab-result').textContent = JSON.stringify(await r.json(), null, 2); });</script>{% endif %}
     {% endif %}
   {% endif %}
-  {% if challenge.id == 8 %}<footer class="scenario-footer rich-footer"><span>ReservaFácil · espaço que funciona</span><nav><a href="{{ root }}/rooms">Salas</a><a href="{{ root }}/calendar">Agenda</a><a href="{{ root }}/help">Ajuda</a></nav></footer>{% elif challenge.id > 8 %}<footer class="scenario-footer rich-footer"><span>{{ challenge.site.brand_main }}{{ challenge.site.brand_accent }} · Serviço de atendimento</span><nav><a href="{{ root }}">Início</a><a href="{{ root }}/guide">Ajuda</a><a href="{{ root }}/status">Status do serviço</a>{% if challenge.mechanism == 'redirect' %}<a href="{{ root }}/delivery/start">Consultar solicitação</a>{% endif %}</nav></footer>{% endif %}
+  {% if challenge.id == 8 %}<footer class="scenario-footer rich-footer"><span>ReservaFácil · espaço que funciona</span><nav><a href="{{ root }}/rooms">Salas</a><a href="{{ root }}/calendar">Agenda</a><a href="{{ root }}/help">Ajuda</a></nav></footer>{% elif challenge.id > 8 and not has_site2 %}<footer class="scenario-footer rich-footer"><span>{{ challenge.site.brand_main }}{{ challenge.site.brand_accent }} · Serviço de atendimento</span><nav><a href="{{ root }}">Início</a><a href="{{ root }}/guide">Ajuda</a><a href="{{ root }}/status">Status do serviço</a>{% if challenge.mechanism == 'redirect' %}<a href="{{ root }}/delivery/start">Consultar solicitação</a>{% endif %}</nav></footer>{% endif %}
 </div>
 {% endblock %}
