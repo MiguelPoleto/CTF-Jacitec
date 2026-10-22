@@ -1592,8 +1592,8 @@ _WALKTHROUGH_BY_MECHANISM = {
         "steps": ["Requisite a home: `curl -i http://<host>{root}`.", "Leia o cabecalho 'Set-Cookie' da resposta.", "O valor de 'preferencia_padaria' e a flag (nao aparece na tela)."]},
     "svg": {"tool": "Navegador ou `curl`", "where": "Comentario dentro de um dos SVGs da galeria.",
         "steps": ["A galeria mostra varias ilustracoes; todas sao arquivos .svg (vetor = texto).", "Abra cada SVG pela URL (ex.: `curl http://<host>{root}/assets/cobre.svg`) e leia o codigo.", "Uma das artes tem um comentario <!-- ... --> com a assinatura da artista: essa e a flag."]},
-    "debug": {"tool": "`curl` ou barra de endereco", "where": "Campo interno da resposta de rastreio, so com o modo de diagnostico ligado.",
-        "steps": ["O rastreio consulta {root}/rastreio. Um comentario esquecido no codigo da pagina cita um parametro interno de diagnostico.", "Chame `curl 'http://<host>{root}/rastreio?debug=1'`.", "A resposta ganha o bloco 'interno' com 'chave_operacao' — a flag."]},
+    "debug": {"tool": "`curl` ou barra de endereco", "where": "Campo interno da resposta de {root}/rastreio, so com o modo de diagnostico ligado.",
+        "steps": ["Rastreie um pedido na home; a pagina consulta {root}/rastreio. A resposta normal avisa que ha campos internos atras de ?debug=1.", "Refaca a consulta com o parametro: `curl 'http://<host>{root}/rastreio?debug=1'`.", "A resposta ganha o bloco 'interno' com 'chave_operacao' — a flag."]},
     "login_sqli": {"tool": "Formulario de login ou `curl`", "where": "Bypass de autenticacao por SQL injection no login.",
         "steps": ["A consulta e: SELECT ... WHERE usuario='<u>' AND senha='<p>' (concatenada).", "No usuario, feche a aspa e torne a condicao sempre verdadeira, comentando o resto: `' OR '1'='1' --`. Senha: qualquer coisa.", "Ex.: `curl -d \"user=' OR '1'='1' --&password=x\" http://<host>{root}/entrar`. A resposta logada traz 'mural_interno' com a flag."]},
     "token": {"tool": "`curl` + Base64 (ou DevTools -> Application -> Cookies)", "where": "Cookie 'cracha' em Base64 com o campo papel.",
@@ -2130,8 +2130,8 @@ def create_app(testing=False):
         )
         return svg, 200, {"Content-Type": "image/svg+xml; charset=utf-8"}
 
-    # 22 debug: o painel de rastreio tem um modo interno (descoberto por um
-    # comentario esquecido no codigo da pagina).
+    # 22 debug: o rastreio tem um modo de diagnostico. A resposta normal avisa
+    # que existem campos internos atras do parametro ?debug=1 (dica indireta).
     @app.get("/lab/22/rastreio")
     def lab22_rastreio():
         if not playable_challenge(22):
@@ -2142,6 +2142,8 @@ def create_app(testing=False):
         ]}
         if request.args.get("debug") == "1":
             base["interno"] = {"no": "cd-sudeste-3", "build": "2026.2", "chave_operacao": CHALLENGE_BY_ID[22]["flags"][0]}
+        else:
+            base["diagnostico"] = "desligado — acesse ?debug=1 nesta requisição para ver os campos internos do CD"
         return jsonify(base)
 
     # 23 login_sqli: login de verdade. A consulta e montada concatenando a

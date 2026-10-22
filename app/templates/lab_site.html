@@ -285,6 +285,7 @@
         <p class="scenario-kicker">PEÇAS DISPONÍVEIS</p><h1>Catálogo da oficina</h1>
         <p class="marc-lead">Cada peça é feita sob encomenda, à mão, na nossa bancada. Preços atualizados toda semana.</p>
         <div id="catalogo-lista" class="marc-catalog"><p class="marc-muted">Carregando catálogo…</p></div>
+        <p class="marc-source">Catálogo atual em JSON: <a href="{{ root }}/catalogo.json">/catalogo.json</a> · as versões anteriores ficam com <code>.bak</code> no fim do arquivo.</p>
       {% elif page == 'madeiras' %}
         <p class="scenario-kicker">NOSSAS MADEIRAS</p><h1>Do tronco à peça</h1>
         <div class="marc-woods">
@@ -336,7 +337,7 @@
           <article><span class="pad-art sonho"></span><div><b>Sonho de creme</b><small>recheio fresco</small></div><strong>R$ 8</strong></article>
           <article><span class="pad-art cafe"></span><div><b>Café coado</b><small>grão do produtor</small></div><strong>R$ 5</strong></article>
           <article><span class="pad-art bolo"></span><div><b>Bolo de fubá</b><small>fatia generosa</small></div><strong>R$ 6</strong></article>
-          <article><span class="pad-art suco"></span><div><b>Suco do dia</b><small>fruta da estação</small></div><strong>R$ 7</strong></article>
+          <article><span class="pad-art cookie"></span><div><b>Cookies da casa</b><small>sempre bom conferir</small></div><strong>R$ 6</strong></article>
         </div>
       {% elif page == 'horarios' %}
         <p class="scenario-kicker">TODO DIA FRESQUINHO</p><h1>Quando abrimos</h1>
@@ -396,18 +397,11 @@
     {% set s = challenge.site2 %}
     <header class="scenario-header rota-header">
       <a href="{{ root }}" class="scenario-logo">Rota<span>Log</span></a>
-      <nav><a href="{{ root }}">Início</a><a href="{{ root }}/rastrear">Rastrear</a><a href="{{ root }}/suporte">Suporte</a></nav>
+      <nav><a href="{{ root }}">Início</a><a href="{{ root }}#rastreio">Rastrear</a><a href="{{ root }}/suporte">Suporte</a></nav>
       <span class="rota-pill">● operação normal</span>
     </header>
     <main class="scenario-content rota-content">
-      {% if page == 'rastrear' %}
-        <!-- QA interno: /rastreio aceita ?debug=1 e devolve os campos do CD. remover antes de publicar. -->
-        <p class="scenario-kicker">ONDE ESTÁ SUA ENCOMENDA</p><h1>Rastrear pedido</h1>
-        <div class="rota-track">
-          <div class="scenario-inline"><input id="track-code" value="RL-20268841"><button id="track-btn" class="rota-btn" type="button">Rastrear</button></div>
-          <pre id="track-output" class="lab-output">Informe o código e clique em rastrear.</pre>
-        </div>
-      {% elif page == 'suporte' %}
+      {% if page == 'suporte' %}
         <p class="scenario-kicker">PRECISA DE AJUDA?</p><h1>Suporte Rota Log</h1>
         <p class="rota-lead">Atendimento de segunda a sábado. Tenha o código de rastreio em mãos.</p>
         <div class="scenario-columns"><article><b>Telefone</b><p>0800 555 2026</p></article><article><b>E-mail</b><p>ajuda@rotalog.local</p></article><article><b>Horário</b><p>Seg a sáb, 8h–18h</p></article></div>
@@ -415,13 +409,18 @@
         <section class="rota-hero">
           <div><p class="scenario-kicker">LOGÍSTICA PARA QUEM TEM PRESSA</p><h1>Sua encomenda no caminho certo.</h1>
           <p class="rota-lead">Coleta, transporte e entrega com rastreamento em tempo real. Acompanhe cada etapa do trajeto.</p>
-          <a class="rota-btn" href="{{ root }}/rastrear">Rastrear encomenda</a></div>
+          <a class="rota-btn" href="{{ root }}#rastreio">Rastrear encomenda</a></div>
           <div class="rota-map"><i></i><i></i><i></i><b>CD-SUDESTE</b></div>
         </section>
         <div class="rota-stats"><div><b>98,6%</b><span>no prazo</span></div><div><b>14</b><span>centros de distribuição</span></div><div><b>24h</b><span>para capitais</span></div><div><b>+2M</b><span>entregas/ano</span></div></div>
+        <section id="rastreio" class="rota-track">
+          <p class="scenario-kicker">ONDE ESTÁ SUA ENCOMENDA</p><h2>Rastrear pedido</h2>
+          <div class="scenario-inline"><input id="track-code" value="RL-20268841"><button id="track-btn" class="rota-btn" type="button">Rastrear</button></div>
+          <pre id="track-output" class="lab-output">Informe o código e clique em rastrear.</pre>
+        </section>
       {% endif %}
     </main>
-    {% if page == 'rastrear' %}<script>
+    {% if page != 'suporte' %}<script>
       document.getElementById('track-btn').addEventListener('click', async () => {
         const r = await fetch('{{ root }}/rastreio?codigo=' + encodeURIComponent(document.getElementById('track-code').value));
         document.getElementById('track-output').textContent = JSON.stringify(await r.json(), null, 2);

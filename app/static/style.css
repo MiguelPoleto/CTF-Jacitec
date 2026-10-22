@@ -1324,7 +1324,8 @@ th {
 .marc-item b { font-family: Arial, sans-serif; } .marc-item small { display: block; color: #917452; font-size: .74rem; } .marc-item strong { color: #6b4423; font-size: 1.05rem; }
 .marc-woods { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 14px; margin-top: 18px; }
 .marc-woods article { padding: 16px; border-radius: 12px; background: #ece2d0; } .wood-chip { display: block; height: 52px; border-radius: 8px; margin-bottom: 11px; } .marc-woods b { font-family: Arial, sans-serif; } .marc-woods p { color: #6b543a; font-size: .82rem; margin: 5px 0 0; }
-.marc-muted { color: #917452; } .marc-footer { background: #efe6d6; border-color: #ddceb6; }
+.marc-muted { color: #917452; }
+.marc-source { margin-top: 18px; padding-top: 14px; border-top: 1px solid #ddceb6; color: #917452; font-family: Arial, sans-serif; font-size: .78rem; } .marc-source a { color: #6b4423; } .marc-source code { padding: 1px 5px; border-radius: 4px; background: #e4d6bd; font-size: .74rem; } .marc-footer { background: #efe6d6; border-color: #ddceb6; }
 @media (max-width: 720px){ .marc-hero, .marc-steps { grid-template-columns: 1fr; } }
 
 /* 20 · Padaria Pão & Grão — aconchego claro */
@@ -1343,6 +1344,7 @@ th {
 .pad-menu b { color: #4a3626; } .pad-menu small { display: block; color: #9a7a56; font-size: .74rem; } .pad-menu strong { margin-left: auto; color: #c17a24; }
 .pad-art { width: 52px; height: 52px; border-radius: 50%; flex: 0 0 auto; background: radial-gradient(circle at 35% 30%,#f6d9a0,#c98a3c); }
 .pad-art.croi { border-radius: 42% 58% 54% 46%; background: linear-gradient(135deg,#e6b968,#b97e30); } .pad-art.sonho { background: radial-gradient(circle at 40% 35%,#fde4c4,#e0a35a); } .pad-art.cafe { background: radial-gradient(circle at 50% 40%,#6f4a2d,#3a2416); } .pad-art.bolo { background: linear-gradient(135deg,#e8c37a,#b8863c); border-radius: 10px; } .pad-art.suco { background: radial-gradient(circle at 40% 35%,#ffd27a,#f0962f); }
+.pad-art.cookie { background: radial-gradient(circle at 40% 35%,#d8a860,#9a6a2f); position: relative; } .pad-art.cookie::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 30% 35%, #4a2f18 2px, transparent 3px), radial-gradient(circle at 62% 50%, #4a2f18 2px, transparent 3px), radial-gradient(circle at 45% 68%, #4a2f18 2px, transparent 3px); }
 .pad-note { margin-top: 18px; padding: 16px 18px; border-left: 3px solid #e0962f; background: #fbeedb; border-radius: 0 12px 12px 0; color: #7a5a3c; }
 .pad-footer { background: #fbeedb; border-color: #efdcc0; }
 @media (max-width: 720px){ .pad-hero { grid-template-columns: 1fr; } }
@@ -1375,6 +1377,7 @@ th {
 .rota-map b { color: #1b4d8a; font-size: .72rem; letter-spacing: .12em; background: rgba(255,255,255,.7); padding: 4px 10px; border-radius: 99px; }
 .rota-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-top: 28px; }
 .rota-stats div { padding: 20px; border-radius: 14px; background: #fff; box-shadow: 0 8px 22px rgba(27,42,58,.05); } .rota-stats b { display: block; color: #2f7ad6; font-size: 1.7rem; letter-spacing: -.03em; } .rota-stats span { color: #4a5e74; font-size: .76rem; }
+.rota-track { margin-top: 30px; padding: 24px; border-radius: 16px; background: #fff; box-shadow: 0 8px 22px rgba(27,42,58,.05); scroll-margin-top: 20px; } .rota-track h2 { margin: 6px 0 14px; color: #1b2a3a; }
 .rota-track .scenario-inline input { min-height: 46px; border-radius: 9px; border: 1px solid #c5d6e8; background: #fff; color: #1b2a3a; padding: 0 14px; }
 .scenario-22 .lab-output { background: #0f1b2a; color: #bfe0ff; border-radius: 10px; }
 .rota-footer { background: #fff; border-color: #dbe6f0; }
