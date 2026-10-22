@@ -518,11 +518,11 @@
         <p class="scenario-kicker">AUTOATENDIMENTO</p><h1>Recuperar acesso</h1>
         <p class="cid-lead">Informe o seu e-mail corporativo e enviaremos um token de recuperação para redefinir a senha.</p>
         <div class="cid-card">
-          <form class="scenario-form" onsubmit="return false">
-            <label>E-mail corporativo<input placeholder="nome.sobrenome@central.local"></label>
+          <form id="recovery-form" class="scenario-form">
+            <label>E-mail corporativo<input name="email" type="email" required placeholder="nome.sobrenome@central.local"></label>
             <button class="cid-btn" type="submit">Enviar token</button>
           </form>
-          <p class="cid-note">Não recebeu? Procure a coordenação da sua área.</p>
+          <p id="recovery-output" class="cid-note" role="status" aria-live="polite">Não recebeu? Procure a coordenação da sua área.</p>
         </div>
       {% elif page == 'equipe' %}
         <p class="scenario-kicker">QUEM CUIDA DA CENTRAL</p><h1>Nossa equipe</h1>
@@ -535,7 +535,26 @@
         <div class="scenario-columns cid-cols"><article><b>Conta única</b><p>Um login para tudo.</p></article><article><b>Autoatendimento</b><p>Recupere o acesso sem abrir chamado.</p></article><article><b>Auditável</b><p>Tokens temporários e trilha completa.</p></article></div>
       {% endif %}
     </main>
-    {% if page == 'equipe' %}<script>
+    {% if page == 'recuperar' %}<script>
+      document.getElementById('recovery-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const output = document.getElementById('recovery-output');
+        const button = event.currentTarget.querySelector('button[type="submit"]');
+        button.disabled = true;
+        try {
+          const response = await fetch('{{ root }}/solicitar-token', {
+            method: 'POST',
+            body: new URLSearchParams(new FormData(event.currentTarget)),
+          });
+          const result = await response.json();
+          output.textContent = result.mensagem || result.erro;
+        } catch {
+          output.textContent = 'Não foi possível enviar a solicitação. Tente novamente.';
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>{% elif page == 'equipe' %}<script>
       fetch('{{ root }}/equipe.json').then(r => r.json()).then(d => {
         document.getElementById('equipe-lista').innerHTML = d.equipe.map(p =>
           `<article class="cid-person"><b>${p.nome}</b><span>${p.cargo}</span><small>${p.email}</small></article>`).join('');

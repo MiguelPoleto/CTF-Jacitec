@@ -1009,12 +1009,20 @@ def test_every_ctf2_challenge_is_solvable(monkeypatch, tmp_path):
     assert client.post('/lab/23/entrar', data={'user': '', 'password': ''}).status_code == 400
     # credenciais reais tambem entram (login de verdade), mas sem a flag
     assert client.post('/lab/23/entrar', data={'user': 'mariana', 'password': 'cafe-2024'}).get_json()['ok'] is True
-    # 24 token: trocar role para admin no cookie Base64.
+    # 24 token: aliases administrativos no papel do cookie Base64.
     raw = re.search(r'cracha=([^;]+)', client.get('/lab/24').headers['Set-Cookie']).group(1)
-    forged = base64.b64encode(base64.b64decode(raw).decode().replace('papel=visitante', 'papel=admin').encode()).decode()
-    client.set_cookie('cracha', forged, path='/lab/24')
-    assert client.get('/lab/24/restrito').get_json()['chave_mestra'] == flag(24)
+    for role in ('adm', 'admin', 'administrador'):
+        forged = base64.b64encode(base64.b64decode(raw).decode().replace('papel=visitante', f'papel={role}').encode()).decode()
+        client.set_cookie('cracha', forged, path='/lab/24')
+        assert client.get('/lab/24/restrito').get_json()['chave_mestra'] == flag(24)
     # 25 recovery: robots → debug → usuarios → redefinir (só curl/base64, sem Burp).
+    recovery_page = client.get('/lab/25/recuperar').get_data(as_text=True)
+    assert 'id="recovery-form"' in recovery_page
+    assert 'solicitar-token' in recovery_page
+    request_token = client.post('/lab/25/solicitar-token', data={'email': 'ana@central.local'})
+    assert request_token.get_json()['ok'] is True
+    assert 'Se o endereço estiver cadastrado' in request_token.get_json()['mensagem']
+    assert client.post('/lab/25/solicitar-token', data={'email': ''}).status_code == 400
     assert '/lab/25/interno/gerador-token' in client.get('/lab/25/robots.txt').get_data(as_text=True)
     assert 'base64' in client.get('/lab/25/interno/gerador-token').get_json()['algoritmo']
     email = client.get('/lab/25/equipe.json').get_json()['equipe'][0]['email']

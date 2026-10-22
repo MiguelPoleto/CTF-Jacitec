@@ -207,9 +207,9 @@ HINTS_BY_MECHANISM = {
         "Leia o valor do cookie que a pagina inicial grava - a flag esta ali, nao na tela.",
     ],
     "svg": [
-        "Ferramenta necessaria: o navegador ou `curl` para abrir o arquivo da imagem direto pela URL.",
-        "O logo nao e uma foto: e um SVG, que por dentro e texto. Descubra o endereco do arquivo no HTML da pagina.",
-        "Abra o .svg pela URL e leia o codigo dele - ha uma anotacao escrita entre as formas do desenho.",
+        "Ferramenta necessária: o navegador ou `curl` para abrir o arquivo da imagem diretamente pela URL.",
+        "O logo não é uma foto: é um SVG, cujo conteúdo é texto. Descubra o endereço do arquivo no HTML da página.",
+        "Abra o arquivo `.svg` pela URL e leia o código: há uma anotação escrita entre as formas do desenho.",
     ],
     "debug": [
         "Ferramenta necessaria: `curl` no terminal, ou a barra de endereco do navegador.",
@@ -2190,7 +2190,7 @@ def create_app(testing=False):
         except Exception:
             decoded = ""
         campos = dict(part.split("=", 1) for part in decoded.split("|") if "=" in part)
-        if campos.get("papel") == "admin":
+        if campos.get("papel", "").strip().casefold() in {"adm", "admin", "administrador"}:
             return jsonify({"acesso": "administrador", "painel": "Reservas e chaves mestras",
                             "chave_mestra": CHALLENGE_BY_ID[24]["flags"][0]})
         return jsonify({"acesso": campos.get("papel", "desconhecido"),
@@ -2223,6 +2223,17 @@ def create_app(testing=False):
             "servico": "gerador de token de recuperação (interno)",
             "algoritmo": "token = base64(email_do_usuario)",
             "endpoint": "/lab/25/redefinir?user=<email>&token=<token>",
+        })
+
+    @app.post("/lab/25/solicitar-token")
+    def lab25_solicitar_token():
+        if not playable_challenge(25):
+            return jsonify({"error": "Indisponivel"}), 404
+        if not (request.form.get("email") or "").strip():
+            return jsonify({"ok": False, "erro": "Informe seu e-mail corporativo."}), 400
+        return jsonify({
+            "ok": True,
+            "mensagem": "Se o endereço estiver cadastrado, você receberá as instruções de recuperação.",
         })
 
     @app.get("/lab/25/redefinir")
